@@ -14,11 +14,13 @@
     "@astrojs/cloudflare": "^12.6.12",
     "@supabase/supabase-js": "^2.87.0",
     "@tmi.js/chat": "^0.4.1",
+    "arctic": "^3.7.0",
     "astro": "^5.16.4",
     "socket.io-client": "^2.5.0",
     "tmi.js": "^1.8.5"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251217.0",
     "@types/socket.io-client": "^1.4.36",
     "@types/tmi.js": "^1.8.6"
   }
