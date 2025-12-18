@@ -1,12 +1,28 @@
 /// <reference types="astro/client" />
+/// <reference types="@cloudflare/workers-types" />
 
 interface Env {
   SUPABASE_URL: string;
   SUPABASE_KEY: string;
+  MIN_WORD_LENGTH: number;
+  MAX_WORD_LENGTH: number;
+  // Twitch OAuth
+  TWITCH_CLIENT_ID: string;
+  TWITCH_CLIENT_SECRET: string;
+  TWITCH_REDIRECT_URI: string;
+  // Cloudflare KV for sessions
+  WOS_SESSIONS: KVNamespace;
 }
 
-type Runtime = import('@astrojs/cloudflare').Runtime<Env>;
+type CloudflareRuntime = import('@astrojs/cloudflare').Runtime<Env>;
 
 declare namespace App {
-  interface Locals extends Runtime { }
+  interface Locals {
+    runtime: CloudflareRuntime['runtime'];
+    session?: import('./lib/session').Session;
+  }
 }
+
+
+
+
