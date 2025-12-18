@@ -9,17 +9,17 @@ const { displayName, profileImageUrl, login } = Astro.props;
 ---
 
 <div class="user-menu" data-user-menu>
-  <button 
-    class="user-button" 
-    type="button" 
-    aria-expanded="false" 
+  <button
+    class="user-button"
+    type="button"
+    aria-expanded="false"
     aria-haspopup="true"
     aria-label={`User menu for ${displayName}`}
   >
-    <img 
-      src={profileImageUrl} 
-      alt="" 
-      class="user-avatar" 
+    <img
+      src={profileImageUrl}
+      alt=""
+      class="user-avatar"
       loading="lazy"
       width="32"
       height="32"

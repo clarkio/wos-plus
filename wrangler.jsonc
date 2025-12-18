@@ -9,6 +9,13 @@
     "directory": "./dist",
     "binding": "ASSETS"
   },
+  // KV namespace for session storage
+  "kv_namespaces": [
+    {
+      "binding": "WOS_SESSIONS",
+      "id": "c0207f35e21f4d239578384c21f991c1"
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,

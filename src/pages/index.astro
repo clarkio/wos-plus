@@ -2,6 +2,29 @@
 import Logo from "../components/Icons/Logo.astro";
 import WosBaseLayout from "../layouts/WosBaseLayout.astro";
 import Twitch from "../components/Icons/Twitch.astro";
+import LoginButton from "../components/LoginButton.astro";
+import UserMenu from "../components/UserMenu.astro";
+import { getSession } from "../lib/session";
+
+// Get session from middleware (or fetch it if on index page)
+const session = Astro.locals.session;
+
+// Check for URL parameters
+const url = new URL(Astro.request.url);
+const loginRequired = url.searchParams.get('login') === 'required';
+const returnUrl = url.searchParams.get('returnUrl') || '/player';
+const error = url.searchParams.get('error');
+const errorMessage = url.searchParams.get('message');
+
+// Map error codes to user-friendly messages
+const errorMessages: Record<string, string> = {
+  auth_denied: 'Authentication was cancelled.',
+  invalid_state: 'Invalid authentication state. Please try again.',
+  token_exchange_failed: 'Failed to authenticate with Twitch. Please try again.',
+  user_fetch_failed: 'Failed to fetch your Twitch profile. Please try again.',
+  auth_failed: 'Authentication failed. Please try again.',
+  server_error: 'A server error occurred. Please try again later.',
+};
 ---
 
 <WosBaseLayout
@@ -16,6 +39,17 @@ import Twitch from "../components/Icons/Twitch.astro";
         <div class="logo-section">
           <span class="brand-name" id="brand-name">WoS<span class="plus">+</span></span>
         </div>
+        <div class="header-actions">
+          {session ? (
+            <UserMenu
+              displayName={session.displayName}
+              profileImageUrl={session.profileImageUrl}
+              login={session.login}
+            />
+          ) : (
+            <LoginButton returnUrl={returnUrl} />
+          )}
+        </div>
       </div>
     </header>
 
@@ -26,6 +60,30 @@ import Twitch from "../components/Icons/Twitch.astro";
           <Twitch width={75} height={75} />
           <span>Built for Twitch Streamers & Players</span>
         </div>
+
+        {/* Auth alerts */}
+        {loginRequired && (
+          <div class="alert alert-info">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>Please login with Twitch to access that page.</span>
+          </div>
+        )}
+
+        {error && (
+          <div class="alert alert-error">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="15" y1="9" x2="9" y2="15"></line>
+              <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            <span>{errorMessage || errorMessages[error] || 'An error occurred.'}</span>
+          </div>
+        )}
+
         <h1 class="hero-title">
           Words on Stream<span class="gradient-text">+</span>
         </h1>
@@ -354,10 +412,45 @@ import Twitch from "../components/Icons/Twitch.astro";
     font-weight: 800;
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
   .nav {
     display: flex;
     align-items: center;
     gap: 1.5rem;
+  }
+
+  /* Alerts */
+  .alert {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+  }
+
+  .alert-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .alert-info {
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+  }
+
+  .alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
   }
 
   /* Hero Section */
