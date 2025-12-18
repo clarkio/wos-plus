@@ -1,7 +1,7 @@
 import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
-import { findAllMissingWords, loadWosDictionary, updateWosDictionary } from './wos-words';
+import { findAllMissingWords, loadWordsFromDb, updateWordsDb } from './wos-words';
 import { saveBoard } from './db-service';
 
 
@@ -52,7 +52,7 @@ export class GameSpectator {
   constructor() {
     this.twitchChatLog = new Map();
     this.wosSocket = null;
-    loadWosDictionary();
+    loadWordsFromDb();
     this.startEventProcessors();
   }
 
@@ -355,7 +355,7 @@ export class GameSpectator {
 
     // Add to correct words list
     this.updateCorrectWordsDisplayed(word);
-    updateWosDictionary(word);
+    updateWordsDb(word);
     this.updateCurrentLevelSlots(username, word.split(''), index, hitMax);
 
     // If hitMax is true, set the current level big word
@@ -673,6 +673,7 @@ export class GameSpectator {
     });
 
     this.wosSocket.on('error', (error: any) => {
+      console.error('WOS Socket error:', error);
       this.log('WOS Socket error: ', this.wosGameLogId);
     });
   }

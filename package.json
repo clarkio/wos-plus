@@ -7,7 +7,8 @@
     "build": "astro build",
     "preview": "npm run build && wrangler dev",
     "astro": "astro",
-    "db:fix-board-ids": "node db-scripts/fix-board-ids.mjs"
+    "db:fix-board-ids": "node db-scripts/fix-board-ids.mjs",
+    "db:insert-words-from-boards": "node db-scripts/insert-words-from-boards.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",

@@ -1,7 +1,7 @@
 // import localDictionary from './wos_dictionary.json';
 let wosDictionary: string[]; // = localDictionary as string[];
 
-export async function updateWosDictionary(word: string) {
+export async function updateWordsDb(word: string) {
   try {
     if (wosDictionary && wosDictionary.includes(word)) {
       console.log(`Word "${word}" already exists in the WOS dictionary.`);
@@ -31,7 +31,7 @@ export async function updateWosDictionary(word: string) {
   }
 }
 
-export async function loadWosDictionary() {
+export async function loadWordsFromDb() {
   try {
     // Use a CORS proxy for local development
     const url = 'https://clarkio.com/wos-dictionary';
