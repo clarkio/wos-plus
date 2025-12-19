@@ -84,8 +84,9 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
 
     console.log(`User ${user.login} authenticated successfully`);
 
-    // Redirect to the original destination or player page
-    return redirect(returnUrl);
+    // Redirect to the original destination with success indicator
+    const separator = returnUrl.includes('?') ? '&' : '?';
+    return redirect(`${returnUrl}${separator}login_success=true`);
   } catch (err) {
     console.error('Auth callback error:', err);
     return redirect('/?error=auth_failed');

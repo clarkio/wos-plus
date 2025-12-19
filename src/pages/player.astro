@@ -7,6 +7,10 @@ import SettingsDialog from '../components/SettingsDialog.astro';
 
 // Get session from middleware (guaranteed to exist on protected routes)
 const session = Astro.locals.session;
+
+// Check for login success
+const url = new URL(Astro.request.url);
+const loginSuccess = url.searchParams.get('login_success') === 'true';
 ---
 
 <WosBaseLayout
@@ -111,6 +115,24 @@ const session = Astro.locals.session;
           <Settings size={24} />
         </button>
       </div>
+
+      {/* Login success toast */}
+      {loginSuccess && session && (
+        <div class="welcome-toast" id="welcome-toast">
+          <img src={session.profileImageUrl} alt="" class="toast-avatar" />
+          <div class="toast-content">
+            <span class="toast-title">Welcome, {session.displayName}!</span>
+            <span class="toast-message">You're now logged in with Twitch</span>
+          </div>
+          <button class="toast-close" id="toast-close" aria-label="Dismiss">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div id='overlay' class='overlay'>
         <div id='level-current' class='level-current'>
           <span id='level-title' class='level-title'>LEVEL</span>
@@ -456,6 +478,23 @@ const session = Astro.locals.session;
     // Reset dialog reference on each navigation
     settingsDialog = null;
 
+    // Handle welcome toast close button and auto-dismiss
+    const welcomeToast = document.getElementById('welcome-toast');
+    const toastClose = document.getElementById('toast-close');
+    if (welcomeToast && toastClose) {
+      toastClose.addEventListener('click', () => {
+        welcomeToast.style.display = 'none';
+      });
+      // Auto-remove after animation completes (5 seconds)
+      setTimeout(() => {
+        if (welcomeToast) welcomeToast.remove();
+      }, 5000);
+      // Clean up login_success param from URL without reload
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('login_success');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    }
+
     // Initialize settings dialog
     const dialog = document.getElementById(
       'player-settings'
@@ -658,6 +697,88 @@ const session = Astro.locals.session;
     .user-name-small {
       display: none;
     }
+  }
+
+  /* Welcome toast styles */
+  .welcome-toast {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: linear-gradient(135deg, #9146FF 0%, #7c3aed 100%);
+    border: 1px solid rgba(199, 156, 255, 0.5);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(145, 70, 255, 0.4);
+    z-index: 1000;
+    animation: slideDown 0.4s ease-out, fadeOut 0.3s ease-in 4.7s forwards;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
+
+  .toast-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .toast-title {
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.95rem;
+  }
+
+  .toast-message {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .toast-close {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    transition: color 0.2s;
+    margin-left: 0.5rem;
+  }
+
+  .toast-close:hover {
+    color: #fff;
+  }
+
+  .toast-close svg {
+    width: 18px;
+    height: 18px;
   }
 
   /* Settings form styles */
