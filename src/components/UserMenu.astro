@@ -62,35 +62,57 @@ const { displayName, profileImageUrl, login } = Astro.props;
 
 <script>
   function initUserMenus() {
-    document.querySelectorAll('[data-user-menu]').forEach((menu) => {
+    const menus = document.querySelectorAll('[data-user-menu]');
+    if (menus.length === 0) return;
+
+    const closeAllMenus = () => {
+      menus.forEach((menu) => {
+        const button = menu.querySelector('.user-button') as HTMLButtonElement | null;
+        const dropdown = menu.querySelector('.dropdown-menu') as HTMLElement | null;
+        if (!button || !dropdown) return;
+        button.setAttribute('aria-expanded', 'false');
+        dropdown.hidden = true;
+      });
+    };
+
+    menus.forEach((menu) => {
       const button = menu.querySelector('.user-button') as HTMLButtonElement | null;
       const dropdown = menu.querySelector('.dropdown-menu') as HTMLElement | null;
 
       if (!button || !dropdown) return;
 
+      // Prevent duplicate listeners across Astro navigations.
+      if ((button as any).__wosUserMenuInit) return;
+      (button as any).__wosUserMenuInit = true;
+
       // Toggle menu on button click
-      button.addEventListener('click', () => {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
         const isExpanded = button.getAttribute('aria-expanded') === 'true';
+        closeAllMenus();
         button.setAttribute('aria-expanded', (!isExpanded).toString());
         dropdown.hidden = isExpanded;
       });
+    });
+
+    const win = window as any;
+    if (!win.__wosUserMenuGlobalListeners) {
+      win.__wosUserMenuGlobalListeners = true;
 
       // Close on click outside
       document.addEventListener('click', (e) => {
-        if (!menu.contains(e.target as Node)) {
-          button.setAttribute('aria-expanded', 'false');
-          dropdown.hidden = true;
-        }
+        const target = e.target as Node;
+        const clickedInMenu = Array.from(document.querySelectorAll('[data-user-menu]')).some((m) =>
+          m.contains(target)
+        );
+        if (!clickedInMenu) closeAllMenus();
       });
 
       // Close on Escape key
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          button.setAttribute('aria-expanded', 'false');
-          dropdown.hidden = true;
-        }
+        if (e.key === 'Escape') closeAllMenus();
       });
-    });
+    }
   }
 
   // Initialize on load and after Astro navigation
