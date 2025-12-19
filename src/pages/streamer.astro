@@ -63,29 +63,6 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
     </form>
   </SettingsDialog>
 
-  <div class='streamer-header-actions'>
-    {session && (
-      <a href="/api/auth/logout" class="user-info-link" title={`Logged in as ${session.displayName} - Click to logout`}>
-        <img src={session.profileImageUrl} alt="" class="user-avatar-small" />
-        <span class="user-name-small">{session.displayName}</span>
-        <svg class="logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
-      </a>
-    )}
-    <button
-      id='open-settings-btn'
-      class='settings-button'
-      type='button'
-      aria-label='Open settings'
-      title='Settings'
-    >
-      <Settings size={24} />
-    </button>
-  </div>
-
   {/* Login success toast */}
   {loginSuccess && session && (
     <div class="welcome-toast" id="welcome-toast">
@@ -108,6 +85,57 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
       <iframe id='streamer-wos-board-iframe' src='' loading='lazy'></iframe>
     </div>
     <div class='streamer-channel-data-container'>
+      <div class="channel-menu" data-channel-menu>
+        <button
+          type="button"
+          class="channel-menu__button"
+          data-channel-menu-button
+          aria-label="Open menu"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="Menu"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.5"></circle>
+            <circle cx="12" cy="12" r="1.5"></circle>
+            <circle cx="12" cy="19" r="1.5"></circle>
+          </svg>
+        </button>
+
+        <div class="channel-menu__dropdown" data-channel-menu-dropdown hidden>
+          {session && (
+            <div class="channel-menu__user">
+              <img src={session.profileImageUrl} alt="" class="channel-menu__avatar" loading="lazy" />
+              <div class="channel-menu__userText">
+                <div class="channel-menu__name">{session.displayName}</div>
+                <div class="channel-menu__hint">Logged in with Twitch</div>
+              </div>
+            </div>
+          )}
+
+          <button
+            id="open-settings-btn"
+            type="button"
+            class="channel-menu__item"
+            data-channel-menu-close
+          >
+            <Settings size={18} />
+            <span>Settings</span>
+          </button>
+
+          {session && (
+            <a href="/api/auth/logout" class="channel-menu__item channel-menu__logout" data-channel-menu-close>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              <span>Logout</span>
+            </a>
+          )}
+        </div>
+      </div>
+
       <div id='overlay' class='overlay'>
         <div id='level-current' class='level-current'>
           <span id='level-title' class='level-title'>LEVEL</span>
@@ -324,6 +352,33 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
   };
 
   const spectator = new GameSpectator();
+  const populateSettingsFormFromUrl = (urlParams: URLSearchParams) => {
+    const mirrorUrlInput = document.getElementById(
+      'streamer-mirror-url-input'
+    ) as HTMLInputElement | null;
+    const twitchChannelInput = document.getElementById(
+      'streamer-twitch-channel-input'
+    ) as HTMLInputElement | null;
+    const clearSoundInput = document.getElementById(
+      'streamer-clear-sound-input'
+    ) as HTMLInputElement | null;
+
+    if (mirrorUrlInput && urlParams.has('mirrorUrl')) {
+      mirrorUrlInput.value = urlParams.get('mirrorUrl') || '';
+    }
+
+    if (twitchChannelInput && urlParams.has('twitchChannel')) {
+      twitchChannelInput.value = urlParams.get('twitchChannel') || '';
+    }
+
+    if (clearSoundInput) {
+      const clearSoundParam = urlParams.get('clearSound');
+      clearSoundInput.checked = clearSoundParam
+        ? clearSoundParam.toLowerCase() === 'true'
+        : true;
+    }
+  };
+
 
   // Initialize dialog API reference
   let settingsDialog: any = null;
@@ -368,34 +423,7 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
     // If either parameter is missing, show the settings dialog
     if (!hasMirrorUrl || !hasTwitchChannel) {
       // Pre-populate any existing values
-      if (hasMirrorUrl) {
-        const mirrorUrlInput = document.getElementById(
-          'streamer-mirror-url-input'
-        ) as HTMLInputElement;
-        if (mirrorUrlInput) {
-          mirrorUrlInput.value = urlParams.get('mirrorUrl') || '';
-        }
-      }
-
-      if (hasTwitchChannel) {
-        const twitchChannelInput = document.getElementById(
-          'streamer-twitch-channel-input'
-        ) as HTMLInputElement;
-        if (twitchChannelInput) {
-          twitchChannelInput.value = urlParams.get('twitchChannel') || '';
-        }
-      }
-
-      // Pre-populate clear sound checkbox
-      const clearSoundInput = document.getElementById(
-        'streamer-clear-sound-input'
-      ) as HTMLInputElement;
-      if (clearSoundInput) {
-        const clearSoundParam = urlParams.get('clearSound');
-        clearSoundInput.checked = clearSoundParam
-          ? clearSoundParam.toLowerCase() === 'true'
-          : true;
-      }
+      populateSettingsFormFromUrl(urlParams);
 
       // Ensure dialog is ready and set up callbacks before opening
       const attemptOpenDialog = () => {
@@ -446,10 +474,92 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
       // Try to get the API immediately if it exists
       if ((dialog as any).__api) {
         settingsDialog = (dialog as any).__api;
+        setupDialogCallbacks();
       } else {
         // If not ready yet, wait for the event
-        dialog.addEventListener('dialog-ready', initializeSettingsDialog, { once: true });
+        dialog.addEventListener(
+          'dialog-ready',
+          (event) => {
+            initializeSettingsDialog(event);
+            setupDialogCallbacks();
+          },
+          { once: true }
+        );
       }
+    }
+
+    // Init menu button + dropdown behavior
+    const initChannelMenus = () => {
+      const menus = document.querySelectorAll('[data-channel-menu]');
+      if (menus.length === 0) return;
+
+      const closeAllMenus = () => {
+        menus.forEach((menu) => {
+          const button = menu.querySelector('[data-channel-menu-button]') as HTMLButtonElement | null;
+          const dropdown = menu.querySelector('[data-channel-menu-dropdown]') as HTMLElement | null;
+          if (!button || !dropdown) return;
+          dropdown.hidden = true;
+          button.setAttribute('aria-expanded', 'false');
+        });
+      };
+
+      menus.forEach((menu) => {
+        const button = menu.querySelector('[data-channel-menu-button]') as HTMLButtonElement | null;
+        const dropdown = menu.querySelector('[data-channel-menu-dropdown]') as HTMLElement | null;
+        if (!button || !dropdown) return;
+
+        if ((button as any).__wosInit) return;
+        (button as any).__wosInit = true;
+
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = button.getAttribute('aria-expanded') === 'true';
+          closeAllMenus();
+          dropdown.hidden = isOpen;
+          button.setAttribute('aria-expanded', (!isOpen).toString());
+        });
+
+        menu.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement | null;
+          if (!target) return;
+          const shouldClose = !!target.closest('[data-channel-menu-close]');
+          if (shouldClose) {
+            closeAllMenus();
+          }
+        });
+      });
+
+      const win = window as any;
+      if (!win.__wosChannelMenuGlobalListeners) {
+        win.__wosChannelMenuGlobalListeners = true;
+        document.addEventListener('click', (e) => {
+          const target = e.target as Node;
+          const clickedInMenu = Array.from(document.querySelectorAll('[data-channel-menu]')).some((m) =>
+            m.contains(target)
+          );
+          if (!clickedInMenu) closeAllMenus();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeAllMenus();
+        });
+      }
+    };
+    initChannelMenus();
+
+    // Set up settings button click handler (now inside the menu)
+    const settingsBtn = document.getElementById('open-settings-btn');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        if (!settingsDialog && dialog && (dialog as any).__api) {
+          settingsDialog = (dialog as any).__api;
+          setupDialogCallbacks();
+        }
+        if (settingsDialog) {
+          const urlParams = new URLSearchParams(window.location.search);
+          populateSettingsFormFromUrl(urlParams);
+          settingsDialog.open();
+        }
+      });
     }
 
     // check for query parameters in the url
@@ -639,66 +749,7 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
     font-size: 0.95rem;
   }
 
-  /* Streamer header actions */
-  .streamer-header-actions {
-    position: fixed;
-    top: 0.5rem;
-    right: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    z-index: 100;
-  }
-
-  .user-info-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    background: var(--bg-tertiary, #4b1a81);
-    border: 1px solid var(--border-primary, rgba(199, 156, 255, 0.4));
-    border-radius: 6px;
-    color: var(--text-primary, #dacfe6);
-    text-decoration: none;
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-  }
-
-  .user-info-link:hover {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #fca5a5;
-  }
-
-  .user-avatar-small {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  .user-name-small {
-    max-width: 100px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .logout-icon {
-    width: 16px;
-    height: 16px;
-    opacity: 0.7;
-  }
-
-  .user-info-link:hover .logout-icon {
-    opacity: 1;
-  }
-
-  @media (max-width: 640px) {
-    .user-name-small {
-      display: none;
-    }
-  }
+  /* Streamer header actions moved into menu dropdown */
 
   /* Welcome toast styles */
   .welcome-toast {
