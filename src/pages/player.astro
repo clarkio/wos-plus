@@ -133,6 +133,14 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
             <span>Settings</span>
           </button>
 
+          <a href="/" class="channel-menu__item" data-channel-menu-close>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 10.5L12 3l9 7.5"></path>
+              <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"></path>
+            </svg>
+            <span>Home</span>
+          </a>
+
           {session && (
             <a href="/api/auth/logout" class="channel-menu__item channel-menu__logout" data-channel-menu-close>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
