@@ -1,5 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
-import { getSession, type Session } from './lib/session';
+import { getSessionFromKV, getSessionIdFromCookie, type Session } from './lib/session';
 
 /**
  * Paths that require authentication
@@ -31,9 +31,25 @@ export const onRequest = defineMiddleware(async ({ request, cookies, redirect, l
 
   // Try to get session if KV is available
   let session: Session | null = null;
+  const sessionId = getSessionIdFromCookie(cookies);
   if (env.WOS_SESSIONS) {
-    session = await getSession(env.WOS_SESSIONS, cookies);
-    console.log('[Auth Middleware] Session lookup result:', session ? `Found user: ${session.login}` : 'No session found');
+    if (sessionId) {
+      // KV is eventually consistent in production; a short retry helps right after login.
+      const retryDelaysMs = [0, 75, 150, 300];
+      for (const delayMs of retryDelaysMs) {
+        if (delayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+        session = await getSessionFromKV(env.WOS_SESSIONS, sessionId);
+        if (session) {
+          break;
+        }
+      }
+    }
+    console.log(
+      '[Auth Middleware] Session lookup result:',
+      session ? `Found user: ${session.login}` : (sessionId ? 'No session found (cookie present)' : 'No session found')
+    );
   } else {
     console.error('[Auth Middleware] WOS_SESSIONS KV binding is not available!');
   }
@@ -51,8 +67,18 @@ export const onRequest = defineMiddleware(async ({ request, cookies, redirect, l
       cookieHeader: request.headers.get('cookie')?.substring(0, 100) // Log first 100 chars of cookie header
     });
     const returnUrl = encodeURIComponent(url.pathname + url.search);
-    return redirect(`/?login=required&returnUrl=${returnUrl}`);
+    const response = redirect(`/?login=required&returnUrl=${returnUrl}`);
+    // Prevent caching of the redirect response (otherwise browsers can “stick” to login_required)
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    response.headers.set('Pragma', 'no-cache');
+    return response;
   }
 
-  return next();
+  // For protected paths, add cache-control to prevent caching auth state
+  const response = await next();
+  if (isProtectedPath) {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    response.headers.set('Pragma', 'no-cache');
+  }
+  return response;
 });

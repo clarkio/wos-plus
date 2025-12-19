@@ -4,7 +4,8 @@ import WosBaseLayout from "../layouts/WosBaseLayout.astro";
 import Twitch from "../components/Icons/Twitch.astro";
 import LoginButton from "../components/LoginButton.astro";
 import UserMenu from "../components/UserMenu.astro";
-import { getSession } from "../lib/session";
+
+export const prerender = false;
 
 // Get session from middleware (or fetch it if on index page)
 const session = Astro.locals.session;

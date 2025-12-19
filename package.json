@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "npm run build && wrangler dev",
+    "preview": "npm run build && wrangler dev --config wrangler.jsonc",
     "astro": "astro",
     "db:fix-board-ids": "node db-scripts/fix-board-ids.mjs",
     "db:insert-words-from-boards": "node db-scripts/insert-words-from-boards.mjs"

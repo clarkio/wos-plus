@@ -25,7 +25,28 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
 
   // Get stored state and return URL from cookies
   const storedState = cookies.get(STATE_COOKIE_NAME)?.value;
-  const returnUrl = cookies.get(RETURN_URL_COOKIE_NAME)?.value || '/player';
+  const rawReturnUrl = cookies.get(RETURN_URL_COOKIE_NAME)?.value || '/player';
+
+  // Normalize returnUrl so we only ever redirect to an internal path.
+  // This also guards against accidentally persisting '/?login=required&returnUrl=...' as the return URL.
+  let returnUrl = rawReturnUrl;
+  try {
+    const parsed = new URL(rawReturnUrl, 'https://example.invalid');
+
+    // If we somehow stored the login-required landing URL, extract the real returnUrl.
+    if (parsed.pathname === '/' && parsed.searchParams.get('login') === 'required') {
+      const embeddedReturnUrl = parsed.searchParams.get('returnUrl');
+      if (embeddedReturnUrl) {
+        returnUrl = embeddedReturnUrl;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  if (!returnUrl.startsWith('/') || returnUrl.startsWith('//')) {
+    returnUrl = '/player';
+  }
 
   // Clear OAuth cookies
   cookies.delete(STATE_COOKIE_NAME, { path: '/' });
@@ -88,8 +109,13 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
     console.log(`[Auth Callback] User ${user.login} authenticated successfully, redirecting to: ${returnUrl}`);
 
     // Redirect to the original destination with success indicator
-    const separator = returnUrl.includes('?') ? '&' : '?';
-    return redirect(`${returnUrl}${separator}login_success=true`);
+    // Ensure trailing slash to avoid 307 redirect stripping query params
+    let finalUrl = returnUrl;
+    if (!finalUrl.includes('?') && !finalUrl.endsWith('/')) {
+      finalUrl = finalUrl + '/';
+    }
+    const separator = finalUrl.includes('?') ? '&' : '?';
+    return redirect(`${finalUrl}${separator}login_success=true`);
   } catch (err) {
     console.error('Auth callback error:', err);
     return redirect('/?error=auth_failed');

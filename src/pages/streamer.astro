@@ -5,6 +5,8 @@ import Twitch from '../components/Icons/Twitch.astro';
 import SettingsDialog from '../components/SettingsDialog.astro';
 import Settings from '../components/Icons/Settings.astro';
 
+export const prerender = false;
+
 // Get session from middleware (guaranteed to exist on protected routes)
 const session = Astro.locals.session;
 
