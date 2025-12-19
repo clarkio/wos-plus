@@ -1,5 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getSessionFromKV, getSessionIdFromCookie, type Session } from './lib/session';
+import { getObsSessionFromKV, obsSessionToAppSession } from './lib/obs-session';
 
 /**
  * Paths that require authentication
@@ -29,6 +30,8 @@ export const onRequest = defineMiddleware(async ({ request, cookies, redirect, l
     (path) => url.pathname === path || url.pathname.startsWith(path + '/')
   );
 
+  const isStreamerPath = url.pathname === '/streamer' || url.pathname.startsWith('/streamer/');
+
   // Try to get session if KV is available
   let session: Session | null = null;
   const sessionId = getSessionIdFromCookie(cookies);
@@ -46,6 +49,21 @@ export const onRequest = defineMiddleware(async ({ request, cookies, redirect, l
         }
       }
     }
+
+    // If no cookie-based session and this is /streamer, allow long-lived OBS token auth.
+    if (!session && isStreamerPath) {
+      const obsToken = url.searchParams.get('obs');
+      if (obsToken) {
+        const obsSession = await getObsSessionFromKV(env.WOS_SESSIONS, obsToken);
+        if (obsSession) {
+          session = obsSessionToAppSession(obsSession);
+          console.log('[Auth Middleware] OBS token session accepted');
+        } else {
+          console.log('[Auth Middleware] OBS token invalid/expired');
+        }
+      }
+    }
+
     console.log(
       '[Auth Middleware] Session lookup result:',
       session ? `Found user: ${session.login}` : (sessionId ? 'No session found (cookie present)' : 'No session found')

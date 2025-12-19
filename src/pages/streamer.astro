@@ -50,6 +50,33 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
         <label class='toggle-label'>
           <input
             type='checkbox'
+            id='streamer-chat-enabled-input'
+            name='chatEnabled'
+            class='toggle-input'
+          />
+          <span class='toggle-slider'></span>
+          <span class='toggle-text'>Show Twitch Chat</span>
+        </label>
+        <small class='form-help'>Toggle Twitch chat visibility</small>
+      </div>
+      <div class='form-group'>
+        <label class='toggle-label'>
+          <input
+            type='checkbox'
+            id='streamer-wos-enabled-input'
+            name='wosEnabled'
+            class='toggle-input'
+            checked
+          />
+          <span class='toggle-slider'></span>
+          <span class='toggle-text'>Show Words on Stream Board</span>
+        </label>
+        <small class='form-help'>Toggle the Words on Stream board visibility</small>
+      </div>
+      <div class='form-group'>
+        <label class='toggle-label'>
+          <input
+            type='checkbox'
             id='streamer-clear-sound-input'
             name='clearSound'
             class='toggle-input'
@@ -121,6 +148,32 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
           >
             <Settings size={18} />
             <span>Settings</span>
+          </button>
+
+          <button
+            id="generate-obs-url-btn"
+            type="button"
+            class="channel-menu__item"
+            data-channel-menu-close
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 4.86"></path>
+              <path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.4a5 5 0 0 0 7.07 7.07L14 19.14"></path>
+            </svg>
+            <span>Copy OBS Browser Source URL</span>
+          </button>
+
+          <button
+            id="regenerate-obs-url-btn"
+            type="button"
+            class="channel-menu__item"
+            data-channel-menu-close
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+              <polyline points="21 3 21 9 15 9"></polyline>
+            </svg>
+            <span>Regenerate OBS URL</span>
           </button>
 
           <a href="/" class="channel-menu__item" data-channel-menu-close>
@@ -370,6 +423,12 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
     const clearSoundInput = document.getElementById(
       'streamer-clear-sound-input'
     ) as HTMLInputElement | null;
+    const chatEnabledInput = document.getElementById(
+      'streamer-chat-enabled-input'
+    ) as HTMLInputElement | null;
+    const wosEnabledInput = document.getElementById(
+      'streamer-wos-enabled-input'
+    ) as HTMLInputElement | null;
 
     if (mirrorUrlInput && urlParams.has('mirrorUrl')) {
       mirrorUrlInput.value = urlParams.get('mirrorUrl') || '';
@@ -383,6 +442,20 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
       const clearSoundParam = urlParams.get('clearSound');
       clearSoundInput.checked = clearSoundParam
         ? clearSoundParam.toLowerCase() === 'true'
+        : true;
+    }
+
+    if (chatEnabledInput) {
+      const chatParam = urlParams.get('chat');
+      chatEnabledInput.checked = chatParam
+        ? chatParam.toLowerCase() === 'true'
+        : true;
+    }
+
+    if (wosEnabledInput) {
+      const boardParam = urlParams.get('board');
+      wosEnabledInput.checked = boardParam
+        ? boardParam.toLowerCase() === 'true'
         : true;
     }
   };
@@ -417,6 +490,12 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
       }
       // Handle clear sound toggle
       params.set('clearSound', data.clearSound ? 'true' : 'false');
+
+      // Handle chat enabled toggle
+      params.set('chat', data.chatEnabled ? 'true' : 'false');
+
+      // Handle WoS board visibility toggle
+      params.set('board', data.wosEnabled ? 'true' : 'false');
 
       // Reload the page with new parameters
       window.location.href = window.location.pathname + '?' + params.toString();
@@ -566,6 +645,192 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
           const urlParams = new URLSearchParams(window.location.search);
           populateSettingsFormFromUrl(urlParams);
           settingsDialog.open();
+        }
+      });
+    }
+
+    type ObsUrlHandlerConfig = {
+      button: HTMLButtonElement;
+      endpoint: string;
+      payload: unknown;
+      generatingLabel: string;
+      defaultLabel: string;
+      successClipboardMessage: string;
+      errorAlertMessage: string;
+      consoleErrorPrefix: string;
+      promptMessage: string;
+    };
+
+    async function handleObsUrlRequest(config: ObsUrlHandlerConfig): Promise<void> {
+      const {
+        button,
+        endpoint,
+        payload,
+        generatingLabel,
+        defaultLabel,
+        successClipboardMessage,
+        errorAlertMessage,
+        consoleErrorPrefix,
+        promptMessage,
+      } = config;
+
+      const labelEl = button.querySelector('span') as HTMLSpanElement | null;
+      const originalText = labelEl?.textContent || defaultLabel;
+
+      button.disabled = true;
+      if (labelEl) labelEl.textContent = generatingLabel;
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload ?? {}),
+        });
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(text || `Request failed: ${response.status}`);
+        }
+
+        const data: { token?: string; url?: string } = await response.json();
+        const token = data.token;
+        const apiUrl = data.url;
+
+        const buildUrlWithTokenAndSettings = (tokenValue: string): string => {
+          const currentUrl = new URL(window.location.href);
+          const finalUrl = new URL(window.location.origin + window.location.pathname);
+          const params = new URLSearchParams(currentUrl.search);
+
+          // Remove one-time params
+          params.delete('login_success');
+
+          // Ensure required settings exist on the URL. If they aren't on the URL yet,
+          // fall back to the current Settings dialog input values.
+          const mirrorInput = document.getElementById('streamer-mirror-url-input') as HTMLInputElement | null;
+          const twitchInput = document.getElementById('streamer-twitch-channel-input') as HTMLInputElement | null;
+          const clearSoundInput = document.getElementById('streamer-clear-sound-input') as HTMLInputElement | null;
+          const chatEnabledInput = document.getElementById('streamer-chat-enabled-input') as HTMLInputElement | null;
+          const wosEnabledInput = document.getElementById('streamer-wos-enabled-input') as HTMLInputElement | null;
+
+          if (!params.has('mirrorUrl') && mirrorInput?.value) {
+            params.set('mirrorUrl', mirrorInput.value);
+          }
+          if (!params.has('twitchChannel') && twitchInput?.value) {
+            params.set('twitchChannel', twitchInput.value);
+          }
+          if (!params.has('clearSound') && clearSoundInput) {
+            params.set('clearSound', clearSoundInput.checked ? 'true' : 'false');
+          }
+          if (!params.has('chat') && chatEnabledInput) {
+            params.set('chat', chatEnabledInput.checked ? 'true' : 'false');
+          }
+          if (!params.has('board') && wosEnabledInput) {
+            params.set('board', wosEnabledInput.checked ? 'true' : 'false');
+          }
+
+          params.set('obs', tokenValue);
+          finalUrl.search = params.toString();
+          return finalUrl.toString();
+        };
+
+        // Prefer token-based reconstruction so we keep existing query params.
+        let url: string | undefined;
+        if (token) {
+          url = buildUrlWithTokenAndSettings(token);
+        } else {
+          url = apiUrl;
+        }
+
+        if (!url) throw new Error('Missing URL in response');
+
+        try {
+          await navigator.clipboard.writeText(url);
+          window.alert(successClipboardMessage);
+        } catch {
+          // Fallback for non-secure contexts / blocked clipboard APIs
+          window.prompt(promptMessage, url);
+        }
+      } catch (err) {
+        console.error(consoleErrorPrefix, err);
+        window.alert(errorAlertMessage);
+      } finally {
+        button.disabled = false;
+        if (labelEl) labelEl.textContent = originalText;
+      }
+    }
+
+    // Generate/copy OBS URL (long-lived, token-based)
+    const obsBtn = document.getElementById('generate-obs-url-btn') as HTMLButtonElement | null;
+    if (obsBtn && !(obsBtn as any).__wosObsInit) {
+      (obsBtn as any).__wosObsInit = true;
+      obsBtn.addEventListener('click', () => {
+        void handleObsUrlRequest({
+          button: obsBtn,
+          endpoint: '/api/obs/session',
+          payload: {},
+          generatingLabel: 'Generating…',
+          defaultLabel: 'Copy OBS Browser Source URL',
+          successClipboardMessage: 'OBS Browser Source URL copied to clipboard.',
+          errorAlertMessage: 'Failed to generate OBS URL. Make sure you are logged in, then try again.',
+          consoleErrorPrefix: 'Failed to generate OBS URL:',
+          promptMessage: 'Copy this OBS Browser Source URL:',
+        });
+      });
+    }
+
+    // Regenerate OBS URL (rotates token; old URLs stop working)
+    const regenObsBtn = document.getElementById('regenerate-obs-url-btn') as HTMLButtonElement | null;
+    if (regenObsBtn && !(regenObsBtn as any).__wosObsRegenInit) {
+      (regenObsBtn as any).__wosObsRegenInit = true;
+      regenObsBtn.addEventListener('click', async () => {
+        const confirmed = window.confirm(
+          'Regenerate OBS URL? This will invalidate the previous OBS link you may have already added to OBS.'
+        );
+        if (!confirmed) return;
+
+        const labelEl = regenObsBtn.querySelector('span') as HTMLSpanElement | null;
+        const originalText = labelEl?.textContent || 'Regenerate OBS URL';
+        regenObsBtn.disabled = true;
+        if (labelEl) labelEl.textContent = 'Regenerating…';
+
+        try {
+          const response = await fetch('/api/obs/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ regenerate: true }),
+          });
+
+          if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error(text || `Request failed: ${response.status}`);
+          }
+
+          const data: { token?: string; url?: string } = await response.json();
+          const token = data.token;
+          const apiUrl = data.url;
+
+          let url: string | undefined;
+          if (token) {
+            // Match the generate flow by reusing the shared URL builder.
+            url = buildUrlWithTokenAndSettings(token);
+          } else {
+            url = apiUrl;
+          }
+
+          if (!url) throw new Error('Missing URL in response');
+
+          try {
+            await navigator.clipboard.writeText(url);
+            window.alert('New OBS Browser Source URL copied to clipboard.');
+          } catch {
+            window.prompt('Copy this new OBS Browser Source URL:', url);
+          }
+        } catch (err) {
+          console.error('Failed to regenerate OBS URL:', err);
+          window.alert('Failed to regenerate OBS URL. Make sure you are logged in, then try again.');
+        } finally {
+          regenObsBtn.disabled = false;
+          if (labelEl) labelEl.textContent = originalText;
         }
       });
     }
