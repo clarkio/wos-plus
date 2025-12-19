@@ -28,6 +28,8 @@ export interface PublicSession {
 const SESSION_COOKIE_NAME = 'wos_session';
 const SESSION_PREFIX = 'session:';
 
+const LEGACY_SESSION_COOKIE_PATHS = ['/', '/player', '/player/', '/streamer', '/streamer/'];
+
 /**
  * Generates a secure random session ID
  */
@@ -143,7 +145,13 @@ export function setSessionCookie(
  * @param cookies - Astro cookies object
  */
 export function clearSessionCookie(cookies: AstroCookies): void {
-  cookies.delete(SESSION_COOKIE_NAME, { path: '/' });
+  // Remove the current cookie and any legacy cookies that may have been set
+  // on more specific paths. If multiple cookies share the same name, browsers
+  // may send different ones depending on the request path, which can make a
+  // user appear "logged in" on one route but not another.
+  for (const path of LEGACY_SESSION_COOKIE_PATHS) {
+    cookies.delete(SESSION_COOKIE_NAME, { path });
+  }
 }
 
 /**

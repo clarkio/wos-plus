@@ -2,7 +2,7 @@ export const prerender = false;
 
 import type { APIContext } from 'astro';
 import { createTwitchClient, getTwitchUser } from '../../../lib/twitch-oauth';
-import { createSession, setSessionCookie } from '../../../lib/session';
+import { createSession, setSessionCookie, clearSessionCookie } from '../../../lib/session';
 
 const STATE_COOKIE_NAME = 'twitch_oauth_state';
 const RETURN_URL_COOKIE_NAME = 'auth_return_url';
@@ -101,6 +101,10 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
     // Store session in Cloudflare KV
     const sessionId = await createSession(env.WOS_SESSIONS, sessionData, expiresInSeconds);
     console.log(`[Auth Callback] Session created in KV with ID: ${sessionId.substring(0, 8)}...`);
+
+    // Defensive: clear any legacy path-scoped session cookies so the new cookie
+    // works consistently across '/', '/player', and '/streamer'.
+    clearSessionCookie(cookies);
 
     // Set session cookie (isSecure=false for localhost development)
     setSessionCookie(cookies, sessionId, expiresInSeconds, isSecure);
