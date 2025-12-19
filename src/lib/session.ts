@@ -121,15 +121,17 @@ export function getSessionIdFromCookie(cookies: AstroCookies): string | null {
  * @param cookies - Astro cookies object
  * @param sessionId - The session ID to set
  * @param maxAgeSeconds - Cookie max age in seconds
+ * @param isSecure - Whether to set secure flag (false for localhost)
  */
 export function setSessionCookie(
   cookies: AstroCookies,
   sessionId: string,
-  maxAgeSeconds: number
+  maxAgeSeconds: number,
+  isSecure: boolean = true
 ): void {
   cookies.set(SESSION_COOKIE_NAME, sessionId, {
     httpOnly: true,
-    secure: true,
+    secure: isSecure,
     sameSite: 'lax',
     path: '/',
     maxAge: maxAgeSeconds,

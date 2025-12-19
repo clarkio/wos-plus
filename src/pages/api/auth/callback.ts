@@ -15,6 +15,7 @@ const RETURN_URL_COOKIE_NAME = 'auth_return_url';
 export async function GET({ request, redirect, cookies, locals }: APIContext) {
   const { env } = locals.runtime;
   const url = new URL(request.url);
+  const isSecure = url.protocol === 'https:';
 
   // Extract OAuth parameters
   const code = url.searchParams.get('code');
@@ -79,8 +80,8 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
     // Store session in Cloudflare KV
     const sessionId = await createSession(env.WOS_SESSIONS, sessionData, expiresInSeconds);
 
-    // Set session cookie
-    setSessionCookie(cookies, sessionId, expiresInSeconds);
+    // Set session cookie (isSecure=false for localhost development)
+    setSessionCookie(cookies, sessionId, expiresInSeconds, isSecure);
 
     console.log(`User ${user.login} authenticated successfully`);
 
