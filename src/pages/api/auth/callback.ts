@@ -79,11 +79,13 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
 
     // Store session in Cloudflare KV
     const sessionId = await createSession(env.WOS_SESSIONS, sessionData, expiresInSeconds);
+    console.log(`[Auth Callback] Session created in KV with ID: ${sessionId.substring(0, 8)}...`);
 
     // Set session cookie (isSecure=false for localhost development)
     setSessionCookie(cookies, sessionId, expiresInSeconds, isSecure);
+    console.log(`[Auth Callback] Session cookie set, isSecure: ${isSecure}`);
 
-    console.log(`User ${user.login} authenticated successfully`);
+    console.log(`[Auth Callback] User ${user.login} authenticated successfully, redirecting to: ${returnUrl}`);
 
     // Redirect to the original destination with success indicator
     const separator = returnUrl.includes('?') ? '&' : '?';

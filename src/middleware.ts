@@ -33,6 +33,9 @@ export const onRequest = defineMiddleware(async ({ request, cookies, redirect, l
   let session: Session | null = null;
   if (env.WOS_SESSIONS) {
     session = await getSession(env.WOS_SESSIONS, cookies);
+    console.log('[Auth Middleware] Session lookup result:', session ? `Found user: ${session.login}` : 'No session found');
+  } else {
+    console.error('[Auth Middleware] WOS_SESSIONS KV binding is not available!');
   }
 
   // Attach session to locals for use in pages
@@ -42,6 +45,11 @@ export const onRequest = defineMiddleware(async ({ request, cookies, redirect, l
 
   // Redirect to login if accessing protected path without session
   if (isProtectedPath && !session) {
+    console.log('[Auth Middleware] Redirecting to login - protected path without session', {
+      path: url.pathname,
+      hasKV: !!env.WOS_SESSIONS,
+      cookieHeader: request.headers.get('cookie')?.substring(0, 100) // Log first 100 chars of cookie header
+    });
     const returnUrl = encodeURIComponent(url.pathname + url.search);
     return redirect(`/?login=required&returnUrl=${returnUrl}`);
   }
