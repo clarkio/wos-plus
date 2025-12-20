@@ -1,14 +1,17 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { getCorsHeaders, createCorsPreflightResponse } from '../../lib/cors';
 export const prerender = false;
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-}
 
-export const GET: APIRoute = async ({ locals }) => {
+// Handle CORS preflight requests
+export const OPTIONS: APIRoute = async ({ request, locals }) => {
   const { env } = locals.runtime;
+  return createCorsPreflightResponse(request, env);
+};
+
+export const GET: APIRoute = async ({ request, locals }) => {
+  const { env } = locals.runtime;
+  const corsHeaders = getCorsHeaders(request, env);
 
   try {
     const supabase = createClient(
@@ -32,8 +35,9 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   const { env } = locals.runtime;
+  const corsHeaders = getCorsHeaders(request, env);
   const body = await request.json();
 
   try {
