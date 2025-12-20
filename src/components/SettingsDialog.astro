@@ -181,14 +181,26 @@ const { id = 'settings-dialog', title = 'Settings' } = Astro.props;
 
 <script is:inline define:vars={{ dialogId: id }}>
   (function() {
-    // Wait for DOM to be ready
     function initDialog() {
       const dialog = document.getElementById(dialogId);
-      
+
       if (!dialog) {
         console.error('Dialog not found:', dialogId);
         return;
       }
+
+      // Avoid double-initializing the same dialog element.
+      if (dialog.__wosSettingsDialogInitialized) {
+        // If API exists, still emit ready event so listeners that missed it can recover.
+        if (dialog.__api) {
+          dialog.dispatchEvent(
+            new CustomEvent('dialog-ready', { detail: dialog.__api, bubbles: true })
+          );
+        }
+        return;
+      }
+
+      dialog.__wosSettingsDialogInitialized = true;
 
       const closeBtn = dialog.querySelector('.settings-dialog__close');
       const cancelBtn = dialog.querySelector('.settings-dialog__cancel');
@@ -304,11 +316,14 @@ const { id = 'settings-dialog', title = 'Settings' } = Astro.props;
       );
     }
 
-    // Initialize immediately if DOM is ready, otherwise wait
+    // Initialize immediately if DOM is ready, otherwise wait.
+    // Also re-initialize after Astro client-side navigations.
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initDialog);
+      document.addEventListener('DOMContentLoaded', initDialog, { once: true });
     } else {
       initDialog();
     }
+
+    document.addEventListener('astro:page-load', initDialog);
   })();
 </script>

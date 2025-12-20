@@ -464,14 +464,36 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
   // Initialize dialog API reference
   let settingsDialog: any = null;
 
-  const initializeSettingsDialog = (event?: Event) => {
-    const dialog = document.getElementById(
-      'streamer-settings'
-    ) as HTMLDialogElement;
+  const waitForDialogApi = async (
+    dialogId: string,
+    { timeoutMs = 1500, intervalMs = 50 }: { timeoutMs?: number; intervalMs?: number } = {}
+  ): Promise<any | null> => {
+    const startedAt = Date.now();
 
-    if (dialog && (dialog as any).__api) {
-      settingsDialog = (dialog as any).__api;
+    while (Date.now() - startedAt < timeoutMs) {
+      const dialog = document.getElementById(dialogId) as any;
+      const api = dialog?.__api;
+      if (api) return api;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
+
+    return null;
+  };
+
+  const ensureSettingsDialogReady = async (): Promise<any | null> => {
+    const dialog = document.getElementById('streamer-settings') as any;
+    const api = dialog?.__api ?? (await waitForDialogApi('streamer-settings'));
+    if (!api) return null;
+
+    settingsDialog = api;
+
+    // Avoid re-registering callbacks across Astro navigations.
+    if (dialog && !dialog.__wosPlusCallbacksInitialized) {
+      dialog.__wosPlusCallbacksInitialized = true;
+      setupDialogCallbacks();
+    }
+
+    return api;
   };
 
   // Separate function to set up save callback
@@ -555,25 +577,8 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
       window.history.replaceState({}, '', cleanUrl.toString());
     }
 
-    // Initialize settings dialog
-    const dialog = document.getElementById('streamer-settings') as HTMLDialogElement;
-    if (dialog) {
-      // Try to get the API immediately if it exists
-      if ((dialog as any).__api) {
-        settingsDialog = (dialog as any).__api;
-        setupDialogCallbacks();
-      } else {
-        // If not ready yet, wait for the event
-        dialog.addEventListener(
-          'dialog-ready',
-          (event) => {
-            initializeSettingsDialog(event);
-            setupDialogCallbacks();
-          },
-          { once: true }
-        );
-      }
-    }
+    // Initialize settings dialog (robust across Astro navigations)
+    void ensureSettingsDialogReady();
 
     // Init menu button + dropdown behavior
     const initChannelMenus = () => {
@@ -636,17 +641,20 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
     // Set up settings button click handler (now inside the menu)
     const settingsBtn = document.getElementById('open-settings-btn');
     if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
-        if (!settingsDialog && dialog && (dialog as any).__api) {
-          settingsDialog = (dialog as any).__api;
-          setupDialogCallbacks();
-        }
-        if (settingsDialog) {
+      if (!(settingsBtn as any).__wosSettingsInit) {
+        (settingsBtn as any).__wosSettingsInit = true;
+        settingsBtn.addEventListener('click', async () => {
+          const api = await ensureSettingsDialogReady();
+          if (!api) {
+            console.warn('[WoS+] Settings dialog API not ready');
+            return;
+          }
+
           const urlParams = new URLSearchParams(window.location.search);
           populateSettingsFormFromUrl(urlParams);
-          settingsDialog.open();
-        }
-      });
+          api.open();
+        });
+      }
     }
 
     type ObsUrlHandlerConfig = {
@@ -659,6 +667,43 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
       errorAlertMessage: string;
       consoleErrorPrefix: string;
       promptMessage: string;
+    };
+
+    const buildUrlWithTokenAndSettings = (tokenValue: string): string => {
+      const currentUrl = new URL(window.location.href);
+      const finalUrl = new URL(window.location.origin + window.location.pathname);
+      const params = new URLSearchParams(currentUrl.search);
+
+      // Remove one-time params
+      params.delete('login_success');
+
+      // Ensure required settings exist on the URL. If they aren't on the URL yet,
+      // fall back to the current Settings dialog input values.
+      const mirrorInput = document.getElementById('streamer-mirror-url-input') as HTMLInputElement | null;
+      const twitchInput = document.getElementById('streamer-twitch-channel-input') as HTMLInputElement | null;
+      const clearSoundInput = document.getElementById('streamer-clear-sound-input') as HTMLInputElement | null;
+      const chatEnabledInput = document.getElementById('streamer-chat-enabled-input') as HTMLInputElement | null;
+      const wosEnabledInput = document.getElementById('streamer-wos-enabled-input') as HTMLInputElement | null;
+
+      if (!params.has('mirrorUrl') && mirrorInput?.value) {
+        params.set('mirrorUrl', mirrorInput.value);
+      }
+      if (!params.has('twitchChannel') && twitchInput?.value) {
+        params.set('twitchChannel', twitchInput.value);
+      }
+      if (!params.has('clearSound') && clearSoundInput) {
+        params.set('clearSound', clearSoundInput.checked ? 'true' : 'false');
+      }
+      if (!params.has('chat') && chatEnabledInput) {
+        params.set('chat', chatEnabledInput.checked ? 'true' : 'false');
+      }
+      if (!params.has('board') && wosEnabledInput) {
+        params.set('board', wosEnabledInput.checked ? 'true' : 'false');
+      }
+
+      params.set('obs', tokenValue);
+      finalUrl.search = params.toString();
+      return finalUrl.toString();
     };
 
     async function handleObsUrlRequest(config: ObsUrlHandlerConfig): Promise<void> {
@@ -695,43 +740,6 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
         const data: { token?: string; url?: string } = await response.json();
         const token = data.token;
         const apiUrl = data.url;
-
-        const buildUrlWithTokenAndSettings = (tokenValue: string): string => {
-          const currentUrl = new URL(window.location.href);
-          const finalUrl = new URL(window.location.origin + window.location.pathname);
-          const params = new URLSearchParams(currentUrl.search);
-
-          // Remove one-time params
-          params.delete('login_success');
-
-          // Ensure required settings exist on the URL. If they aren't on the URL yet,
-          // fall back to the current Settings dialog input values.
-          const mirrorInput = document.getElementById('streamer-mirror-url-input') as HTMLInputElement | null;
-          const twitchInput = document.getElementById('streamer-twitch-channel-input') as HTMLInputElement | null;
-          const clearSoundInput = document.getElementById('streamer-clear-sound-input') as HTMLInputElement | null;
-          const chatEnabledInput = document.getElementById('streamer-chat-enabled-input') as HTMLInputElement | null;
-          const wosEnabledInput = document.getElementById('streamer-wos-enabled-input') as HTMLInputElement | null;
-
-          if (!params.has('mirrorUrl') && mirrorInput?.value) {
-            params.set('mirrorUrl', mirrorInput.value);
-          }
-          if (!params.has('twitchChannel') && twitchInput?.value) {
-            params.set('twitchChannel', twitchInput.value);
-          }
-          if (!params.has('clearSound') && clearSoundInput) {
-            params.set('clearSound', clearSoundInput.checked ? 'true' : 'false');
-          }
-          if (!params.has('chat') && chatEnabledInput) {
-            params.set('chat', chatEnabledInput.checked ? 'true' : 'false');
-          }
-          if (!params.has('board') && wosEnabledInput) {
-            params.set('board', wosEnabledInput.checked ? 'true' : 'false');
-          }
-
-          params.set('obs', tokenValue);
-          finalUrl.search = params.toString();
-          return finalUrl.toString();
-        };
 
         // Prefer token-based reconstruction so we keep existing query params.
         let url: string | undefined;

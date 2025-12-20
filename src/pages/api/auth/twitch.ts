@@ -26,7 +26,7 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
   }
 
   // Check for return URL in query params
-  const returnUrl = url.searchParams.get('returnUrl') || '/player';
+  const returnUrl = url.searchParams.get('returnUrl') || '/';
 
   // Create Twitch client and generate state for CSRF protection
   const twitch = createTwitchClient(clientId, clientSecret, redirectUri);

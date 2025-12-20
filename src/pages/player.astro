@@ -393,6 +393,38 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
   // Initialize dialog API reference
   let settingsDialog: any = null;
 
+  const waitForDialogApi = async (
+    dialogId: string,
+    { timeoutMs = 1500, intervalMs = 50 }: { timeoutMs?: number; intervalMs?: number } = {}
+  ): Promise<any | null> => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+      const dialog = document.getElementById(dialogId) as any;
+      const api = dialog?.__api;
+      if (api) return api;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+
+    return null;
+  };
+
+  const ensureSettingsDialogReady = async (): Promise<any | null> => {
+    const dialog = document.getElementById('player-settings') as any;
+    const api = dialog?.__api ?? (await waitForDialogApi('player-settings'));
+    if (!api) return null;
+
+    settingsDialog = api;
+
+    // Avoid re-registering callbacks across Astro navigations.
+    if (dialog && !dialog.__wosPlusCallbacksInitialized) {
+      dialog.__wosPlusCallbacksInitialized = true;
+      setupDialogCallbacks();
+    }
+
+    return api;
+  };
+
   const populateSettingsFormFromUrl = (urlParams: URLSearchParams) => {
     const mirrorUrlInput = document.getElementById(
       'mirror-url-input'
@@ -437,16 +469,6 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
       clearSoundInput.checked = clearSoundParam
         ? clearSoundParam.toLowerCase() === 'true'
         : true;
-    }
-  };
-
-  const initializeSettingsDialog = (event?: Event) => {
-    const dialog = document.getElementById(
-      'player-settings'
-    ) as HTMLDialogElement;
-
-    if (dialog && (dialog as any).__api) {
-      settingsDialog = (dialog as any).__api;
     }
   };
 
@@ -533,27 +555,8 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
       window.history.replaceState({}, '', cleanUrl.toString());
     }
 
-    // Initialize settings dialog
-    const dialog = document.getElementById(
-      'player-settings'
-    ) as HTMLDialogElement;
-    if (dialog) {
-      // Try to get the API immediately if it exists
-      if ((dialog as any).__api) {
-        settingsDialog = (dialog as any).__api;
-        setupDialogCallbacks();
-      } else {
-        // If not ready yet, wait for the event
-        dialog.addEventListener(
-          'dialog-ready',
-          (event) => {
-            initializeSettingsDialog(event);
-            setupDialogCallbacks();
-          },
-          { once: true }
-        );
-      }
-    }
+    // Initialize settings dialog (robust across Astro navigations)
+    void ensureSettingsDialogReady();
 
     // Init menu button + dropdown behavior
     const initChannelMenus = () => {
@@ -616,19 +619,21 @@ const loginSuccess = url.searchParams.get('login_success') === 'true';
     // Set up settings button click handler (now inside the menu)
     const settingsBtn = document.getElementById('open-settings-btn');
     if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
-        // Ensure dialog is ready and callbacks are set up
-        if (!settingsDialog && dialog && (dialog as any).__api) {
-          settingsDialog = (dialog as any).__api;
-          setupDialogCallbacks();
-        }
-        if (settingsDialog) {
+      if (!(settingsBtn as any).__wosSettingsInit) {
+        (settingsBtn as any).__wosSettingsInit = true;
+        settingsBtn.addEventListener('click', async () => {
+          const api = await ensureSettingsDialogReady();
+          if (!api) {
+            console.warn('[WoS+] Settings dialog API not ready');
+            return;
+          }
+
           // Populate current values before opening
           const urlParams = new URLSearchParams(window.location.search);
           populateSettingsFormFromUrl(urlParams);
-          settingsDialog.open();
-        }
-      });
+          api.open();
+        });
+      }
     }
 
     // check for query parameters in the url
