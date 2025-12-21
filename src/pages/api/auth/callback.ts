@@ -3,6 +3,7 @@ export const prerender = false;
 import type { APIContext } from 'astro';
 import { createTwitchClient, getTwitchUser } from '../../../lib/twitch-oauth';
 import { createSession, setSessionCookie, clearSessionCookie } from '../../../lib/session';
+import { extractNestedReturnUrl } from '../../../lib/url-validation';
 
 const STATE_COOKIE_NAME = 'twitch_oauth_state';
 const RETURN_URL_COOKIE_NAME = 'auth_return_url';
@@ -27,26 +28,9 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
   const storedState = cookies.get(STATE_COOKIE_NAME)?.value;
   const rawReturnUrl = cookies.get(RETURN_URL_COOKIE_NAME)?.value || '/player';
 
-  // Normalize returnUrl so we only ever redirect to an internal path.
-  // This also guards against accidentally persisting '/?login=required&returnUrl=...' as the return URL.
-  let returnUrl = rawReturnUrl;
-  try {
-    const parsed = new URL(rawReturnUrl, 'https://example.invalid');
-
-    // If we somehow stored the login-required landing URL, extract the real returnUrl.
-    if (parsed.pathname === '/' && parsed.searchParams.get('login') === 'required') {
-      const embeddedReturnUrl = parsed.searchParams.get('returnUrl');
-      if (embeddedReturnUrl) {
-        returnUrl = embeddedReturnUrl;
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  if (!returnUrl.startsWith('/') || returnUrl.startsWith('//')) {
-    returnUrl = '/player';
-  }
+  // Validate and sanitize returnUrl to prevent open redirect attacks
+  // This also handles nested returnUrl from login-required redirects
+  const returnUrl = extractNestedReturnUrl(rawReturnUrl, '/player');
 
   // Clear OAuth cookies
   cookies.delete(STATE_COOKIE_NAME, { path: '/' });

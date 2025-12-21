@@ -3,6 +3,7 @@ export const prerender = false;
 import type { APIContext } from 'astro';
 import { generateState } from 'arctic';
 import { createTwitchClient } from '../../../lib/twitch-oauth';
+import { validateReturnUrl } from '../../../lib/url-validation';
 
 const STATE_COOKIE_NAME = 'twitch_oauth_state';
 const RETURN_URL_COOKIE_NAME = 'auth_return_url';
@@ -25,8 +26,9 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
     return new Response('Server configuration error', { status: 500 });
   }
 
-  // Check for return URL in query params
-  const returnUrl = url.searchParams.get('returnUrl') || '/';
+  // Check for return URL in query params and validate to prevent open redirect
+  const rawReturnUrl = url.searchParams.get('returnUrl');
+  const returnUrl = validateReturnUrl(rawReturnUrl, '/');
 
   // Create Twitch client and generate state for CSRF protection
   const twitch = createTwitchClient(clientId, clientSecret, redirectUri);
