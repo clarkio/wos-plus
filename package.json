@@ -1,12 +1,11 @@
 {
-  "name": "temp",
+  "name": "wos-plus",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "npm run build && wrangler dev",
-    "astro": "astro",
+    "preview": "npm run build && wrangler dev --config wrangler.jsonc",
     "db:fix-board-ids": "node db-scripts/fix-board-ids.mjs",
     "db:insert-words-from-boards": "node db-scripts/insert-words-from-boards.mjs"
   },
@@ -14,11 +13,13 @@
     "@astrojs/cloudflare": "^12.6.12",
     "@supabase/supabase-js": "^2.87.0",
     "@tmi.js/chat": "^0.4.1",
-    "astro": "^5.16.4",
+    "arctic": "^3.7.0",
+    "astro": "^5.16.6",
     "socket.io-client": "^2.5.0",
     "tmi.js": "^1.8.5"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251217.0",
     "@types/socket.io-client": "^1.4.36",
     "@types/tmi.js": "^1.8.6"
   }

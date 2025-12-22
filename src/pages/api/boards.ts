@@ -1,14 +1,18 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { getCorsHeaders, createCorsPreflightResponse } from '../../lib/cors';
+import { validateBoardInput, sanitizeBoardInput, type BoardInput } from '../../lib/validation';
 export const prerender = false;
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-}
 
-export const GET: APIRoute = async ({ locals }) => {
+// Handle CORS preflight requests
+export const OPTIONS: APIRoute = async ({ request, locals }) => {
   const { env } = locals.runtime;
+  return createCorsPreflightResponse(request, env);
+};
+
+export const GET: APIRoute = async ({ request, locals }) => {
+  const { env } = locals.runtime;
+  const corsHeaders = getCorsHeaders(request, env);
 
   try {
     const supabase = createClient(
@@ -32,9 +36,39 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   const { env } = locals.runtime;
-  const body = await request.json();
+  const corsHeaders = getCorsHeaders(request, env);
+
+  // Require authentication for write operations
+  if (!locals.session) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  let rawBody: unknown;
+  try {
+    rawBody = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Validate request body structure
+  const validation = validateBoardInput(rawBody);
+  if (!validation.valid) {
+    return new Response(JSON.stringify({ error: validation.error }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Sanitize input after validation
+  const body = sanitizeBoardInput(rawBody as BoardInput);
 
   try {
     const supabase = createClient(

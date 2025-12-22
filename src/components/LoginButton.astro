@@ -1,0 +1,57 @@
+---
+interface Props {
+  returnUrl?: string;
+  class?: string;
+}
+
+const { returnUrl, class: className } = Astro.props;
+const loginUrl = returnUrl
+  ? `/api/auth/twitch?returnUrl=${encodeURIComponent(returnUrl)}`
+  : '/api/auth/twitch';
+---
+
+<a href={loginUrl} class:list={['login-button', className]}>
+  <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+  </svg>
+  <span>Login with Twitch</span>
+</a>
+
+<style>
+  .login-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.5rem;
+    background: #9146FF;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .login-button:hover {
+    background: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(145, 70, 255, 0.4);
+  }
+
+  .login-button:active {
+    transform: translateY(0);
+  }
+
+  .login-button:focus-visible {
+    outline: 2px solid #c79cff;
+    outline-offset: 2px;
+  }
+
+  .twitch-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+</style>

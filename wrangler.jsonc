@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "wos-plus",
-  "compatibility_date": "2025-12-05",
+  "compatibility_date": "2025-11-18",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./dist/_worker.js/index.js",
   "send_metrics": false,
@@ -9,6 +9,13 @@
     "directory": "./dist",
     "binding": "ASSETS"
   },
+  // KV namespace for session storage
+  "kv_namespaces": [
+    {
+      "binding": "WOS_SESSIONS",
+      "id": "c0207f35e21f4d239578384c21f991c1"
+    }
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,

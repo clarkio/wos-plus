@@ -154,6 +154,132 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Channel Menu (Player/Streamer) */
+.channel-menu {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 20;
+}
+
+.channel-menu__button {
+  background: var(--bg-tertiary, #4b1a81);
+  border: 2px solid var(--border-primary, rgba(199, 156, 255, 0.4));
+  border-radius: 10px;
+  color: var(--text-primary, #dacfe6);
+  padding: 0.45rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.channel-menu__button:hover {
+  background: var(--bg-secondary, #7736c6);
+  border-color: var(--accent-violet, #c79cff);
+  color: var(--text-lightest, #f5efff);
+  transform: scale(1.05);
+}
+
+.channel-menu__button:active {
+  transform: scale(0.98);
+}
+
+.channel-menu__button:focus-visible {
+  outline: 2px solid var(--accent-violet, #c79cff);
+  outline-offset: 2px;
+}
+
+.channel-menu__button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.channel-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 220px;
+  background: var(--bg-secondary, #2a1050);
+  border: 1px solid var(--border-primary, rgba(199, 156, 255, 0.4));
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.channel-menu__user {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-primary, rgba(199, 156, 255, 0.2));
+  margin-bottom: 0.5rem;
+}
+
+.channel-menu__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.channel-menu__userText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.channel-menu__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-lightest, #f5efff);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.channel-menu__hint {
+  font-size: 0.8rem;
+  color: rgba(218, 207, 230, 0.7);
+}
+
+.channel-menu__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  color: var(--text-primary, #dacfe6);
+  background: transparent;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.channel-menu__item:hover {
+  background: var(--bg-tertiary, #4b1a81);
+  border-color: rgba(199, 156, 255, 0.25);
+}
+
+.channel-menu__item svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.channel-menu__logout {
+  color: #f87171;
+}
+
+.channel-menu__logout:hover {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
 .level-current {
   background: #000;
   display: flex;
