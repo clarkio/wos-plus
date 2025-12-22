@@ -119,7 +119,15 @@ export function getSessionIdFromCookie(cookies: AstroCookies): string | null {
 }
 
 /**
- * Sets the session cookie
+ * Sets the session cookie with secure defaults
+ *
+ * Security settings:
+ * - httpOnly: true - Prevents JavaScript access (XSS protection)
+ * - secure: isSecure - Only sent over HTTPS in production (allows localhost dev)
+ * - sameSite: 'lax' - CSRF protection while allowing OAuth redirects from Twitch
+ * - path: '/' - Cookie accessible across all paths
+ * - maxAge: controlled expiration matching KV TTL
+ *
  * @param cookies - Astro cookies object
  * @param sessionId - The session ID to set
  * @param maxAgeSeconds - Cookie max age in seconds

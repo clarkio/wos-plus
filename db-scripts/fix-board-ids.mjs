@@ -61,10 +61,19 @@ Options:
 }
 
 function normalizeId(value) {
-  return String(value ?? "")
+  const raw = String(value ?? "")
     .trim()
     .replace(/\s+/g, "")
     .toUpperCase();
+
+  // Validate: only allow letters A-Z, max 20 characters
+  if (!/^[A-Z]*$/.test(raw)) {
+    return null;
+  }
+  if (raw.length > 20) {
+    return null;
+  }
+  return raw || null;
 }
 
 function coerceSlots(slots) {
@@ -315,7 +324,7 @@ async function main() {
       const currentIdNorm = normalizeId(currentId);
       const desiredIdNorm = normalizeId(lastWord);
 
-      if (!desiredIdNorm) {
+      if (!currentIdNorm || !desiredIdNorm) {
         skipped += 1;
         continue;
       }

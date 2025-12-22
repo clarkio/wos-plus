@@ -9,6 +9,28 @@ const STATE_COOKIE_NAME = 'twitch_oauth_state';
 const RETURN_URL_COOKIE_NAME = 'auth_return_url';
 
 /**
+ * Timing-safe string comparison to prevent timing attacks
+ * Returns true if strings are equal, false otherwise
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  const encoder = new TextEncoder();
+  const aBytes = encoder.encode(a);
+  const bBytes = encoder.encode(b);
+
+  // Use crypto.subtle.timingSafeEqual if available (Node.js 16+)
+  // Otherwise, do a constant-time comparison manually
+  let result = 0;
+  for (let i = 0; i < aBytes.length; i++) {
+    result |= aBytes[i] ^ bBytes[i];
+  }
+  return result === 0;
+}
+
+/**
  * GET /api/auth/callback
  * Handles the OAuth callback from Twitch, exchanges code for tokens,
  * fetches user info, and creates a session
@@ -43,8 +65,9 @@ export async function GET({ request, redirect, cookies, locals }: APIContext) {
   }
 
   // Validate state to prevent CSRF attacks
-  if (!code || !state || state !== storedState) {
-    console.error('Invalid OAuth state', { hasCode: !!code, hasState: !!state, stateMatch: state === storedState });
+  // Use timing-safe comparison to prevent timing attacks
+  if (!code || !state || !storedState || !timingSafeEqual(state, storedState)) {
+    console.error('Invalid OAuth state', { hasCode: !!code, hasState: !!state, hasStoredState: !!storedState });
     return redirect('/?error=invalid_state');
   }
 

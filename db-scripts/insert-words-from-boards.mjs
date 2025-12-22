@@ -104,10 +104,38 @@ function coerceSlots(slots) {
   return null;
 }
 
+// Validation patterns
+const WORD_PATTERN = /^[a-z]+$/;
+const MAX_WORD_LENGTH = 20;
+const MIN_WORD_LENGTH = 4;
+const LANGUAGE_CODE_PATTERN = /^[a-z]{2,5}$/;
+
 function normalizeWord(value) {
-  return String(value ?? "")
+  const raw = String(value ?? "")
     .trim()
     .toLowerCase();
+
+  // Validate: only allow letters a-z, 4-20 characters
+  if (!WORD_PATTERN.test(raw)) {
+    return null;
+  }
+  if (raw.length < MIN_WORD_LENGTH || raw.length > MAX_WORD_LENGTH) {
+    return null;
+  }
+  return raw;
+}
+
+/**
+ * Validates and sanitizes a language code
+ */
+function validateLanguageCode(value) {
+  const code = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (!LANGUAGE_CODE_PATTERN.test(code)) {
+    return null;
+  }
+  return code;
 }
 
 function chunk(array, chunkSize) {
@@ -231,6 +259,15 @@ async function main() {
     auth: { persistSession: false },
   });
 
+  // Validate and sanitize language code
+  const languageCode = validateLanguageCode(args.languageCode);
+  if (!languageCode) {
+    console.error(
+      `Invalid language code: ${args.languageCode}. Must be 2-5 lowercase letters.`
+    );
+    process.exit(1);
+  }
+
   console.log(
     `Mode: ${
       args.apply ? "APPLY (inserts will be written)" : "DRY-RUN (no writes)"
@@ -238,7 +275,7 @@ async function main() {
   );
   console.log(`Boards page size: ${args.pageSize}`);
   console.log(`Insert chunk size: ${args.insertChunkSize}`);
-  console.log(`Language code: ${args.languageCode}`);
+  console.log(`Language code: ${languageCode}`);
   console.log(`Preload existing: ${args.preloadExisting ? "yes" : "no"}`);
 
   const nowIso = new Date().toISOString();
@@ -248,7 +285,7 @@ async function main() {
     console.log("Loading existing words...");
     existingNormalizedWords = await loadExistingNormalizedWords(
       supabase,
-      args.languageCode
+      languageCode
     );
     console.log(
       `Loaded ${existingNormalizedWords.size} existing normalized words.`
@@ -328,7 +365,7 @@ async function main() {
       const word = normalizedToWord.get(normalized) || normalized;
       return {
         id: crypto.randomUUID(),
-        language_code: args.languageCode,
+        language_code: languageCode,
         word,
         normalized_word: normalized,
         created_at: nowIso,
@@ -369,7 +406,7 @@ async function main() {
     // even when --no-preload-existing is used.
     const existingInDb = await fetchExistingNormalizedWordsForBatch(
       supabase,
-      args.languageCode,
+      languageCode,
       batch.map((row) => row.normalized_word)
     );
 
