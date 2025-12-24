@@ -149,11 +149,11 @@
   display: none;
 }
 
-.level-data-container > div:last-child {
+.level-data-container>div:last-child {
   margin-top: auto;
 }
 
-.level-data-container > div {
+.level-data-container>div {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
@@ -232,6 +232,7 @@
 
 /* Container queries for better responsiveness */
 @container level-data (max-width: 400px) {
+
   .hidden-letter-label,
   .fake-letter-label,
   .letters-label {
@@ -250,7 +251,7 @@
 }
 
 @container level-data (max-width: 250px) {
-  .level-data-container > div {
+  .level-data-container>div {
     flex-direction: column;
     align-items: flex-start;
     gap: 0;
@@ -301,6 +302,7 @@
 }
 
 @media (max-width: 600px) {
+
   .player-channel-data-container,
   .player-twitch-chat-frame {
     grid-column: 1 / -1;
@@ -332,7 +334,7 @@
     gap: 0.25rem;
   }
 
-  .level-data-container > div {
+  .level-data-container>div {
     gap: 0.25rem;
   }
 
@@ -374,5 +376,206 @@
   .level-record .icon {
     width: 1.5rem;
     height: 1.5rem;
+  }
+}
+
+/* Specific fix for 896x510 (Steam Deck / Handhelds) */
+@media (max-width: 900px) and (max-height: 600px) {
+  .player-wos-main-grid {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    grid-template-rows: auto 1fr 140px;
+    /* Stats, Chat, Bottom */
+    gap: 4px;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    padding: 4px;
+    box-sizing: border-box;
+  }
+
+  /* Board spans Top+Mid on the left */
+  .player-wos-board-container {
+    grid-column: 1 / 2;
+    grid-row: 1 / 3;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+
+  /* Stats Container - Top Right */
+  .player-channel-data-container {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    height: auto;
+    min-height: 60px;
+    /* Reduced min-height */
+    margin-bottom: 0;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-width: 2px;
+    padding: 2px;
+  }
+
+  /* Chat Frame - Mid Right */
+  .player-twitch-chat-frame {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    height: 100%;
+    min-height: 0;
+    border-width: 2px;
+  }
+
+  /* Bottom Container - Bottom Row, Full Width */
+  .player-bottom-container {
+    grid-column: 1 / 3;
+    grid-row: 3 / 4;
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    /* Give more space to words */
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  /* Correct Words Log (Left Bottom) */
+  #player-correct-words-log-container {
+    height: 100%;
+    border-width: 2px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Explicitly target the label span */
+  #player-correct-words-log-container>span {
+    font-size: 0.85rem !important;
+    font-weight: 600;
+    padding: 2px 4px;
+    line-height: 1.2;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .player-correct-words-log {
+    flex: 1;
+    overflow-y: auto;
+    border-width: 1px;
+    padding: 2px;
+  }
+
+  /* Level Data/Letters (Right Bottom) */
+  .player-level-data-grid-container {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .level-data-container {
+    border-width: 2px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    padding: 2px 4px;
+    gap: 0;
+  }
+
+  .level-data-container>div {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.1;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Typography Scaling - Aggressive reduction */
+  .letters,
+  .letters-label,
+  .hidden-letter,
+  .hidden-letter-label,
+  .fake-letter,
+  .fake-letter-label {
+    font-size: 0.85rem !important;
+    /* Force smaller size */
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  /* Log Word styling */
+  .player-correct-word {
+    font-size: 0.75rem;
+    padding: 0 2px;
+    display: inline-block;
+  }
+
+  .word-group__title {
+    font-size: 0.75rem;
+    font-weight: bold;
+    margin-right: 4px;
+  }
+
+  /* Compact Stats Components */
+  .level-current {
+    font-size: 0.8rem;
+    /* Reduced from 0.9rem */
+    padding: 2px 4px;
+    min-width: unset;
+    /* Remove fixed min-width to allow shrinking */
+    width: auto;
+    margin-right: 24px;
+    /* Space for settings button */
+    border-width: 1px;
+  }
+
+  .level-title {
+    font-size: 0.7rem;
+    /* Label size */
+    margin-bottom: 0;
+  }
+
+  .level-value {
+    font-size: 1.1rem;
+    /* Number size */
+    line-height: 1;
+  }
+
+  .level-record-container {
+    gap: 2px;
+    margin-top: 2px;
+  }
+
+  .level-record {
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    border-width: 1px;
+  }
+
+  .level-record .icon {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+
+  .level-record-value {
+    font-size: 0.8rem;
+  }
+
+  .made-by {
+    font-size: 0.65rem;
+    bottom: 2px;
+    right: 4px;
+  }
+
+  .settings-button {
+    width: 20px;
+    height: 20px;
+    padding: 2px;
+    top: 4px;
+    right: 4px;
   }
 }
