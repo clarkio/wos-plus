@@ -3,6 +3,16 @@ import '../styles/wos-plus-streamer.css';
 import WosBaseLayout from '../layouts/WosBaseLayout.astro';
 import Twitch from '../components/Icons/Twitch.astro';
 import SettingsDialog from '../components/SettingsDialog.astro';
+import Settings from '../components/Icons/Settings.astro';
+
+export const prerender = false;
+
+// Get session from middleware (guaranteed to exist on protected routes)
+const session = Astro.locals.session;
+
+// Check for login success
+const url = new URL(Astro.request.url);
+const loginSuccess = url.searchParams.get('login_success') === 'true';
 ---
 
 <WosBaseLayout
@@ -40,6 +50,33 @@ import SettingsDialog from '../components/SettingsDialog.astro';
         <label class='toggle-label'>
           <input
             type='checkbox'
+            id='streamer-chat-enabled-input'
+            name='chatEnabled'
+            class='toggle-input'
+          />
+          <span class='toggle-slider'></span>
+          <span class='toggle-text'>Show Twitch Chat</span>
+        </label>
+        <small class='form-help'>Toggle Twitch chat visibility</small>
+      </div>
+      <div class='form-group'>
+        <label class='toggle-label'>
+          <input
+            type='checkbox'
+            id='streamer-wos-enabled-input'
+            name='wosEnabled'
+            class='toggle-input'
+            checked
+          />
+          <span class='toggle-slider'></span>
+          <span class='toggle-text'>Show Words on Stream Board</span>
+        </label>
+        <small class='form-help'>Toggle the Words on Stream board visibility</small>
+      </div>
+      <div class='form-group'>
+        <label class='toggle-label'>
+          <input
+            type='checkbox'
             id='streamer-clear-sound-input'
             name='clearSound'
             class='toggle-input'
@@ -53,11 +90,113 @@ import SettingsDialog from '../components/SettingsDialog.astro';
     </form>
   </SettingsDialog>
 
+  {/* Login success toast */}
+  {loginSuccess && session && (
+    <div class="welcome-toast" id="welcome-toast">
+      <img src={session.profileImageUrl} alt="" class="toast-avatar" />
+      <div class="toast-content">
+        <span class="toast-title">Welcome, {session.displayName}!</span>
+        <span class="toast-message">You're now logged in with Twitch</span>
+      </div>
+      <button class="toast-close" id="toast-close" aria-label="Dismiss">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  )}
+
   <div class='streamer-wos-main-grid'>
     <div class='streamer-wos-board-container' id='wos-board'>
       <iframe id='streamer-wos-board-iframe' src='' loading='lazy'></iframe>
     </div>
     <div class='streamer-channel-data-container'>
+      <div class="channel-menu" data-channel-menu>
+        <button
+          type="button"
+          class="channel-menu__button"
+          data-channel-menu-button
+          aria-label="Open menu"
+          aria-haspopup="true"
+          aria-expanded="false"
+          title="Menu"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.5"></circle>
+            <circle cx="12" cy="12" r="1.5"></circle>
+            <circle cx="12" cy="19" r="1.5"></circle>
+          </svg>
+        </button>
+
+        <div class="channel-menu__dropdown" data-channel-menu-dropdown hidden>
+          {session && (
+            <div class="channel-menu__user">
+              <img src={session.profileImageUrl} alt="" class="channel-menu__avatar" loading="lazy" />
+              <div class="channel-menu__userText">
+                <div class="channel-menu__name">{session.displayName}</div>
+                <div class="channel-menu__hint">Logged in with Twitch</div>
+              </div>
+            </div>
+          )}
+
+          <button
+            id="open-settings-btn"
+            type="button"
+            class="channel-menu__item"
+            data-channel-menu-close
+          >
+            <Settings size={18} />
+            <span>Settings</span>
+          </button>
+
+          <button
+            id="generate-obs-url-btn"
+            type="button"
+            class="channel-menu__item"
+            data-channel-menu-close
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 4.86"></path>
+              <path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.4a5 5 0 0 0 7.07 7.07L14 19.14"></path>
+            </svg>
+            <span>Copy OBS Browser Source URL</span>
+          </button>
+
+          <button
+            id="regenerate-obs-url-btn"
+            type="button"
+            class="channel-menu__item"
+            data-channel-menu-close
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+              <polyline points="21 3 21 9 15 9"></polyline>
+            </svg>
+            <span>Regenerate OBS URL</span>
+          </button>
+
+          <a href="/" class="channel-menu__item" data-channel-menu-close>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M3 10.5L12 3l9 7.5"></path>
+              <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"></path>
+            </svg>
+            <span>Home</span>
+          </a>
+
+          {session && (
+            <a href="/api/auth/logout" class="channel-menu__item channel-menu__logout" data-channel-menu-close>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              <span>Logout</span>
+            </a>
+          )}
+        </div>
+      </div>
+
       <div id='overlay' class='overlay'>
         <div id='level-current' class='level-current'>
           <span id='level-title' class='level-title'>LEVEL</span>
@@ -274,18 +413,87 @@ import SettingsDialog from '../components/SettingsDialog.astro';
   };
 
   const spectator = new GameSpectator();
+  const populateSettingsFormFromUrl = (urlParams: URLSearchParams) => {
+    const mirrorUrlInput = document.getElementById(
+      'streamer-mirror-url-input'
+    ) as HTMLInputElement | null;
+    const twitchChannelInput = document.getElementById(
+      'streamer-twitch-channel-input'
+    ) as HTMLInputElement | null;
+    const clearSoundInput = document.getElementById(
+      'streamer-clear-sound-input'
+    ) as HTMLInputElement | null;
+    const chatEnabledInput = document.getElementById(
+      'streamer-chat-enabled-input'
+    ) as HTMLInputElement | null;
+    const wosEnabledInput = document.getElementById(
+      'streamer-wos-enabled-input'
+    ) as HTMLInputElement | null;
+
+    if (mirrorUrlInput && urlParams.has('mirrorUrl')) {
+      mirrorUrlInput.value = urlParams.get('mirrorUrl') || '';
+    }
+
+    if (twitchChannelInput && urlParams.has('twitchChannel')) {
+      twitchChannelInput.value = urlParams.get('twitchChannel') || '';
+    }
+
+    if (clearSoundInput) {
+      const clearSoundParam = urlParams.get('clearSound');
+      clearSoundInput.checked = clearSoundParam
+        ? clearSoundParam.toLowerCase() === 'true'
+        : true;
+    }
+
+    if (chatEnabledInput) {
+      const chatParam = urlParams.get('chat');
+      chatEnabledInput.checked = chatParam
+        ? chatParam.toLowerCase() === 'true'
+        : true;
+    }
+
+    if (wosEnabledInput) {
+      const boardParam = urlParams.get('board');
+      wosEnabledInput.checked = boardParam
+        ? boardParam.toLowerCase() === 'true'
+        : true;
+    }
+  };
+
 
   // Initialize dialog API reference
   let settingsDialog: any = null;
 
-  const initializeSettingsDialog = (event?: Event) => {
-    const dialog = document.getElementById(
-      'streamer-settings'
-    ) as HTMLDialogElement;
+  const waitForDialogApi = async (
+    dialogId: string,
+    { timeoutMs = 1500, intervalMs = 50 }: { timeoutMs?: number; intervalMs?: number } = {}
+  ): Promise<any | null> => {
+    const startedAt = Date.now();
 
-    if (dialog && (dialog as any).__api) {
-      settingsDialog = (dialog as any).__api;
+    while (Date.now() - startedAt < timeoutMs) {
+      const dialog = document.getElementById(dialogId) as any;
+      const api = dialog?.__api;
+      if (api) return api;
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
+
+    return null;
+  };
+
+  const ensureSettingsDialogReady = async (): Promise<any | null> => {
+    const dialog = document.getElementById('streamer-settings') as any;
+    const api = dialog?.__api ?? (await waitForDialogApi('streamer-settings'));
+    if (!api) return null;
+
+    settingsDialog = api;
+
+    // Avoid re-registering callbacks across Astro navigations.
+    if (dialog && !dialog.__wosPlusCallbacksInitialized) {
+      dialog.__wosPlusCallbacksInitialized = true;
+      setupDialogCallbacks();
+    }
+
+    return api;
   };
 
   // Separate function to set up save callback
@@ -305,6 +513,12 @@ import SettingsDialog from '../components/SettingsDialog.astro';
       // Handle clear sound toggle
       params.set('clearSound', data.clearSound ? 'true' : 'false');
 
+      // Handle chat enabled toggle
+      params.set('chat', data.chatEnabled ? 'true' : 'false');
+
+      // Handle WoS board visibility toggle
+      params.set('board', data.wosEnabled ? 'true' : 'false');
+
       // Reload the page with new parameters
       window.location.href = window.location.pathname + '?' + params.toString();
     });
@@ -318,34 +532,7 @@ import SettingsDialog from '../components/SettingsDialog.astro';
     // If either parameter is missing, show the settings dialog
     if (!hasMirrorUrl || !hasTwitchChannel) {
       // Pre-populate any existing values
-      if (hasMirrorUrl) {
-        const mirrorUrlInput = document.getElementById(
-          'streamer-mirror-url-input'
-        ) as HTMLInputElement;
-        if (mirrorUrlInput) {
-          mirrorUrlInput.value = urlParams.get('mirrorUrl') || '';
-        }
-      }
-
-      if (hasTwitchChannel) {
-        const twitchChannelInput = document.getElementById(
-          'streamer-twitch-channel-input'
-        ) as HTMLInputElement;
-        if (twitchChannelInput) {
-          twitchChannelInput.value = urlParams.get('twitchChannel') || '';
-        }
-      }
-
-      // Pre-populate clear sound checkbox
-      const clearSoundInput = document.getElementById(
-        'streamer-clear-sound-input'
-      ) as HTMLInputElement;
-      if (clearSoundInput) {
-        const clearSoundParam = urlParams.get('clearSound');
-        clearSoundInput.checked = clearSoundParam
-          ? clearSoundParam.toLowerCase() === 'true'
-          : true;
-      }
+      populateSettingsFormFromUrl(urlParams);
 
       // Ensure dialog is ready and set up callbacks before opening
       const attemptOpenDialog = () => {
@@ -373,16 +560,287 @@ import SettingsDialog from '../components/SettingsDialog.astro';
     // Reset dialog reference on each navigation
     settingsDialog = null;
 
-    // Initialize settings dialog
-    const dialog = document.getElementById('streamer-settings') as HTMLDialogElement;
-    if (dialog) {
-      // Try to get the API immediately if it exists
-      if ((dialog as any).__api) {
-        settingsDialog = (dialog as any).__api;
-      } else {
-        // If not ready yet, wait for the event
-        dialog.addEventListener('dialog-ready', initializeSettingsDialog, { once: true });
+    // Handle welcome toast close button and auto-dismiss
+    const welcomeToast = document.getElementById('welcome-toast');
+    const toastClose = document.getElementById('toast-close');
+    if (welcomeToast && toastClose) {
+      toastClose.addEventListener('click', () => {
+        welcomeToast.style.display = 'none';
+      });
+      // Auto-remove after animation completes (5 seconds)
+      setTimeout(() => {
+        if (welcomeToast) welcomeToast.remove();
+      }, 5000);
+      // Clean up login_success param from URL without reload
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('login_success');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    }
+
+    // Initialize settings dialog (robust across Astro navigations)
+    void ensureSettingsDialogReady();
+
+    // Init menu button + dropdown behavior
+    const initChannelMenus = () => {
+      const menus = document.querySelectorAll('[data-channel-menu]');
+      if (menus.length === 0) return;
+
+      const closeAllMenus = () => {
+        menus.forEach((menu) => {
+          const button = menu.querySelector('[data-channel-menu-button]') as HTMLButtonElement | null;
+          const dropdown = menu.querySelector('[data-channel-menu-dropdown]') as HTMLElement | null;
+          if (!button || !dropdown) return;
+          dropdown.hidden = true;
+          button.setAttribute('aria-expanded', 'false');
+        });
+      };
+
+      menus.forEach((menu) => {
+        const button = menu.querySelector('[data-channel-menu-button]') as HTMLButtonElement | null;
+        const dropdown = menu.querySelector('[data-channel-menu-dropdown]') as HTMLElement | null;
+        if (!button || !dropdown) return;
+
+        if ((button as any).__wosInit) return;
+        (button as any).__wosInit = true;
+
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = button.getAttribute('aria-expanded') === 'true';
+          closeAllMenus();
+          dropdown.hidden = isOpen;
+          button.setAttribute('aria-expanded', (!isOpen).toString());
+        });
+
+        menu.addEventListener('click', (e) => {
+          const target = e.target as HTMLElement | null;
+          if (!target) return;
+          const shouldClose = !!target.closest('[data-channel-menu-close]');
+          if (shouldClose) {
+            closeAllMenus();
+          }
+        });
+      });
+
+      const win = window as any;
+      if (!win.__wosChannelMenuGlobalListeners) {
+        win.__wosChannelMenuGlobalListeners = true;
+        document.addEventListener('click', (e) => {
+          const target = e.target as Node;
+          const clickedInMenu = Array.from(document.querySelectorAll('[data-channel-menu]')).some((m) =>
+            m.contains(target)
+          );
+          if (!clickedInMenu) closeAllMenus();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeAllMenus();
+        });
       }
+    };
+    initChannelMenus();
+
+    // Set up settings button click handler (now inside the menu)
+    const settingsBtn = document.getElementById('open-settings-btn');
+    if (settingsBtn) {
+      if (!(settingsBtn as any).__wosSettingsInit) {
+        (settingsBtn as any).__wosSettingsInit = true;
+        settingsBtn.addEventListener('click', async () => {
+          const api = await ensureSettingsDialogReady();
+          if (!api) {
+            console.warn('[WoS+] Settings dialog API not ready');
+            return;
+          }
+
+          const urlParams = new URLSearchParams(window.location.search);
+          populateSettingsFormFromUrl(urlParams);
+          api.open();
+        });
+      }
+    }
+
+    type ObsUrlHandlerConfig = {
+      button: HTMLButtonElement;
+      endpoint: string;
+      payload: unknown;
+      generatingLabel: string;
+      defaultLabel: string;
+      successClipboardMessage: string;
+      errorAlertMessage: string;
+      consoleErrorPrefix: string;
+      promptMessage: string;
+    };
+
+    const buildUrlWithTokenAndSettings = (tokenValue: string): string => {
+      const currentUrl = new URL(window.location.href);
+      const finalUrl = new URL(window.location.origin + window.location.pathname);
+      const params = new URLSearchParams(currentUrl.search);
+
+      // Remove one-time params
+      params.delete('login_success');
+
+      // Ensure required settings exist on the URL. If they aren't on the URL yet,
+      // fall back to the current Settings dialog input values.
+      const mirrorInput = document.getElementById('streamer-mirror-url-input') as HTMLInputElement | null;
+      const twitchInput = document.getElementById('streamer-twitch-channel-input') as HTMLInputElement | null;
+      const clearSoundInput = document.getElementById('streamer-clear-sound-input') as HTMLInputElement | null;
+      const chatEnabledInput = document.getElementById('streamer-chat-enabled-input') as HTMLInputElement | null;
+      const wosEnabledInput = document.getElementById('streamer-wos-enabled-input') as HTMLInputElement | null;
+
+      if (!params.has('mirrorUrl') && mirrorInput?.value) {
+        params.set('mirrorUrl', mirrorInput.value);
+      }
+      if (!params.has('twitchChannel') && twitchInput?.value) {
+        params.set('twitchChannel', twitchInput.value);
+      }
+      if (!params.has('clearSound') && clearSoundInput) {
+        params.set('clearSound', clearSoundInput.checked ? 'true' : 'false');
+      }
+      if (!params.has('chat') && chatEnabledInput) {
+        params.set('chat', chatEnabledInput.checked ? 'true' : 'false');
+      }
+      if (!params.has('board') && wosEnabledInput) {
+        params.set('board', wosEnabledInput.checked ? 'true' : 'false');
+      }
+
+      params.set('obs', tokenValue);
+      finalUrl.search = params.toString();
+      return finalUrl.toString();
+    };
+
+    async function handleObsUrlRequest(config: ObsUrlHandlerConfig): Promise<void> {
+      const {
+        button,
+        endpoint,
+        payload,
+        generatingLabel,
+        defaultLabel,
+        successClipboardMessage,
+        errorAlertMessage,
+        consoleErrorPrefix,
+        promptMessage,
+      } = config;
+
+      const labelEl = button.querySelector('span') as HTMLSpanElement | null;
+      const originalText = labelEl?.textContent || defaultLabel;
+
+      button.disabled = true;
+      if (labelEl) labelEl.textContent = generatingLabel;
+
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload ?? {}),
+        });
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(text || `Request failed: ${response.status}`);
+        }
+
+        const data: { token?: string; url?: string } = await response.json();
+        const token = data.token;
+        const apiUrl = data.url;
+
+        // Prefer token-based reconstruction so we keep existing query params.
+        let url: string | undefined;
+        if (token) {
+          url = buildUrlWithTokenAndSettings(token);
+        } else {
+          url = apiUrl;
+        }
+
+        if (!url) throw new Error('Missing URL in response');
+
+        try {
+          await navigator.clipboard.writeText(url);
+          window.alert(successClipboardMessage);
+        } catch {
+          // Fallback for non-secure contexts / blocked clipboard APIs
+          window.prompt(promptMessage, url);
+        }
+      } catch (err) {
+        console.error(consoleErrorPrefix, err);
+        window.alert(errorAlertMessage);
+      } finally {
+        button.disabled = false;
+        if (labelEl) labelEl.textContent = originalText;
+      }
+    }
+
+    // Generate/copy OBS URL (long-lived, token-based)
+    const obsBtn = document.getElementById('generate-obs-url-btn') as HTMLButtonElement | null;
+    if (obsBtn && !(obsBtn as any).__wosObsInit) {
+      (obsBtn as any).__wosObsInit = true;
+      obsBtn.addEventListener('click', () => {
+        void handleObsUrlRequest({
+          button: obsBtn,
+          endpoint: '/api/obs/session',
+          payload: {},
+          generatingLabel: 'Generating…',
+          defaultLabel: 'Copy OBS Browser Source URL',
+          successClipboardMessage: 'OBS Browser Source URL copied to clipboard.',
+          errorAlertMessage: 'Failed to generate OBS URL. Make sure you are logged in, then try again.',
+          consoleErrorPrefix: 'Failed to generate OBS URL:',
+          promptMessage: 'Copy this OBS Browser Source URL:',
+        });
+      });
+    }
+
+    // Regenerate OBS URL (rotates token; old URLs stop working)
+    const regenObsBtn = document.getElementById('regenerate-obs-url-btn') as HTMLButtonElement | null;
+    if (regenObsBtn && !(regenObsBtn as any).__wosObsRegenInit) {
+      (regenObsBtn as any).__wosObsRegenInit = true;
+      regenObsBtn.addEventListener('click', async () => {
+        const confirmed = window.confirm(
+          'Regenerate OBS URL? This will invalidate the previous OBS link you may have already added to OBS.'
+        );
+        if (!confirmed) return;
+
+        const labelEl = regenObsBtn.querySelector('span') as HTMLSpanElement | null;
+        const originalText = labelEl?.textContent || 'Regenerate OBS URL';
+        regenObsBtn.disabled = true;
+        if (labelEl) labelEl.textContent = 'Regenerating…';
+
+        try {
+          const response = await fetch('/api/obs/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ regenerate: true }),
+          });
+
+          if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error(text || `Request failed: ${response.status}`);
+          }
+
+          const data: { token?: string; url?: string } = await response.json();
+          const token = data.token;
+          const apiUrl = data.url;
+
+          let url: string | undefined;
+          if (token) {
+            // Match the generate flow by reusing the shared URL builder.
+            url = buildUrlWithTokenAndSettings(token);
+          } else {
+            url = apiUrl;
+          }
+
+          if (!url) throw new Error('Missing URL in response');
+
+          try {
+            await navigator.clipboard.writeText(url);
+            window.alert('New OBS Browser Source URL copied to clipboard.');
+          } catch {
+            window.prompt('Copy this new OBS Browser Source URL:', url);
+          }
+        } catch (err) {
+          console.error('Failed to regenerate OBS URL:', err);
+          window.alert('Failed to regenerate OBS URL. Make sure you are logged in, then try again.');
+        } finally {
+          regenObsBtn.disabled = false;
+          if (labelEl) labelEl.textContent = originalText;
+        }
+      });
     }
 
     // check for query parameters in the url
@@ -570,5 +1028,89 @@ import SettingsDialog from '../components/SettingsDialog.astro';
     color: var(--text-lightest, #f5efff);
     font-weight: 600;
     font-size: 0.95rem;
+  }
+
+  /* Streamer header actions moved into menu dropdown */
+
+  /* Welcome toast styles */
+  .welcome-toast {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    background: linear-gradient(135deg, #9146FF 0%, #7c3aed 100%);
+    border: 1px solid rgba(199, 156, 255, 0.5);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(145, 70, 255, 0.4);
+    z-index: 1000;
+    animation: slideDown 0.4s ease-out, fadeOut 0.3s ease-in 4.7s forwards;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
+
+  .toast-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .toast-title {
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.95rem;
+  }
+
+  .toast-message {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .toast-close {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    transition: color 0.2s;
+    margin-left: 0.5rem;
+  }
+
+  .toast-close:hover {
+    color: #fff;
+  }
+
+  .toast-close svg {
+    width: 18px;
+    height: 18px;
   }
 </style>

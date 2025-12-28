@@ -67,6 +67,13 @@ Required in **Cloudflare Pages dashboard** (not .env):
 
 - `SUPABASE_URL`: Supabase project URL
 - `SUPABASE_KEY`: Supabase service key
+- `TWITCH_CLIENT_ID`: Twitch OAuth application client ID
+- `TWITCH_CLIENT_SECRET`: Twitch OAuth application client secret
+- `TWITCH_REDIRECT_URI`: OAuth callback URL (e.g., `https://wos-plus.pages.dev/api/auth/callback`)
+
+### Cloudflare KV Bindings
+
+- `WOS_SESSIONS`: Session storage for authenticated users (configured in `wrangler.jsonc`)
 
 ## Project Conventions
 
@@ -122,12 +129,65 @@ const groupedWords = sortedWords.reduce((map, word) => {
 
 ## External Dependencies
 
-| Service     | Purpose                | Connection                            |
-| ----------- | ---------------------- | ------------------------------------- |
-| WoS API     | Game events            | `wss://wos2.gartic.es` (Socket.IO v2) |
-| Dictionary  | Word validation        | `https://clarkio.com/wos-dictionary`  |
-| Twitch Chat | Hidden word resolution | IRC via `@tmi.js/chat`                |
-| Supabase    | Board/word storage     | REST API (on 5-star clears)           |
+| Service      | Purpose                | Connection                            |
+| ------------ | ---------------------- | ------------------------------------- |
+| WoS API      | Game events            | `wss://wos2.gartic.es` (Socket.IO v2) |
+| Dictionary   | Word validation        | `https://clarkio.com/wos-dictionary`  |
+| Twitch Chat  | Hidden word resolution | IRC via `@tmi.js/chat`                |
+| Twitch OAuth | User authentication    | Arctic library → Twitch Helix API     |
+| Supabase     | Board/word storage     | REST API (on 5-star clears)           |
+
+## Authentication System
+
+### Overview
+
+Protected routes (`/player`, `/streamer`) require Twitch authentication. Uses **Arctic** for OAuth 2.0 and **Cloudflare KV** for session storage.
+
+### Key Files
+
+- [src/lib/twitch-oauth.ts](../src/lib/twitch-oauth.ts): `createTwitchClient()`, `getTwitchUser()` - OAuth client factory and user fetching
+- [src/lib/session.ts](../src/lib/session.ts): `Session` interface, `createSession()`, `getSession()` - KV-based session CRUD
+- [src/middleware.ts](../src/middleware.ts): Route protection, attaches `session` to `Astro.locals`
+- [src/pages/api/auth/](../src/pages/api/auth/): OAuth endpoints (`twitch.ts`, `callback.ts`, `logout.ts`)
+
+### Auth Flow
+
+```
+1. User visits /player or /streamer
+2. Middleware checks for session cookie
+3. If no session → redirect to /?login=required&returnUrl=/player
+4. User clicks "Login with Twitch" → /api/auth/twitch
+5. Redirect to Twitch OAuth with CSRF state
+6. User authorizes → Twitch redirects to /api/auth/callback
+7. Callback exchanges code for tokens, fetches user profile
+8. Creates session in KV, sets session cookie
+9. Redirects to original returnUrl
+```
+
+### Session Data
+
+```typescript
+interface Session {
+  userId: string; // Twitch user ID
+  login: string; // Twitch username (lowercase)
+  displayName: string; // Display name with casing
+  profileImageUrl: string; // Avatar URL
+  accessToken: string; // Twitch access token (stored in KV only)
+  refreshToken: string; // Twitch refresh token (stored in KV only)
+  expiresAt: number; // Token expiration timestamp
+}
+```
+
+### Components
+
+- [LoginButton.astro](../src/components/LoginButton.astro): Twitch-branded login button, accepts `returnUrl` prop
+- [UserMenu.astro](../src/components/UserMenu.astro): Dropdown with user info, navigation, logout
+
+### Adding Auth to a New Protected Route
+
+1. Add path to protected routes array in `src/middleware.ts`
+2. Access session via `Astro.locals.session` in page frontmatter
+3. Session is guaranteed to exist on protected routes (middleware redirects if not)
 
 ## Known Edge Cases
 
