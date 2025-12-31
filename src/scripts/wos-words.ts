@@ -33,8 +33,7 @@ export async function updateWordsDb(word: string) {
 
 export async function loadWordsFromDb() {
   try {
-    // Use a CORS proxy for local development
-    const url = 'https://clarkio.com/wos-dictionary';
+    const url = '/api/words';
 
     const response = await fetch(url);
 
