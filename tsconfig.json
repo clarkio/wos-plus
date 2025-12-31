@@ -1,5 +1,8 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "src/**/*", "public/**/*"],
-  "exclude": ["dist", "node_modules"]
+  "include": [".astro/types.d.ts", "src/**/*", "public/**/*", "tests/**/*"],
+  "exclude": ["dist", "node_modules"],
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  }
 }
