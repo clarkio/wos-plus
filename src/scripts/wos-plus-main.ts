@@ -1,7 +1,7 @@
 import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
-import { findAllMissingWords, loadWordsFromDb, updateWordsDb } from './wos-words';
+import { findAllMissingWords, loadWordsFromDb } from './wos-words';
 import { saveBoard } from './db-service';
 
 
@@ -355,7 +355,6 @@ export class GameSpectator {
 
     // Add to correct words list
     this.updateCorrectWordsDisplayed(word);
-    updateWordsDb(word);
     this.updateCurrentLevelSlots(username, word.split(''), index, hitMax);
 
     // If hitMax is true, set the current level big word
