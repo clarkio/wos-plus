@@ -1,0 +1,220 @@
+---
+export const prerender = false;
+
+import WosBaseLayout from '../layouts/WosBaseLayout.astro';
+import Twitch from '../components/Icons/Twitch.astro';
+
+const url = Astro.url;
+const error = url.searchParams.get('error');
+const redirect = url.searchParams.get('redirect');
+
+const errorMessages: Record<string, string> = {
+  invalid_request: 'Invalid authentication request',
+  invalid_state: 'Invalid authentication state. Please try again.',
+  authentication_failed: 'Authentication failed. Please try again.',
+  config_error: 'Server configuration error. Please contact support.',
+};
+
+const errorMessage = error ? errorMessages[error] || 'An error occurred. Please try again.' : null;
+---
+
+<WosBaseLayout
+  title="Sign In | WoS+ Words on Stream Plus"
+  description="Sign in with your Twitch account to access WoS+ features"
+  keywords="sign in, login, twitch, authentication, wos plus"
+>
+  <div class="signin-page">
+    <div class="signin-container">
+      <div class="signin-card">
+        <div class="logo-section">
+          <span class="brand-name">WoS<span class="plus">+</span></span>
+        </div>
+
+        <h1 class="signin-title">Sign in to continue</h1>
+        <p class="signin-subtitle">
+          Connect your Twitch account to access player and streamer features
+        </p>
+
+        {errorMessage && (
+          <div class="error-banner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        <a href="/api/auth/twitch" class="twitch-signin-btn">
+          <Twitch width={24} height={24} />
+          <span>Sign in with Twitch</span>
+        </a>
+
+        <p class="privacy-notice">
+          By signing in, you agree to share your Twitch username and email with WoS+.
+          We respect your privacy and will never share your information.
+        </p>
+
+        <div class="back-link">
+          <a href="/">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Back to home
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</WosBaseLayout>
+
+<style>
+  .signin-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #161625 0%, #2a1a4a 100%);
+    padding: 2rem;
+  }
+
+  .signin-container {
+    width: 100%;
+    max-width: 450px;
+  }
+
+  .signin-card {
+    background: rgba(30, 30, 46, 0.8);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 1.5rem;
+    padding: 3rem 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo-section {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .brand-name {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .brand-name .plus {
+    color: #8b5cf6;
+    font-weight: 800;
+  }
+
+  .signin-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    margin: 0 0 0.75rem 0;
+    text-align: center;
+  }
+
+  .signin-subtitle {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 2rem 0;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .error-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 0.75rem;
+    color: #fca5a5;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .error-banner svg {
+    flex-shrink: 0;
+  }
+
+  .twitch-signin-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background: #9146ff;
+    color: white;
+    border: none;
+    border-radius: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(145, 70, 255, 0.3);
+  }
+
+  .twitch-signin-btn:hover {
+    background: #7d3cd1;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(145, 70, 255, 0.4);
+  }
+
+  .twitch-signin-btn:active {
+    transform: translateY(0);
+  }
+
+  .privacy-notice {
+    margin: 1.5rem 0 0 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .back-link {
+    margin-top: 2rem;
+    text-align: center;
+  }
+
+  .back-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #8b5cf6;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
+  }
+
+  .back-link a:hover {
+    color: #a78bfa;
+  }
+
+  @media (max-width: 640px) {
+    .signin-page {
+      padding: 1rem;
+    }
+
+    .signin-card {
+      padding: 2rem 1.5rem;
+    }
+
+    .brand-name {
+      font-size: 2rem;
+    }
+
+    .signin-title {
+      font-size: 1.5rem;
+    }
+  }
+</style>

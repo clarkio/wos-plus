@@ -1,8 +1,13 @@
 ---
+export const prerender = false;
+
 import '../styles/wos-plus-streamer.css';
 import WosBaseLayout from '../layouts/WosBaseLayout.astro';
 import Twitch from '../components/Icons/Twitch.astro';
 import SettingsDialog from '../components/SettingsDialog.astro';
+import UserMenu from '../components/UserMenu.astro';
+
+const user = Astro.locals.user;
 ---
 
 <WosBaseLayout
@@ -58,6 +63,15 @@ import SettingsDialog from '../components/SettingsDialog.astro';
       <iframe id='streamer-wos-board-iframe' src='' loading='lazy'></iframe>
     </div>
     <div class='streamer-channel-data-container'>
+      <div class='streamer-header-controls'>
+        {user && (
+          <UserMenu
+            username={user.username}
+            displayName={user.display_name}
+            profileImage={user.profile_image_url}
+          />
+        )}
+      </div>
       <div id='overlay' class='overlay'>
         <div id='level-current' class='level-current'>
           <span id='level-title' class='level-title'>LEVEL</span>
@@ -459,6 +473,17 @@ import SettingsDialog from '../components/SettingsDialog.astro';
   :global(.widget-mode .wrapper) {
     max-width: 100% !important;
     padding: 0 !important;
+  }
+
+  /* Header controls */
+  .streamer-header-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 10;
   }
 
   /* Settings form styles */

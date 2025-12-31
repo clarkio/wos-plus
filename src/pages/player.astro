@@ -1,9 +1,14 @@
 ---
+export const prerender = false;
+
 import '../styles/wos-plus-player.css';
 import WosBaseLayout from '../layouts/WosBaseLayout.astro';
 import Twitch from '../components/Icons/Twitch.astro';
 import Settings from '../components/Icons/Settings.astro';
 import SettingsDialog from '../components/SettingsDialog.astro';
+import UserMenu from '../components/UserMenu.astro';
+
+const user = Astro.locals.user;
 ---
 
 <WosBaseLayout
@@ -86,15 +91,24 @@ import SettingsDialog from '../components/SettingsDialog.astro';
       <iframe id='player-wos-board-iframe' src='' loading='lazy'></iframe>
     </div>
     <div class='player-channel-data-container'>
-      <button
-        id='open-settings-btn'
-        class='settings-button'
-        type='button'
-        aria-label='Open settings'
-        title='Settings'
-      >
-        <Settings size={24} />
-      </button>
+      <div class='player-header-controls'>
+        {user && (
+          <UserMenu
+            username={user.username}
+            displayName={user.display_name}
+            profileImage={user.profile_image_url}
+          />
+        )}
+        <button
+          id='open-settings-btn'
+          class='settings-button'
+          type='button'
+          aria-label='Open settings'
+          title='Settings'
+        >
+          <Settings size={24} />
+        </button>
+      </div>
       <div id='overlay' class='overlay'>
         <div id='level-current' class='level-current'>
           <span id='level-title' class='level-title'>LEVEL</span>
@@ -583,6 +597,17 @@ import SettingsDialog from '../components/SettingsDialog.astro';
   :global(.widget-mode .wrapper) {
     max-width: 100% !important;
     padding: 0 !important;
+  }
+
+  /* Header controls */
+  .player-header-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 10;
   }
 
   /* Settings form styles */
