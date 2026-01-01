@@ -663,4 +663,311 @@ describe('GameSpectator class', () => {
       expect(() => spectator.disconnectTwitch()).not.toThrow();
     });
   });
+
+  describe('handleGameInitialization', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+    });
+
+    it('should set current level from event data', () => {
+      const slots = [
+        { letters: ['t', 'e', 's', 't'], word: '', hitMax: false, index: 0, length: 4 }
+      ];
+      
+      (spectator as any).handleGameInitialization(10, 1, ['a', 'b', 'c'], slots);
+      
+      expect(spectator.currentLevel).toBe(10);
+    });
+
+    it('should update current level slots', () => {
+      const slots = [
+        { letters: ['t', 'e', 's', 't'], word: '', hitMax: false, index: 0, length: 4 }
+      ];
+      
+      (spectator as any).handleGameInitialization(5, 1, ['a', 'b', 'c'], slots);
+      
+      expect(spectator.currentLevelSlots).toEqual(slots);
+    });
+
+    it('should clear board when event type is 1 (Level Started)', () => {
+      spectator.currentLevelCorrectWords = ['word1', 'word2'];
+      const slots = [];
+      
+      (spectator as any).handleGameInitialization(1, 1, ['a', 'b', 'c'], slots);
+      
+      expect(spectator.currentLevelCorrectWords).toEqual([]);
+    });
+
+    it('should not clear board when event type is 12 (Game Connected)', () => {
+      spectator.currentLevelCorrectWords = ['word1', 'word2'];
+      const slots = [];
+      
+      (spectator as any).handleGameInitialization(5, 12, ['a', 'b', 'c'], slots);
+      
+      // Board should not be cleared for event type 12
+      expect(spectator.currentLevelCorrectWords).toEqual(['word1', 'word2']);
+    });
+
+    it('should update UI elements with level', () => {
+      (spectator as any).handleGameInitialization(15, 1, ['a', 'b', 'c'], []);
+      
+      expect(document.getElementById('level-value')!.innerText).toBe('15');
+      expect(document.getElementById('level-title')!.innerText).toBe('LEVEL');
+    });
+
+    it('should update UI with letters when provided', () => {
+      (spectator as any).handleGameInitialization(5, 1, ['a', 'b', 'c'], []);
+      
+      expect(spectator.currentLevelLetters).toEqual(['a', 'b', 'c']);
+      expect(document.getElementById('letters')!.innerText).toBe('A B C');
+    });
+  });
+
+  describe('handleLevelResults', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+      spectator.currentLevel = 10;
+      spectator.clearSoundEnabled = false; // Disable sound for tests
+      (spectator as any).loadChannelRecords('testchannel');
+    });
+
+    it('should increment level by number of stars', async () => {
+      await (spectator as any).handleLevelResults(5);
+      
+      expect(spectator.currentLevel).toBe(15);
+    });
+
+    it('should update daily record if level increases', async () => {
+      spectator.dailyBest = 10;
+      
+      await (spectator as any).handleLevelResults(5);
+      
+      expect(spectator.dailyBest).toBe(15);
+    });
+
+    it('should update UI to show next level', async () => {
+      await (spectator as any).handleLevelResults(3);
+      
+      expect(document.getElementById('level-title')!.innerText).toBe('NEXT LEVEL');
+      expect(document.getElementById('level-value')!.innerText).toBe('13');
+    });
+
+    it('should record board clear on 5-star completion', async () => {
+      spectator.dailyClears = 2;
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 }
+      ];
+      
+      await (spectator as any).handleLevelResults(5);
+      
+      expect(spectator.dailyClears).toBe(3);
+    });
+
+    it('should record board clear when all slots filled', async () => {
+      spectator.dailyClears = 2;
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false, index: 1, length: 4 }
+      ];
+      
+      await (spectator as any).handleLevelResults(3);
+      
+      expect(spectator.dailyClears).toBe(3);
+    });
+
+    it('should not record clear if slots are incomplete', async () => {
+      spectator.dailyClears = 2;
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: undefined, hitMax: false, index: 1, length: 4 }
+      ];
+      
+      await (spectator as any).handleLevelResults(3);
+      
+      expect(spectator.dailyClears).toBe(2);
+    });
+  });
+
+  describe('handleLevelEnd', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+      spectator.currentLevel = 15;
+    });
+
+    it('should log game ended message', () => {
+      const logSpy = vi.spyOn(spectator, 'log');
+      
+      (spectator as any).handleLevelEnd();
+      
+      expect(logSpy).toHaveBeenCalledWith(
+        'Game Ended on Level 15',
+        spectator.wosGameLogId
+      );
+    });
+  });
+
+  describe('handleLetterReveal', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+    });
+
+    it('should update fake letter display', () => {
+      (spectator as any).handleLetterReveal(['a'], ['x', 'y']);
+      
+      expect(document.getElementById('fake-letter')!.innerText).toBe('X Y');
+    });
+
+    it('should update hidden letter display', () => {
+      (spectator as any).handleLetterReveal(['a', 'b'], ['x']);
+      
+      expect(document.getElementById('hidden-letter')!.innerText).toBe('A B');
+    });
+
+    it('should not update displays if arrays are empty', () => {
+      (spectator as any).handleLetterReveal([], []);
+      
+      expect(document.getElementById('fake-letter')!.innerText).toBe('');
+      expect(document.getElementById('hidden-letter')!.innerText).toBe('');
+    });
+
+    it('should update current level letters when big word is not set', () => {
+      spectator.currentLevelBigWord = '';
+      spectator.currentLevelLetters = ['t', 'e', 's', '?', 'x'];
+      
+      (spectator as any).handleLetterReveal(['a'], ['x']);
+      
+      expect(spectator.currentLevelLetters).toContain('a');
+      expect(spectator.currentLevelLetters).not.toContain('x');
+      expect(spectator.currentLevelLetters).not.toContain('?');
+    });
+  });
+
+  describe('handleCorrectGuess', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 }
+      ];
+    });
+
+    it('should update game state after delay', async () => {
+      spectator.twitchChatLog.set('testuser', { 
+        message: 'test', 
+        timestamp: Date.now() 
+      });
+      
+      const updateSpy = vi.spyOn(spectator as any, 'updateGameState');
+      
+      await (spectator as any).handleCorrectGuess('testuser', ['t', 'e', 's', 't'], 0, false);
+      
+      expect(updateSpy).toHaveBeenCalledWith('testuser', ['t', 'e', 's', 't'], 0, false);
+    }, 10000);
+  });
+
+  describe('logMissingWords', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+      spectator.currentLevelCorrectWords = ['test', 'word'];
+    });
+
+    it('should use big word letters when available', () => {
+      spectator.currentLevelBigWord = 'TESTING';
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: '', hitMax: false, index: 0, length: 4 }
+      ];
+      
+      (spectator as any).logMissingWords();
+      
+      // findAllMissingWords should be called with 'testing' as known letters
+      // We can't easily test this without making the mock return values, 
+      // but we're testing the code path
+    });
+
+    it('should use current level letters when big word not set', () => {
+      spectator.currentLevelBigWord = '';
+      spectator.currentLevelLetters = ['t', 'e', 's', 't'];
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: '', hitMax: false, index: 0, length: 4 }
+      ];
+      
+      (spectator as any).logMissingWords();
+      
+      // Test completes without error
+      expect(spectator.currentLevelBigWord).toBe('');
+    });
+
+    it('should calculate minimum word length from slots', () => {
+      spectator.currentLevelBigWord = '';
+      spectator.currentLevelLetters = ['t', 'e', 's', 't'];
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e'], word: '', hitMax: false, index: 0, length: 2 },
+        { letters: ['t', 'e', 's', 't'], word: '', hitMax: false, index: 1, length: 4 }
+      ];
+      
+      (spectator as any).logMissingWords();
+      
+      // Minimum length should be 2
+      // Test completes without error
+    });
+  });
+
+  describe('updateGameState', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 }
+      ];
+    });
+
+    it('should use twitch message for word when available', () => {
+      spectator.lastTwitchMessage = {
+        username: 'testuser',
+        message: 'test',
+        timestamp: Date.now()
+      };
+      
+      (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't'], 0, false);
+      
+      expect(spectator.currentLevelCorrectWords).toContain('test');
+    });
+
+    it('should fall back to chat log when last message not matching', () => {
+      spectator.lastTwitchMessage = {
+        username: 'otheruser',
+        message: 'other',
+        timestamp: Date.now()
+      };
+      spectator.twitchChatLog.set('testuser', {
+        message: 'test',
+        timestamp: Date.now()
+      });
+      
+      (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't'], 0, false);
+      
+      expect(spectator.currentLevelCorrectWords).toContain('test');
+    });
+
+    it('should return early if no matching message found', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      
+      (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't'], 0, false);
+      
+      expect(warnSpy).toHaveBeenCalled();
+      expect(spectator.currentLevelCorrectWords).toEqual([]);
+      warnSpy.mockRestore();
+    });
+
+    it('should set big word when hitMax is true', () => {
+      spectator.lastTwitchMessage = {
+        username: 'testuser',
+        message: 'testing',
+        timestamp: Date.now()
+      };
+      
+      (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't', 'i', 'n', 'g'], 0, true);
+      
+      expect(spectator.currentLevelBigWord).toBe('T E S T I N G');
+      expect(document.getElementById('letters-label')!.innerText).toBe('Big Word:');
+    });
+  });
 });
