@@ -8,6 +8,22 @@ import type { TwitchWorkerMessage, TwitchWorkerResult } from '@scripts/twitch-ch
  * messages matching /^[a-zA-Z]{4,12}$/ pattern.
  */
 
+// Type for mock Worker global
+interface MockWorkerGlobalScope {
+  postMessage: ReturnType<typeof vi.fn>;
+  onmessage: ((event: MessageEvent) => void) | null;
+  onerror: ((event: ErrorEvent) => void) | null;
+  onmessageerror: ((event: MessageEvent) => void) | null;
+  addEventListener: ReturnType<typeof vi.fn>;
+  removeEventListener: ReturnType<typeof vi.fn>;
+  dispatchEvent: ReturnType<typeof vi.fn>;
+}
+
+// Helper to get mock postMessage
+function getMockPostMessage(): ReturnType<typeof vi.fn> {
+  return ((global as any).self as MockWorkerGlobalScope).postMessage;
+}
+
 describe('twitch-chat-worker', () => {
   let worker: Worker;
   let messageHandler: (event: MessageEvent) => void;
@@ -23,7 +39,7 @@ describe('twitch-chat-worker', () => {
     const listeners: Record<string, Function> = {};
 
     // Create mock worker environment
-    global.self = {
+    (global as any).self = {
       postMessage: mockPostMessage,
       onmessage: null,
       onerror: null,
@@ -31,7 +47,7 @@ describe('twitch-chat-worker', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
-    } as any;
+    } as MockWorkerGlobalScope;
 
     // Import the worker module (this will set up the message handlers)
     // Note: In a real environment, the worker code would be loaded in a separate context
@@ -71,7 +87,7 @@ describe('twitch-chat-worker', () => {
 
   describe('message filtering', () => {
     it('should accept valid 4-letter word', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'test',
@@ -89,7 +105,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should accept valid 12-letter word', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'abcdefghijkl',
@@ -107,7 +123,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should accept mixed case letters', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'WoRdS',
@@ -125,7 +141,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should reject messages with less than 4 characters', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'cat',
@@ -138,7 +154,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should reject messages with more than 12 characters', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'abcdefghijklm',
@@ -151,7 +167,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should reject messages with numbers', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'test123',
@@ -164,7 +180,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should reject messages with special characters', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'test!',
@@ -177,7 +193,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should reject messages with spaces', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'test word',
@@ -190,7 +206,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should reject empty messages', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: '',
@@ -205,7 +221,7 @@ describe('twitch-chat-worker', () => {
 
   describe('data transformation', () => {
     it('should convert username to lowercase', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'word',
@@ -222,7 +238,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should convert message to lowercase', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'WORD',
@@ -239,7 +255,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should preserve timestamp', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const timestamp = 1234567890;
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
@@ -257,7 +273,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should include correct message type', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'TestUser',
         message: 'word',
@@ -276,13 +292,13 @@ describe('twitch-chat-worker', () => {
 
   describe('error handling', () => {
     it('should handle malformed message data', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
-      // Simulate a message with missing fields
-      const malformedData = null as any;
+      // Simulate a message with missing fields (null data)
+      const malformedData = null;
 
-      messageHandler(new MessageEvent('message', { data: malformedData }));
+      messageHandler(new MessageEvent('message', { data: malformedData as unknown as TwitchWorkerMessage }));
 
       expect(mockPostMessage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -294,14 +310,14 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should handle undefined username', () => {
-      const mockPostMessage = (global.self as any).postMessage;
-      const message = {
+      const mockPostMessage = getMockPostMessage();
+      const message: Partial<TwitchWorkerMessage> = {
         username: undefined,
         message: 'word',
         timestamp: Date.now()
-      } as any;
+      };
 
-      messageHandler(new MessageEvent('message', { data: message }));
+      messageHandler(new MessageEvent('message', { data: message as TwitchWorkerMessage }));
 
       expect(mockPostMessage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -311,14 +327,14 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should handle undefined message', () => {
-      const mockPostMessage = (global.self as any).postMessage;
-      const message = {
+      const mockPostMessage = getMockPostMessage();
+      const message: Partial<TwitchWorkerMessage> = {
         username: 'TestUser',
         message: undefined,
         timestamp: Date.now()
-      } as any;
+      };
 
-      messageHandler(new MessageEvent('message', { data: message }));
+      messageHandler(new MessageEvent('message', { data: message as TwitchWorkerMessage }));
 
       expect(mockPostMessage).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -355,7 +371,7 @@ describe('twitch-chat-worker', () => {
 
   describe('edge cases', () => {
     it('should handle exactly 4 characters', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'user',
         message: 'word',
@@ -368,7 +384,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should handle exactly 12 characters', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'user',
         message: 'exactlytwelv',
@@ -381,7 +397,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should reject 3 characters', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'user',
         message: 'cat',
@@ -394,7 +410,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should reject 13 characters', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const message: TwitchWorkerMessage = {
         username: 'user',
         message: 'thirteenlettr',
@@ -407,7 +423,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should handle multiple valid messages in sequence', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const messages: TwitchWorkerMessage[] = [
         { username: 'user1', message: 'word', timestamp: 1000 },
         { username: 'user2', message: 'test', timestamp: 2000 },
@@ -422,7 +438,7 @@ describe('twitch-chat-worker', () => {
     });
 
     it('should filter out invalid messages from sequence', () => {
-      const mockPostMessage = (global.self as any).postMessage;
+      const mockPostMessage = getMockPostMessage();
       const messages: TwitchWorkerMessage[] = [
         { username: 'user1', message: 'word', timestamp: 1000 },      // valid
         { username: 'user2', message: 'hi', timestamp: 2000 },        // invalid (too short)
