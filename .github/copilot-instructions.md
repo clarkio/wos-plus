@@ -9,6 +9,47 @@
 
 Built with **Astro 5 + TypeScript**, deployed to **Cloudflare Pages** with Workers for serverless API routes.
 
+### Suitable Tasks for AI Agent
+
+This project is well-suited for:
+- Bug fixes in game state tracking or UI rendering
+- UI/UX improvements and styling enhancements
+- Documentation updates
+- Adding new game event handlers
+- Refactoring existing code for clarity
+- Performance optimizations
+
+Avoid tasks requiring:
+- Changes to external API integrations (WoS, Twitch) without testing
+- Modifications to core WebSocket message processing without understanding event flow
+- Changes to dictionary algorithms without understanding letter matching logic
+
+## Setup Instructions
+
+### Prerequisites
+- Node.js 20+
+- npm (comes with Node.js)
+
+### Getting Started
+```bash
+# Install dependencies
+npm install
+
+# Start development server (runs on http://localhost:4321)
+npm run dev
+
+# Build for production (outputs to ./dist)
+npm run build
+
+# Preview production build locally (requires wrangler)
+npm run preview
+```
+
+### Environment Setup
+- No `.env` file needed for local development
+- Production environment variables are configured in Cloudflare Pages dashboard
+- Database scripts require `SUPABASE_URL` and `SUPABASE_KEY` environment variables
+
 ## Architecture
 
 ### Core Components
@@ -51,15 +92,34 @@ Level ends → logMissingWords() → findAllMissingWords(knownLetters, minLength
 
 ## Development Workflows
 
+### Build and Development Commands
 ```bash
 npm run dev         # Astro dev server on http://localhost:4321
-npm run build       # Build for Cloudflare Pages
+npm run build       # Build for Cloudflare Pages (outputs to ./dist)
 npm run preview     # Build + Wrangler local preview (tests Workers)
 
 # Database scripts (require SUPABASE_URL and SUPABASE_KEY env vars)
 npm run db:fix-board-ids
 npm run db:insert-words-from-boards -- --apply
 ```
+
+### Code Quality
+- **No linter configured**: Follow existing code style in each file
+- **TypeScript strict mode**: Enabled via `astro/tsconfigs/strict`
+- **Build validation**: Always run `npm run build` after code changes to ensure TypeScript compilation succeeds
+
+### Testing
+- **No automated test suite exists**: Manual testing required
+- **Manual testing approach**:
+  1. Start dev server with `npm run dev`
+  2. Open player view: `http://localhost:4321/player.astro?mirrorUrl=ROOM_ID&twitchChannel=CHANNEL`
+  3. Open streamer view: `http://localhost:4321/streamer.astro?mirrorUrl=ROOM_ID&twitchChannel=CHANNEL`
+  4. Connect to an active WoS game to observe behavior
+- **Validation checklist**:
+  - Check browser console for errors
+  - Verify WebSocket connections establish successfully
+  - Confirm UI updates when game events occur
+  - Test with different query parameters
 
 ### Environment Variables
 
@@ -137,3 +197,59 @@ See [LIST.todo](../LIST.todo) for active bugs. Critical scenarios:
 - Chat message timing mismatches for hidden word resolution
 - Big word detection when fake letters still present
 - Slot-based missed word detection not yet implemented (see [plan-slotBasedMissedWordsDetection.prompt.md](../plan-slotBasedMissedWordsDetection.prompt.md))
+
+## Common Pitfalls and Important Warnings
+
+### Critical: Web Workers Communication
+- **NEVER** use synchronous patterns with Web Workers
+- **ALWAYS** use `postMessage()` for communication between main thread and workers
+- Workers run in separate contexts - they cannot access DOM or share variables directly
+- Example: Don't try to return values from worker functions; use message passing instead
+
+### WebSocket Event Processing
+- **Order matters**: Some events depend on previous state (e.g., CorrectGuess requires LevelStart)
+- **Event type numbers are magic**: Don't change event type constants without understanding WoS protocol
+- **Hidden word resolution**: Requires correlating WoS events with Twitch chat timestamps - timing is critical
+
+### Astro-Specific
+- **No SSR for game state**: All game logic must run in `<script>` tags marked for client execution
+- **Query params are required**: Pages won't work without `mirrorUrl` and `twitchChannel` parameters
+- **ViewTransitions**: Always listen to both `DOMContentLoaded` AND `astro:page-load` events
+
+### Cloudflare Pages
+- **API routes need `prerender = false`**: All API routes in `src/pages/api/` must disable prerendering
+- **Environment access pattern**: Use `locals.runtime.env` not `process.env` in API routes
+- **Workers limitations**: Some Node.js APIs unavailable in Workers runtime
+
+### State Management
+- **No persistence across page reloads**: All game state is in-memory (except localStorage for records)
+- **Slots array is critical**: The `currentLevelSlots` array tracks word positions - corruption breaks everything
+- **Dictionary must load**: If dictionary fails to load, word suggestions won't work
+
+### Performance
+- **Dictionary operations are synchronous**: Large dictionary operations can block UI
+- **DOM manipulation is frequent**: Use efficient selectors; cache element references when possible
+- **WebSocket message volume**: WoS can send many messages rapidly during active gameplay
+
+## File Organization Patterns
+
+### Page Files (`src/pages/*.astro`)
+- Contain both HTML layout and client-side `<script>` logic
+- Query parameter handling in `initializePage()`
+- Settings dialog setup in `setupDialogCallbacks()`
+- GameSpectator instance created and configured per page
+
+### Script Files (`src/scripts/*.ts`)
+- Pure TypeScript with no Astro dependencies
+- Can be imported in both pages and workers
+- Worker files have `self` context, not `window`
+
+### Component Files (`src/components/*.astro`)
+- Reusable UI components
+- Minimal client-side logic (prefer page-level state management)
+- Use props for configuration, not global state
+
+### API Route Files (`src/pages/api/*.ts`)
+- Must export `prerender = false`
+- Use `APIRoute` type from Astro
+- Access Cloudflare env via `context.locals.runtime.env`
