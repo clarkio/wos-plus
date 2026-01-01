@@ -8,7 +8,11 @@
     "preview": "npm run build && wrangler dev",
     "astro": "astro",
     "db:fix-board-ids": "node db-scripts/fix-board-ids.mjs",
-    "db:insert-words-from-boards": "node db-scripts/insert-words-from-boards.mjs"
+    "db:insert-words-from-boards": "node db-scripts/insert-words-from-boards.mjs",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",
@@ -20,6 +24,10 @@
   },
   "devDependencies": {
     "@types/socket.io-client": "^1.4.36",
-    "@types/tmi.js": "^1.8.6"
+    "@types/tmi.js": "^1.8.6",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
+    "happy-dom": "^20.0.11",
+    "vitest": "^4.0.16"
   }
 }
