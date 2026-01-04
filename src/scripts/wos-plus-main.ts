@@ -150,17 +150,17 @@ export class GameSpectator {
         } else if (wosEventType === 10) {
           this.handleLetterReveal(hiddenLetters, falseLetters);
         }
-      };
+      }
+    };
 
-      // Set up Twitch worker message handler
-      twitchWorker.onmessage = (e) => {
-        if (e.data.type === 'twitch_message') {
-          const { username, message, timestamp } = e.data;
-          this.lastTwitchMessage = { username, message, timestamp };
-          this.twitchChatLog.set(username, { message, timestamp });
-          this.log(`[Twitch Chat] ${username}: ${message}`, this.twitchChatLogId);
-        }
-      };
+    // Set up Twitch worker message handler
+    twitchWorker.onmessage = (e) => {
+      if (e.data.type === 'twitch_message') {
+        const { username, message, timestamp } = e.data;
+        this.lastTwitchMessage = { username, message, timestamp };
+        this.twitchChatLog.set(username, { message, timestamp });
+        this.log(`[Twitch Chat] ${username}: ${message}`, this.twitchChatLogId);
+      }
     };
   }
 
