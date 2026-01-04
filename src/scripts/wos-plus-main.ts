@@ -1,7 +1,13 @@
 import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
-import { findAllMissingWords, loadWordsFromDb } from './wos-words';
+import {
+  findAllMissingWords,
+  loadWordsFromDb,
+  groupConsecutiveEmptySlots,
+  findSlotMatchedMissedWords,
+  type SlotInfo,
+} from './wos-words';
 import { saveBoard } from './db-service';
 
 
@@ -291,13 +297,92 @@ export class GameSpectator {
     console.log('Known Letters:', knownLetters);
     console.log('Minimum Word Length:', minLength);
     console.log('Calculating missing words...');
-    const missingWords = findAllMissingWords(this.currentLevelCorrectWords, knownLetters, minLength);
 
-    if (missingWords.length > 0) {
-      missingWords.forEach(word => {
-        this.updateCorrectWordsDisplayed(word + "*");
-      });
+    // Use slot-based detection if we have slot information
+    if (this.currentLevelSlots.length > 0) {
+      const slotInfos: SlotInfo[] = this.currentLevelSlots.map(slot => ({
+        letters: slot.letters,
+        word: slot.word,
+        user: slot.user,
+        hitMax: slot.hitMax,
+        index: slot.index,
+        length: slot.length,
+      }));
+
+      // Create an index map for O(1) slot lookups
+      const slotByIndex = new Map<number, SlotInfo>();
+      for (const slot of slotInfos) {
+        slotByIndex.set(slot.index, slot);
+      }
+
+      // Group consecutive empty slots
+      const emptyGroups = groupConsecutiveEmptySlots(slotInfos);
+      console.log('Empty slot groups:', emptyGroups);
+
+      if (emptyGroups.length === 0) {
+        console.log('No empty slots found, skipping missed word detection');
+        return;
+      }
+
+      const allMissedWords: string[] = [];
+
+      for (const group of emptyGroups) {
+        // Get boundary words from adjacent filled slots using the map
+        const lowerBoundWord = this.getFilledWordFromMap(group.lowerBoundIndex, slotByIndex);
+        const upperBoundWord = this.getFilledWordFromMap(group.upperBoundIndex, slotByIndex);
+
+        console.log(`Group bounds: lower="${lowerBoundWord}", upper="${upperBoundWord}"`);
+
+        // Find candidates for this group
+        const results = findSlotMatchedMissedWords(
+          group,
+          lowerBoundWord,
+          upperBoundWord,
+          knownLetters,
+          this.currentLevelCorrectWords
+        );
+
+        // Collect all candidates
+        for (const result of results) {
+          console.log(`Found ${result.candidates.length} candidates for ${result.slotLength}-letter slots:`, result.candidates);
+          allMissedWords.push(...result.candidates);
+        }
+      }
+
+      // Remove duplicates
+      const uniqueMissedWords = [...new Set(allMissedWords)];
+      console.log('Unique missed words (slot-based):', uniqueMissedWords);
+
+      if (uniqueMissedWords.length > 0) {
+        uniqueMissedWords.forEach(word => {
+          this.updateCorrectWordsDisplayed(word + "*");
+        });
+      }
+    } else {
+      // Fallback to dictionary-only approach if no slot info available
+      console.log('No slot info available, falling back to dictionary-only detection');
+      const missingWords = findAllMissingWords(this.currentLevelCorrectWords, knownLetters, minLength);
+
+      if (missingWords.length > 0) {
+        missingWords.forEach(word => {
+          this.updateCorrectWordsDisplayed(word + "*");
+        });
+      }
     }
+  }
+
+  /**
+   * Gets the word string from a filled slot using an index map (O(1) lookup)
+   */
+  private getFilledWordFromMap(index: number | null, slotByIndex: Map<number, SlotInfo>): string | null {
+    if (index === null) {
+      return null;
+    }
+    const slot = slotByIndex.get(index);
+    if (!slot || !slot.user) {
+      return null; // Slot is empty or not found
+    }
+    return slot.word || slot.letters.join('');
   }
 
   private clearBoard() {
