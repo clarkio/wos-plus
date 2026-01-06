@@ -5,13 +5,13 @@ export default defineConfig({
   test: {
     // Test environment
     environment: 'happy-dom',
-    
+
     // Global test setup
     globals: true,
-    
+
     // Setup file
     setupFiles: ['./tests/setup.ts'],
-    
+
     // Coverage configuration
     coverage: {
       provider: 'v8',
@@ -24,15 +24,16 @@ export default defineConfig({
         '**/types.d.ts',
         '**/*.test.ts',
         '**/*.spec.ts',
+        'tests/',
       ],
     },
-    
+
     // Test file patterns
     include: [
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
     ],
-    
+
     // Exclude patterns
     exclude: [
       'node_modules',
@@ -43,7 +44,7 @@ export default defineConfig({
       '.cache',
     ],
   },
-  
+
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
