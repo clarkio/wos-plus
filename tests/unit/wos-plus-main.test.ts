@@ -165,10 +165,14 @@ describe('GameSpectator class', () => {
     it('should return null for malformed URL', () => {
       spectator = new GameSpectator();
 
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
       const mirrorUrl = 'not-a-valid-url';
       const code = spectator.getMirrorCode(mirrorUrl);
 
       expect(code).toBeNull();
+
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -590,9 +594,13 @@ describe('GameSpectator class', () => {
     });
 
     it('should not connect with invalid mirror URL', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
       spectator.connectToWosGame('invalid-url');
 
       expect(spectator.wosSocket).toBeNull();
+
+      consoleErrorSpy.mockRestore();
     });
 
     it('should disconnect existing socket before connecting', () => {
@@ -890,7 +898,13 @@ describe('GameSpectator class', () => {
 
     it('should call findAllMissingWords using big word when available and render returned missing words', () => {
       const findAllMissingWordsMock = vi.mocked(wosWords.findAllMissingWords);
-      findAllMissingWordsMock.mockReturnValueOnce(['alpha', 'beta']);
+      findAllMissingWordsMock.mockImplementationOnce((knownWords: string[], knownLetters: string, minLength: number) => {
+        // Snapshot the args at call time (the array is later mutated by UI updates).
+        expect([...knownWords]).toEqual(['test', 'word']);
+        expect(knownLetters).toBe('T E S T I N G');
+        expect(minLength).toBe(4);
+        return ['alpha', 'beta'];
+      });
 
       spectator.currentLevelBigWord = 'T E S T I N G';
       spectator.currentLevelLetters = ['t', 'e', 's', 't'];
@@ -901,11 +915,7 @@ describe('GameSpectator class', () => {
 
       (spectator as any).logMissingWords();
 
-      expect(findAllMissingWordsMock).toHaveBeenCalledWith(
-        spectator.currentLevelCorrectWords,
-        'T E S T I N G',
-        4
-      );
+      expect(findAllMissingWordsMock).toHaveBeenCalledTimes(1);
       expect(spectator.currentLevelCorrectWords).toEqual(
         expect.arrayContaining(['alpha*', 'beta*'])
       );

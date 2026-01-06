@@ -3,8 +3,6 @@
  * This file runs before all tests
  */
 
-import { beforeEach } from 'vitest';
-
 // Mock environment variables for tests
 process.env.WOS_MSG_PROCESS_DELAY = '100';
 
@@ -57,11 +55,6 @@ class MockWorker {
 
 // Also expose the mock for tests that need access to created worker instances
 (global as any).MockWorker = MockWorker;
-
-// Prevent cross-test contamination when modules instantiate Workers at import time.
-beforeEach(() => {
-  MockWorker.instances.length = 0;
-});
 
 // Add any global test utilities or mocks here
 export { };
