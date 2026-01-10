@@ -19,17 +19,37 @@ export const GET: APIRoute = async ({ params, locals }) => {
     });
   }
 
+  // Security validation: sanitize and validate board ID
+  // Board IDs should only contain letters (they are words from the game)
+  const cleanId = id.replace(/\s+/g, '').toUpperCase();
+  
+  // Validate: only alphabetic characters allowed
+  if (!/^[A-Z]+$/.test(cleanId)) {
+    return new Response(JSON.stringify({ error: 'Invalid board ID format. Only letters are allowed.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  
+  // Validate: reasonable length (game words are typically 4-20 characters)
+  if (cleanId.length < 4 || cleanId.length > 20) {
+    return new Response(JSON.stringify({ error: 'Invalid board ID length. Must be between 4 and 20 characters.' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const supabase = createClient(
       env.SUPABASE_URL,
       env.SUPABASE_KEY
     );
     
-    // Query for the specific board by ID
+    // Query for the specific board by ID using the sanitized cleanId
     const { data, error } = await supabase
       .from('boards')
       .select('*')
-      .eq('id', id.toUpperCase())
+      .eq('id', cleanId)
       .single();
 
     if (error) {
