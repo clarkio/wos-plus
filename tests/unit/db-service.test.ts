@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { saveBoard, type Slot } from '@scripts/db-service';
+import { saveBoard, fetchBoard, type Slot } from '@scripts/db-service';
 import { mockFetchResponse } from '../test-utils';
 
 /**
@@ -68,7 +68,42 @@ describe('db-service module', () => {
         const result = await saveBoard(longBoardId, validSlots);
         
         expect(result).toBeUndefined();
-        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId exceeds maximum length of 20 characters.');
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId length must be between 4 and 20 characters.');
+      });
+
+      it('should reject boardId shorter than 4 characters', async () => {
+        const result = await saveBoard('ABC', validSlots);
+        
+        expect(result).toBeUndefined();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId length must be between 4 and 20 characters.');
+      });
+
+      it('should reject boardId with special characters', async () => {
+        const result = await saveBoard('TEST123', validSlots);
+        
+        expect(result).toBeUndefined();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
+      });
+
+      it('should reject boardId with SQL injection attempt', async () => {
+        const result = await saveBoard("TEST'; DROP TABLE boards; --", validSlots);
+        
+        expect(result).toBeUndefined();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
+      });
+
+      it('should reject boardId with path traversal attempt', async () => {
+        const result = await saveBoard('../../../etc/passwd', validSlots);
+        
+        expect(result).toBeUndefined();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
+      });
+
+      it('should reject boardId with symbols', async () => {
+        const result = await saveBoard('TEST@WORD', validSlots);
+        
+        expect(result).toBeUndefined();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
       });
     });
 
@@ -473,6 +508,111 @@ describe('db-service module', () => {
           'Error saving board to Cloudflare Worker:',
           expect.any(Error)
         );
+      });
+    });
+  });
+
+  describe('fetchBoard', () => {
+    describe('boardId validation', () => {
+      it('should reject empty boardId string', async () => {
+        const result = await fetchBoard('');
+        
+        expect(result).toBeNull();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId must be a non-empty string.');
+      });
+
+      it('should reject non-string boardId', async () => {
+        const result = await fetchBoard(null as any);
+        
+        expect(result).toBeNull();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId must be a non-empty string.');
+      });
+
+      it('should reject boardId with special characters', async () => {
+        const result = await fetchBoard('TEST123');
+        
+        expect(result).toBeNull();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId contains invalid characters. Only letters are allowed.');
+      });
+
+      it('should reject boardId with SQL injection attempt', async () => {
+        const result = await fetchBoard("TEST'; DROP TABLE boards; --");
+        
+        expect(result).toBeNull();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId contains invalid characters. Only letters are allowed.');
+      });
+
+      it('should reject boardId with path traversal attempt', async () => {
+        const result = await fetchBoard('../../../etc/passwd');
+        
+        expect(result).toBeNull();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId contains invalid characters. Only letters are allowed.');
+      });
+
+      it('should reject boardId shorter than 4 characters', async () => {
+        const result = await fetchBoard('ABC');
+        
+        expect(result).toBeNull();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId length must be between 4 and 20 characters.');
+      });
+
+      it('should reject boardId longer than 20 characters', async () => {
+        const longBoardId = 'A'.repeat(21);
+        const result = await fetchBoard(longBoardId);
+        
+        expect(result).toBeNull();
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId length must be between 4 and 20 characters.');
+      });
+
+      it('should accept valid boardId with spaces', async () => {
+        global.fetch = vi.fn(() => mockFetchResponse({
+          id: 'TESTING',
+          slots: [],
+          created_at: '2024-01-01T00:00:00Z'
+        }));
+        
+        const result = await fetchBoard('T E S T I N G');
+        
+        expect(result).not.toBeNull();
+        expect(global.fetch).toHaveBeenCalledWith('/api/boards/TESTING');
+      });
+
+      it('should use URL encoding for board ID', async () => {
+        global.fetch = vi.fn(() => mockFetchResponse({
+          id: 'TESTING',
+          slots: [],
+          created_at: '2024-01-01T00:00:00Z'
+        }));
+        
+        await fetchBoard('TESTING');
+        
+        // Verify encodeURIComponent is used (though in this case TESTING is already safe)
+        expect(global.fetch).toHaveBeenCalledWith('/api/boards/TESTING');
+      });
+    });
+
+    describe('error handling', () => {
+      it('should handle 404 responses gracefully', async () => {
+        global.fetch = vi.fn(() => 
+          Promise.resolve({
+            ok: false,
+            status: 404,
+          } as Response)
+        );
+        
+        const result = await fetchBoard('NOTFOUND');
+        
+        expect(result).toBeNull();
+        expect(consoleLogSpy).toHaveBeenCalledWith('Board NOTFOUND not found in database.');
+      });
+
+      it('should handle network errors gracefully', async () => {
+        global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));
+        
+        const result = await fetchBoard('TESTING');
+        
+        expect(result).toBeNull();
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching board:', expect.any(Error));
       });
     });
   });

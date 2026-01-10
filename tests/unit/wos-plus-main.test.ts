@@ -15,12 +15,14 @@ vi.mock('@scripts/twitch-chat-worker', () => ({
 // Mock the wos-words module
 vi.mock('@scripts/wos-words', () => ({
   findAllMissingWords: vi.fn(() => []),
+  findMissingWordsFromBoard: vi.fn(() => []),
   loadWordsFromDb: vi.fn(),
 }));
 
 // Mock the db-service module
 vi.mock('@scripts/db-service', () => ({
   saveBoard: vi.fn(),
+  fetchBoard: vi.fn(),
 }));
 
 // Mock socket.io-client
@@ -896,12 +898,16 @@ describe('GameSpectator class', () => {
       spectator.currentLevelCorrectWords = ['test', 'word'];
     });
 
-    it('should call findAllMissingWords using big word when available and render returned missing words', () => {
+    it('should call findAllMissingWords using big word when available and render returned missing words', async () => {
+      const dbService = await import('@scripts/db-service');
+      const fetchBoardMock = vi.mocked(dbService.fetchBoard);
+      fetchBoardMock.mockResolvedValueOnce(null); // Board not found, falls back to dictionary
+      
       const findAllMissingWordsMock = vi.mocked(wosWords.findAllMissingWords);
       findAllMissingWordsMock.mockImplementationOnce((knownWords: string[], knownLetters: string, minLength: number) => {
         // Snapshot the args at call time (the array is later mutated by UI updates).
         expect([...knownWords]).toEqual(['test', 'word']);
-        expect(knownLetters).toBe('T E S T I N G');
+        expect(knownLetters).toBe('TESTING'); // Spaces should be removed
         expect(minLength).toBe(4);
         return ['alpha', 'beta'];
       });
@@ -913,8 +919,9 @@ describe('GameSpectator class', () => {
         { letters: ['.', '.', '.', '.', '.'], word: '', hitMax: false, index: 1, length: 5 },
       ];
 
-      (spectator as any).logMissingWords();
+      await (spectator as any).logMissingWords();
 
+      expect(fetchBoardMock).toHaveBeenCalledWith('T E S T I N G');
       expect(findAllMissingWordsMock).toHaveBeenCalledTimes(1);
       expect(spectator.currentLevelCorrectWords).toEqual(
         expect.arrayContaining(['alpha*', 'beta*'])
@@ -922,7 +929,7 @@ describe('GameSpectator class', () => {
       expect(document.getElementById('correct-words-log')!.innerHTML).toContain('*');
     });
 
-    it('should call findAllMissingWords using currentLevelLetters when big word is not set', () => {
+    it('should call findAllMissingWords using currentLevelLetters when big word is not set', async () => {
       const findAllMissingWordsMock = vi.mocked(wosWords.findAllMissingWords);
       findAllMissingWordsMock.mockReturnValueOnce([]);
 
@@ -932,7 +939,7 @@ describe('GameSpectator class', () => {
         { letters: ['.', '.', '.', '.'], word: '', hitMax: false, index: 0, length: 4 },
       ];
 
-      (spectator as any).logMissingWords();
+      await (spectator as any).logMissingWords();
 
       expect(findAllMissingWordsMock).toHaveBeenCalledWith(
         spectator.currentLevelCorrectWords,
@@ -941,7 +948,7 @@ describe('GameSpectator class', () => {
       );
     });
 
-    it('should compute minLength from currentLevelSlots when present', () => {
+    it('should compute minLength from currentLevelSlots when present', async () => {
       const findAllMissingWordsMock = vi.mocked(wosWords.findAllMissingWords);
       findAllMissingWordsMock.mockReturnValueOnce([]);
 
@@ -952,12 +959,82 @@ describe('GameSpectator class', () => {
         { letters: ['.', '.', '.', '.'], word: '', hitMax: false, index: 1, length: 4 },
       ];
 
-      (spectator as any).logMissingWords();
+      await (spectator as any).logMissingWords();
 
       expect(findAllMissingWordsMock).toHaveBeenCalledWith(
         spectator.currentLevelCorrectWords,
         'test',
         2
+      );
+    });
+
+    it('should use board data when board is found in database', async () => {
+      const dbService = await import('@scripts/db-service');
+      const fetchBoardMock = vi.mocked(dbService.fetchBoard);
+      
+      // Mock board data from database
+      const mockBoard = {
+        id: 'TESTING',
+        created_at: '2024-01-01T00:00:00Z',
+        slots: [
+          { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
+          { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false, index: 1, length: 4 },
+          { letters: ['m', 'i', 's', 's'], word: 'miss', user: 'user3', hitMax: false, index: 2, length: 4 },
+        ]
+      };
+      fetchBoardMock.mockResolvedValueOnce(mockBoard);
+      
+      const findMissingWordsFromBoardMock = vi.mocked(wosWords.findMissingWordsFromBoard);
+      findMissingWordsFromBoardMock.mockReturnValueOnce(['miss']);
+      
+      spectator.currentLevelBigWord = 'T E S T I N G';
+      spectator.currentLevelCorrectWords = ['test', 'word'];
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false, index: 1, length: 4 },
+        { letters: ['m', 'i', 's', 's'], word: '', user: undefined, hitMax: false, index: 2, length: 4 },
+      ];
+
+      await (spectator as any).logMissingWords();
+
+      expect(fetchBoardMock).toHaveBeenCalledWith('T E S T I N G');
+      expect(findMissingWordsFromBoardMock).toHaveBeenCalledWith(
+        spectator.currentLevelSlots,
+        mockBoard.slots
+      );
+      expect(spectator.currentLevelCorrectWords).toEqual(
+        expect.arrayContaining(['miss*'])
+      );
+    });
+
+    it('should return missed words of all lengths when board not found (spaces in big word)', async () => {
+      const dbService = await import('@scripts/db-service');
+      const fetchBoardMock = vi.mocked(dbService.fetchBoard);
+      fetchBoardMock.mockResolvedValueOnce(null); // Board not found
+      
+      const findAllMissingWordsMock = vi.mocked(wosWords.findAllMissingWords);
+      // Simulate finding words of different lengths (4, 5, 7 letters)
+      findAllMissingWordsMock.mockImplementationOnce((knownWords: string[], knownLetters: string, minLength: number) => {
+        // Verify parameters at call time (before array mutations)
+        expect([...knownWords]).toEqual(['some']);
+        expect(knownLetters).toBe('TESTING'); // Spaces removed!
+        expect(minLength).toBe(4);
+        return ['test', 'word', 'words', 'testing'];
+      });
+      
+      spectator.currentLevelBigWord = 'T E S T I N G'; // Has spaces
+      spectator.currentLevelCorrectWords = ['some'];
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', hitMax: false, index: 0, length: 4 },
+        { letters: ['.', '.', '.', '.', '.'], word: '', hitMax: false, index: 1, length: 5 },
+        { letters: ['.', '.', '.', '.', '.', '.', '.'], word: '', hitMax: false, index: 2, length: 7 },
+      ];
+
+      await (spectator as any).logMissingWords();
+      
+      // Verify all missed words are displayed
+      expect(spectator.currentLevelCorrectWords).toEqual(
+        expect.arrayContaining(['test*', 'word*', 'words*', 'testing*'])
       );
     });
   });

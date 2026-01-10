@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-// import { functionToTest } from '@scripts/wos-words';
+import { findMissingWordsFromBoard } from '@scripts/wos-words';
+import type { Slot } from '@scripts/wos-words';
 
 /**
  * Example unit test template for wos-words.ts module
@@ -24,6 +25,73 @@ describe('wos-words module', () => {
     it.todo('should identify missing words from a level');
     it.todo('should respect minimum word length');
     it.todo('should handle known letters correctly');
+  });
+
+  describe('findMissingWordsFromBoard', () => {
+    it('should identify words not guessed by comparing with board slots', () => {
+      const currentSlots: Slot[] = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false },
+        { letters: ['w', 'o', 'r', 'd'], word: '', user: undefined, hitMax: false }, // Empty slot
+        { letters: ['m', 'i', 's', 's'], word: '', user: undefined, hitMax: false }, // Empty slot
+      ];
+
+      const boardSlots: Slot[] = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false },
+        { letters: ['m', 'i', 's', 's'], word: 'miss', user: 'user3', hitMax: false },
+      ];
+
+      const result = findMissingWordsFromBoard(currentSlots, boardSlots);
+
+      expect(result).toEqual(['word', 'miss']);
+    });
+
+    it('should return empty array when all words are guessed', () => {
+      const currentSlots: Slot[] = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false },
+      ];
+
+      const boardSlots: Slot[] = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false },
+      ];
+
+      const result = findMissingWordsFromBoard(currentSlots, boardSlots);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should handle case-insensitive word matching', () => {
+      const currentSlots: Slot[] = [
+        { letters: ['T', 'E', 'S', 'T'], word: 'TEST', user: 'user1', hitMax: false },
+        { letters: ['w', 'o', 'r', 'd'], word: '', user: undefined, hitMax: false },
+      ];
+
+      const boardSlots: Slot[] = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false },
+      ];
+
+      const result = findMissingWordsFromBoard(currentSlots, boardSlots);
+
+      expect(result).toEqual(['word']);
+    });
+
+    it('should skip empty words in board data', () => {
+      const currentSlots: Slot[] = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false },
+      ];
+
+      const boardSlots: Slot[] = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false },
+        { letters: [], word: '', user: undefined, hitMax: false }, // Empty in board data too
+      ];
+
+      const result = findMissingWordsFromBoard(currentSlots, boardSlots);
+
+      expect(result).toEqual([]);
+    });
   });
 
   describe('loadWordsFromDb', () => {

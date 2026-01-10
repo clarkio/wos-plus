@@ -1,6 +1,16 @@
 // import localDictionary from './wos_dictionary.json';
 let wosDictionary: string[]; // = localDictionary as string[];
 
+export interface Slot {
+  letters: string[];
+  user?: string | null;
+  hitMax: boolean;
+  originalIndex?: number;
+  word: string;
+  index?: number;
+  length?: number;
+}
+
 export async function updateWordsDb(word: string) {
   try {
     if (wosDictionary && wosDictionary.includes(word)) {
@@ -57,6 +67,43 @@ export function findAllMissingWords(knownWords: string[], knownLetters: string, 
   const tempMissingWords = findMissingWordsFromList(knownWords, possibleWords);
   const missingWords = tempMissingWords.filter(word => word.length >= minLength);
   console.log('Missing words:', missingWords);
+  return missingWords;
+}
+
+/**
+ * Finds missing words by comparing current level slots with board slots
+ * @param currentSlots Array of current level slots (some may be empty)
+ * @param boardSlots Array of complete board slots from database
+ * @returns Array of words that were missed (not guessed in current level)
+ */
+export function findMissingWordsFromBoard(currentSlots: Slot[], boardSlots: Slot[]): string[] {
+  const missingWords: string[] = [];
+  
+  // Create a map of current guessed words for quick lookup
+  const guessedWords = new Set(
+    currentSlots
+      .filter(slot => slot.user && slot.word)
+      .map(slot => slot.word.toLowerCase())
+  );
+  
+  // For each slot in the board, check if it was guessed in current level
+  boardSlots.forEach((boardSlot, index) => {
+    const word = boardSlot.word;
+    if (!word || word.length === 0) {
+      return; // Skip empty slots in board data
+    }
+    
+    // Check if this word was guessed
+    if (!guessedWords.has(word.toLowerCase())) {
+      // Check if current slot at this position is empty (not guessed)
+      const currentSlot = currentSlots[index];
+      if (currentSlot && !currentSlot.user) {
+        missingWords.push(word);
+      }
+    }
+  });
+  
+  console.log('Missing words from board:', missingWords);
   return missingWords;
 }
 

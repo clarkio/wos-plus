@@ -1,8 +1,8 @@
 import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
-import { findAllMissingWords, loadWordsFromDb } from './wos-words';
-import { saveBoard } from './db-service';
+import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb } from './wos-words';
+import { saveBoard, fetchBoard } from './db-service';
 
 
 const twitchWorker = new Worker(
@@ -144,9 +144,9 @@ export class GameSpectator {
         } else if (wosEventType === 3) {
           await this.handleCorrectGuess(username, letters, index, hitMax);
         } else if (wosEventType === 4) {
-          this.handleLevelResults(stars);
+          await this.handleLevelResults(stars);
         } else if (wosEventType === 5) {
-          this.handleLevelEnd();
+          await this.handleLevelEnd();
         } else if (wosEventType === 10) {
           this.handleLetterReveal(hiddenLetters, falseLetters);
         }
@@ -186,10 +186,10 @@ export class GameSpectator {
     }
   }
 
-  private handleLevelEnd() {
+  private async handleLevelEnd() {
     this.log(`Game Ended on Level ${this.currentLevel}`, this.wosGameLogId);
 
-    this.logMissingWords();
+    await this.logMissingWords();
   }
 
   private async handleLevelResults(stars: any) {
@@ -225,7 +225,7 @@ export class GameSpectator {
         });
       }
     } else {
-      this.logMissingWords();
+      await this.logMissingWords();
       this.logEmptySlots();
     }
 
@@ -282,16 +282,39 @@ export class GameSpectator {
     }
   }
 
-  private logMissingWords() {
+  private async logMissingWords() {
     // This should only ever be called after a level ends or the game fails at which time we either know the big word that has all valid letters we can use or the game revealed all hidden and fake letters so we can determine the current level correct letters to use for determining which words are missing at the end of the level/game
-    const knownLetters = this.currentLevelBigWord !== '' ? this.currentLevelBigWord : this.currentLevelLetters.join('').replace('?', '');
+    let knownLetters = this.currentLevelBigWord !== '' ? this.currentLevelBigWord : this.currentLevelLetters.join('').replace('?', '');
+    // Remove spaces from known letters as they are only for display purposes
+    knownLetters = knownLetters.replace(/\s+/g, '');
     const minLength = this.currentLevelSlots.length > 0
       ? Math.min(...this.currentLevelSlots.map(slot => slot.letters.length))
       : 4;
     console.log('Known Letters:', knownLetters);
     console.log('Minimum Word Length:', minLength);
     console.log('Calculating missing words...');
-    const missingWords = findAllMissingWords(this.currentLevelCorrectWords, knownLetters, minLength);
+    
+    let missingWords: string[] = [];
+    
+    // Try to fetch board data if we have a big word
+    if (this.currentLevelBigWord !== '') {
+      console.log('Attempting to fetch board with ID:', this.currentLevelBigWord);
+      const board = await fetchBoard(this.currentLevelBigWord);
+      
+      if (board && board.slots) {
+        console.log('Board found in database, using board slots for missed words detection');
+        // Use board-based detection
+        missingWords = findMissingWordsFromBoard(this.currentLevelSlots, board.slots);
+      } else {
+        console.log('Board not found in database, falling back to dictionary-based detection');
+        // Fall back to dictionary-based detection
+        missingWords = findAllMissingWords(this.currentLevelCorrectWords, knownLetters, minLength);
+      }
+    } else {
+      // No big word available, use dictionary-based detection
+      console.log('No big word available, using dictionary-based detection');
+      missingWords = findAllMissingWords(this.currentLevelCorrectWords, knownLetters, minLength);
+    }
 
     if (missingWords.length > 0) {
       missingWords.forEach(word => {
