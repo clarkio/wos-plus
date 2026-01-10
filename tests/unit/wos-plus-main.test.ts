@@ -967,6 +967,45 @@ describe('GameSpectator class', () => {
         2
       );
     });
+
+    it('should use board data when board is found in database', async () => {
+      const dbService = await import('@scripts/db-service');
+      const fetchBoardMock = vi.mocked(dbService.fetchBoard);
+      
+      // Mock board data from database
+      const mockBoard = {
+        id: 'TESTING',
+        created_at: '2024-01-01T00:00:00Z',
+        slots: [
+          { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
+          { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false, index: 1, length: 4 },
+          { letters: ['m', 'i', 's', 's'], word: 'miss', user: 'user3', hitMax: false, index: 2, length: 4 },
+        ]
+      };
+      fetchBoardMock.mockResolvedValueOnce(mockBoard);
+      
+      const findMissingWordsFromBoardMock = vi.mocked(wosWords.findMissingWordsFromBoard);
+      findMissingWordsFromBoardMock.mockReturnValueOnce(['miss']);
+      
+      spectator.currentLevelBigWord = 'T E S T I N G';
+      spectator.currentLevelCorrectWords = ['test', 'word'];
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false, index: 1, length: 4 },
+        { letters: ['m', 'i', 's', 's'], word: '', user: undefined, hitMax: false, index: 2, length: 4 },
+      ];
+
+      await (spectator as any).logMissingWords();
+
+      expect(fetchBoardMock).toHaveBeenCalledWith('T E S T I N G');
+      expect(findMissingWordsFromBoardMock).toHaveBeenCalledWith(
+        spectator.currentLevelSlots,
+        mockBoard.slots
+      );
+      expect(spectator.currentLevelCorrectWords).toEqual(
+        expect.arrayContaining(['miss*'])
+      );
+    });
   });
 
   describe('worker routing (startEventProcessors)', () => {
