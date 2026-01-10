@@ -284,7 +284,9 @@ export class GameSpectator {
 
   private async logMissingWords() {
     // This should only ever be called after a level ends or the game fails at which time we either know the big word that has all valid letters we can use or the game revealed all hidden and fake letters so we can determine the current level correct letters to use for determining which words are missing at the end of the level/game
-    const knownLetters = this.currentLevelBigWord !== '' ? this.currentLevelBigWord : this.currentLevelLetters.join('').replace('?', '');
+    let knownLetters = this.currentLevelBigWord !== '' ? this.currentLevelBigWord : this.currentLevelLetters.join('').replace('?', '');
+    // Remove spaces from known letters as they are only for display purposes
+    knownLetters = knownLetters.replace(/\s+/g, '');
     const minLength = this.currentLevelSlots.length > 0
       ? Math.min(...this.currentLevelSlots.map(slot => slot.letters.length))
       : 4;
