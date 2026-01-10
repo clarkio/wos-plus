@@ -6,6 +6,12 @@ export interface Slot {
   word: string;
 }
 
+export interface Board {
+  id: string;
+  slots: Slot[];
+  created_at: string;
+}
+
 export async function saveBoard(boardId: string, slots: Slot[]) {
   // Validate boardId is a string and not too long
   if (typeof boardId !== 'string' || boardId.length === 0) {
@@ -72,5 +78,35 @@ export async function saveBoard(boardId: string, slots: Slot[]) {
     return data;
   } catch (error) {
     console.error('Error saving board to Cloudflare Worker:', error);
+  }
+}
+
+export async function fetchBoard(boardId: string): Promise<Board | null> {
+  if (typeof boardId !== 'string' || boardId.length === 0) {
+    console.warn('Cannot fetch board: boardId must be a non-empty string.');
+    return null;
+  }
+
+  // Clean up big word (remove spaces if stored as "W O R D")
+  const cleanBoardId = boardId.replace(/\s+/g, "").toUpperCase();
+
+  try {
+    const url = `/api/boards/${cleanBoardId}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.log(`Board ${cleanBoardId} not found in database.`);
+        return null;
+      }
+      throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`Board ${cleanBoardId} fetched successfully:`, data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching board:', error);
+    return null;
   }
 }
