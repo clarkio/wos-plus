@@ -4,31 +4,44 @@ import Twitch from './Icons/Twitch.astro';
 
 <div class='made-by-component'>
   <span class='made-by-text' id='made-by-text'>
-    Made by: <Twitch /> clarkio
+    <span id='made-by-content'>Made by: <Twitch /> clarkio</span>
   </span>
 </div>
 
 <script>
   // Module-scoped interval variable
   let cyclingInterval: ReturnType<typeof setInterval> | null = null;
+  let twitchIconHTML = '';
+  
+  // Capture the Twitch icon HTML on first load
+  function captureInitialState() {
+    const textElement = document.getElementById('made-by-content');
+    if (textElement) {
+      // Store the initial HTML which includes the properly rendered Twitch icon
+      twitchIconHTML = textElement.innerHTML;
+    }
+  }
   
   const texts = [
-    { html: 'Made by: <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm0 7.143h1.715v5.143H11.57zm-2.857-1.429H7V16.57h1.714v-6.142zM17.143 7.286h-1.714v9.428h1.714zm-2.857 2.285h-1.715v5.143h1.715z"/></svg> clarkio' },
-    { html: 'Try it → wosplus.com' }
+    { content: () => twitchIconHTML }, // Use the captured HTML with proper Twitch icon
+    { content: () => 'Try it → wosplus.com' }
   ];
   
   let currentIndex = 0;
   
   function updateText() {
-    const textElement = document.getElementById('made-by-text');
-    if (textElement) {
+    const textElement = document.getElementById('made-by-content');
+    if (textElement && twitchIconHTML) {
       currentIndex = (currentIndex + 1) % texts.length;
-      textElement.innerHTML = texts[currentIndex].html;
+      textElement.innerHTML = texts[currentIndex].content();
     }
   }
   
   // Initialize page handler
   function initCycling() {
+    // Capture the initial state with Twitch icon
+    captureInitialState();
+    
     // Clear any existing interval
     if (cyclingInterval !== null) {
       clearInterval(cyclingInterval);
