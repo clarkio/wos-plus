@@ -4,6 +4,7 @@ import WosBaseLayout from '../layouts/WosBaseLayout.astro';
 import Twitch from '../components/Icons/Twitch.astro';
 import Settings from '../components/Icons/Settings.astro';
 import SettingsDialog from '../components/SettingsDialog.astro';
+import MadeBy from '../components/MadeBy.astro';
 ---
 
 <WosBaseLayout
@@ -168,7 +169,10 @@ import SettingsDialog from '../components/SettingsDialog.astro';
     </div>
     <div class='player-bottom-container'>
       <div id='player-correct-words-log-container'>
-        <span>Correct Words: (* potential words missed)</span>
+        <div class='correct-words-header'>
+          <span>Correct Words: (*missed words)</span>
+          <MadeBy />
+        </div>
         <div id='correct-words-log' class='player-correct-words-log'>
           <!-- <div class='word-group'>
             <div class='word-group__title'>4:</div><div
@@ -255,9 +259,6 @@ import SettingsDialog from '../components/SettingsDialog.astro';
               >Fake Letters:</span
             >
             <span id='fake-letter' class='fake-letter'></span>
-          </div>
-          <div>
-            <span class='made-by'>Made by: <Twitch /> clarkio</span>
           </div>
         </div>
       </div>

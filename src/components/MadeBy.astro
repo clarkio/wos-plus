@@ -1,0 +1,93 @@
+---
+import Twitch from './Icons/Twitch.astro';
+
+// Get the cycling interval from environment variable, default to 10 seconds (10000ms)
+// Add validation to ensure a valid number is used
+const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL || '10000') || 10000;
+---
+
+<div class='made-by-component'>
+  <span class='made-by-text' id='made-by-text'>
+    <span id='made-by-content'>Made by: <Twitch /> clarkio</span>
+  </span>
+</div>
+
+<script define:vars={{ cyclingIntervalMs }}>
+  // Module-scoped interval variable
+  let cyclingInterval = null;
+  let twitchIconHTML = '';
+  
+  // Capture the Twitch icon HTML on first load
+  function captureInitialState() {
+    const textElement = document.getElementById('made-by-content');
+    if (textElement) {
+      // Store the initial HTML which includes the properly rendered Twitch icon
+      twitchIconHTML = textElement.innerHTML;
+    }
+  }
+  
+  const texts = [
+    { content: () => twitchIconHTML }, // Use the captured HTML with proper Twitch icon
+    { content: () => 'Try it → wosplus.com' }
+  ];
+  
+  let currentIndex = 0;
+  
+  function updateText() {
+    const textElement = document.getElementById('made-by-content');
+    if (textElement && twitchIconHTML) {
+      currentIndex = (currentIndex + 1) % texts.length;
+      textElement.innerHTML = texts[currentIndex].content();
+    }
+  }
+  
+  // Initialize page handler
+  function initCycling() {
+    // Capture the initial state with Twitch icon
+    captureInitialState();
+    
+    // Clear any existing interval
+    if (cyclingInterval !== null) {
+      clearInterval(cyclingInterval);
+      cyclingInterval = null;
+    }
+    
+    // Set up new interval using the configurable interval time
+    cyclingInterval = setInterval(updateText, cyclingIntervalMs);
+  }
+  
+  // Clean up on page unload
+  function cleanup() {
+    if (cyclingInterval !== null) {
+      clearInterval(cyclingInterval);
+      cyclingInterval = null;
+    }
+  }
+  
+  // Listen for both events to handle initial load and navigation
+  document.addEventListener('DOMContentLoaded', initCycling);
+  document.addEventListener('astro:page-load', initCycling);
+  document.addEventListener('astro:before-preparation', cleanup);
+</script>
+
+<style>
+  .made-by-component {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    opacity: 0.95;
+    flex-shrink: 0;
+  }
+  
+  .made-by-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  /* Ensure Twitch icon is aligned properly */
+  .made-by-text :global(svg) {
+    display: inline-block;
+    vertical-align: middle;
+  }
+</style>
