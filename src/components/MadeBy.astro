@@ -1,5 +1,8 @@
 ---
 import Twitch from './Icons/Twitch.astro';
+
+// Get the cycling interval from environment variable, default to 10 seconds (10000ms)
+const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL || '10000');
 ---
 
 <div class='made-by-component'>
@@ -8,9 +11,9 @@ import Twitch from './Icons/Twitch.astro';
   </span>
 </div>
 
-<script>
+<script define:vars={{ cyclingIntervalMs }}>
   // Module-scoped interval variable
-  let cyclingInterval: ReturnType<typeof setInterval> | null = null;
+  let cyclingInterval = null;
   let twitchIconHTML = '';
   
   // Capture the Twitch icon HTML on first load
@@ -48,8 +51,8 @@ import Twitch from './Icons/Twitch.astro';
       cyclingInterval = null;
     }
     
-    // Set up new interval to cycle every 5 seconds
-    cyclingInterval = setInterval(updateText, 5000);
+    // Set up new interval using the configurable interval time
+    cyclingInterval = setInterval(updateText, cyclingIntervalMs);
   }
   
   // Clean up on page unload
