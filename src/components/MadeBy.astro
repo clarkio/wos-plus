@@ -9,6 +9,9 @@ import Twitch from './Icons/Twitch.astro';
 </div>
 
 <script>
+  // Module-scoped interval variable
+  let cyclingInterval: ReturnType<typeof setInterval> | null = null;
+  
   const texts = [
     { html: 'Made by: <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm0 7.143h1.715v5.143H11.57zm-2.857-1.429H7V16.57h1.714v-6.142zM17.143 7.286h-1.714v9.428h1.714zm-2.857 2.285h-1.715v5.143h1.715z"/></svg> clarkio' },
     { html: 'Try it → wosplus.com' }
@@ -27,21 +30,20 @@ import Twitch from './Icons/Twitch.astro';
   // Initialize page handler
   function initCycling() {
     // Clear any existing interval
-    const existingInterval = (window as any).__madeByInterval;
-    if (existingInterval) {
-      clearInterval(existingInterval);
+    if (cyclingInterval !== null) {
+      clearInterval(cyclingInterval);
+      cyclingInterval = null;
     }
     
     // Set up new interval to cycle every 5 seconds
-    (window as any).__madeByInterval = setInterval(updateText, 5000);
+    cyclingInterval = setInterval(updateText, 5000);
   }
   
   // Clean up on page unload
   function cleanup() {
-    const existingInterval = (window as any).__madeByInterval;
-    if (existingInterval) {
-      clearInterval(existingInterval);
-      (window as any).__madeByInterval = null;
+    if (cyclingInterval !== null) {
+      clearInterval(cyclingInterval);
+      cyclingInterval = null;
     }
   }
   
