@@ -2,7 +2,8 @@
 import Twitch from './Icons/Twitch.astro';
 
 // Get the cycling interval from environment variable, default to 10 seconds (10000ms)
-const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL || '10000');
+// Add validation to ensure a valid number is used
+const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL || '10000') || 10000;
 ---
 
 <div class='made-by-component'>
