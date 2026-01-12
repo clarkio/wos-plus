@@ -930,43 +930,23 @@ import Twitch from "../components/Icons/Twitch.astro";
 </style>
 
 <script>
-  document.addEventListener("astro:page-load", () => {
-    const launchMenuTrigger = document.getElementById("launch-menu-trigger");
-    const launchMenuDropdown = document.querySelector(".launch-menu-dropdown");
+  import initLaunchMenu from '../lib/launch-menu';
 
-    if (!launchMenuTrigger || !launchMenuDropdown) return;
+  const setup = () => {
+    try {
+      initLaunchMenu();
+    } catch (err) {
+      // swallow errors during init to avoid breaking page
+      console.error('There was an issue setting things up for this page', err);
+    }
+  };
 
-    // Toggle menu on click
-    launchMenuTrigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isActive = launchMenuTrigger.classList.contains("active");
+  // Call once immediately in case load events already fired
+  setup();
 
-      if (isActive) {
-        launchMenuTrigger.classList.remove("active");
-        launchMenuDropdown.classList.remove("show");
-      } else {
-        launchMenuTrigger.classList.add("active");
-        launchMenuDropdown.classList.add("show");
-      }
-    });
-
-    // Close menu when clicking outside
-    document.addEventListener("click", (e) => {
-      if (
-        !launchMenuTrigger.contains(e.target as Node) &&
-        !launchMenuDropdown.contains(e.target as Node)
-      ) {
-        launchMenuTrigger.classList.remove("active");
-        launchMenuDropdown.classList.remove("show");
-      }
-    });
-
-    // Close menu on Escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        launchMenuTrigger.classList.remove("active");
-        launchMenuDropdown.classList.remove("show");
-      }
-    });
-  });
+  // Initialize on DOMContentLoaded and Astro page load
+  // Astro page load event is needed for SPA navigation
+  // Any functions in here should be idempotent
+  document.addEventListener('DOMContentLoaded', setup);
+  document.addEventListener('astro:page-load', setup);
 </script>
