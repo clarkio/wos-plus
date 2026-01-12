@@ -96,6 +96,14 @@
   overflow: hidden;
 }
 
+.correct-words-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
 .player-correct-words-log {
   display: flex;
   flex-direction: column;

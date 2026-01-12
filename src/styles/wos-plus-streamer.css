@@ -62,6 +62,14 @@
   overflow: hidden;
 }
 
+.correct-words-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
 .streamer-level-data-grid-container {
   display: block;
   grid-column: auto;

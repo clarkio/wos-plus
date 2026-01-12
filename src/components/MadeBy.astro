@@ -1,0 +1,74 @@
+---
+import Twitch from './Icons/Twitch.astro';
+---
+
+<div class='made-by-component'>
+  <span class='made-by-text' id='made-by-text'>
+    Made by: <Twitch /> clarkio
+  </span>
+</div>
+
+<script>
+  const texts = [
+    { html: 'Made by: <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm0 7.143h1.715v5.143H11.57zm-2.857-1.429H7V16.57h1.714v-6.142zM17.143 7.286h-1.714v9.428h1.714zm-2.857 2.285h-1.715v5.143h1.715z"/></svg> clarkio' },
+    { html: 'Try it → wosplus.com' }
+  ];
+  
+  let currentIndex = 0;
+  
+  function updateText() {
+    const textElement = document.getElementById('made-by-text');
+    if (textElement) {
+      currentIndex = (currentIndex + 1) % texts.length;
+      textElement.innerHTML = texts[currentIndex].html;
+    }
+  }
+  
+  // Initialize page handler
+  function initCycling() {
+    // Clear any existing interval
+    const existingInterval = (window as any).__madeByInterval;
+    if (existingInterval) {
+      clearInterval(existingInterval);
+    }
+    
+    // Set up new interval to cycle every 5 seconds
+    (window as any).__madeByInterval = setInterval(updateText, 5000);
+  }
+  
+  // Clean up on page unload
+  function cleanup() {
+    const existingInterval = (window as any).__madeByInterval;
+    if (existingInterval) {
+      clearInterval(existingInterval);
+      (window as any).__madeByInterval = null;
+    }
+  }
+  
+  // Listen for both events to handle initial load and navigation
+  document.addEventListener('DOMContentLoaded', initCycling);
+  document.addEventListener('astro:page-load', initCycling);
+  document.addEventListener('astro:before-preparation', cleanup);
+</script>
+
+<style>
+  .made-by-component {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    font-size: clamp(0.75rem, 1vw, 0.9rem);
+    opacity: 0.9;
+  }
+  
+  .made-by-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  /* Ensure Twitch icon is aligned properly */
+  .made-by-text :global(svg) {
+    display: inline-block;
+    vertical-align: middle;
+  }
+</style>
