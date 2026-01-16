@@ -29,9 +29,6 @@
   justify-content: center;
   align-items: center;
   position: relative;
-  background: var(--bg-overlay);
-  border-radius: var(--border-radius);
-  border: 5px solid var(--border-primary);
 }
 
 .settings-button {

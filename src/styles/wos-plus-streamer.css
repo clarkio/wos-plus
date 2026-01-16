@@ -28,9 +28,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: var(--bg-overlay);
-  border-radius: var(--border-radius);
-  border: 5px solid var(--border-primary);
 }
 
 .streamer-twitch-chat-frame {
