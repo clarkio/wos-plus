@@ -28,9 +28,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: var(--bg-overlay);
-  border-radius: var(--border-radius);
-  border: 5px solid var(--border-primary);
 }
 
 .streamer-twitch-chat-frame {
@@ -74,7 +71,7 @@
   padding: 2px 4px;
 }
 
-.correct-words-header > span {
+.correct-words-header>span {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -155,9 +152,6 @@
   height: 100%;
   border: none;
   position: absolute;
-  inset: 0;
-  transform-origin: center center;
-  transform: scale(1.07);
 }
 
 .hidden-letter-label,

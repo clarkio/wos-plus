@@ -1,179 +1,183 @@
 ---
-import '../styles/wos-plus-player.css';
-import WosBaseLayout from '../layouts/WosBaseLayout.astro';
-import Twitch from '../components/Icons/Twitch.astro';
-import Settings from '../components/Icons/Settings.astro';
-import SettingsDialog from '../components/SettingsDialog.astro';
-import MadeBy from '../components/MadeBy.astro';
+import "../styles/wos-plus-player.css";
+import WosBaseLayout from "../layouts/WosBaseLayout.astro";
+import Twitch from "../components/Icons/Twitch.astro";
+import Settings from "../components/Icons/Settings.astro";
+import SettingsDialog from "../components/SettingsDialog.astro";
+import MadeBy from "../components/MadeBy.astro";
 ---
 
 <WosBaseLayout
   title="WoS+ | Words on Stream Plus - Player"
   description="WoS+ | Words on Stream Plus - Player - An enhanced spectator interface for Words on Stream with Twitch chat integration and customizable settings."
-  keywords='clarkio, words on stream, wos, twitch, streaming, helper, wordsonstream, tool, wos plus, player'
+  keywords="clarkio, words on stream, wos, twitch, streaming, helper, wordsonstream, tool, wos plus, player"
 >
-  <SettingsDialog id='player-settings' title='Player Settings'>
-    <form id='player-settings-form' class='settings-form'>
-      <div class='form-group'>
-        <label for='mirror-url-input'>Mirror URL</label>
+  <SettingsDialog id="player-settings" title="Player Settings">
+    <form id="player-settings-form" class="settings-form">
+      <div class="form-group">
+        <label for="mirror-url-input">Mirror URL</label>
         <input
-          type='url'
-          id='mirror-url-input'
-          name='mirrorUrl'
-          placeholder='https://wos.gg/r/game-mirror-value-here'
+          type="url"
+          id="mirror-url-input"
+          name="mirrorUrl"
+          placeholder="https://wos.gg/r/game-mirror-value-here"
           required
         />
-        <small class='form-help'
+        <small class="form-help"
           >The URL to the Words on Stream game mirror</small
         >
       </div>
-      <div class='form-group'>
-        <label for='twitch-channel-input'>Twitch Channel</label>
+      <div class="form-group">
+        <label for="twitch-channel-input">Twitch Channel</label>
         <input
-          type='text'
-          id='twitch-channel-input'
-          name='twitchChannel'
-          placeholder='clarkio'
+          type="text"
+          id="twitch-channel-input"
+          name="twitchChannel"
+          placeholder="clarkio"
           required
         />
-        <small class='form-help'>The Twitch channel name to connect to</small>
+        <small class="form-help">The Twitch channel name to connect to</small>
       </div>
-      <div class='form-group'>
-        <label class='toggle-label'>
+      <div class="form-group">
+        <label class="toggle-label">
           <input
-            type='checkbox'
-            id='chat-enabled-input'
-            name='chatEnabled'
-            class='toggle-input'
+            type="checkbox"
+            id="chat-enabled-input"
+            name="chatEnabled"
+            class="toggle-input"
           />
-          <span class='toggle-slider'></span>
-          <span class='toggle-text'>Show Twitch Chat</span>
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Show Twitch Chat</span>
         </label>
-        <small class='form-help'>Toggle Twitch chat visibility</small>
+        <small class="form-help">Toggle Twitch chat visibility</small>
       </div>
-      <div class='form-group'>
-        <label class='toggle-label'>
+      <div class="form-group">
+        <label class="toggle-label">
           <input
-            type='checkbox'
-            id='wos-enabled-input'
-            name='wosEnabled'
-            class='toggle-input'
+            type="checkbox"
+            id="wos-enabled-input"
+            name="wosEnabled"
+            class="toggle-input"
             checked
           />
-          <span class='toggle-slider'></span>
-          <span class='toggle-text'>Show Words on Stream Board</span>
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Show Words on Stream Board</span>
         </label>
-        <small class='form-help'>Toggle the Words on Stream board visibility</small>
+        <small class="form-help"
+          >Toggle the Words on Stream board visibility</small
+        >
       </div>
-      <div class='form-group'>
-        <label class='toggle-label'>
+      <div class="form-group">
+        <label class="toggle-label">
           <input
-            type='checkbox'
-            id='clear-sound-input'
-            name='clearSound'
-            class='toggle-input'
+            type="checkbox"
+            id="clear-sound-input"
+            name="clearSound"
+            class="toggle-input"
             checked
           />
-          <span class='toggle-slider'></span>
-          <span class='toggle-text'>Play Clear Sound</span>
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Play Clear Sound</span>
         </label>
-        <small class='form-help'>Play a sound when all words are found on a level</small>
+        <small class="form-help"
+          >Play a sound when all words are found on a level</small
+        >
       </div>
     </form>
   </SettingsDialog>
 
-  <div class='player-wos-main-grid'>
-    <div class='player-wos-board-container' id='wos-board'>
-      <iframe id='player-wos-board-iframe' src='' loading='lazy'></iframe>
+  <div class="player-wos-main-grid">
+    <div class="player-wos-board-container" id="wos-board">
+      <iframe id="player-wos-board-iframe" src="" loading="lazy"></iframe>
     </div>
-    <div class='player-channel-data-container'>
+    <div class="player-channel-data-container">
       <button
-        id='open-settings-btn'
-        class='settings-button'
-        type='button'
-        aria-label='Open settings'
-        title='Settings'
+        id="open-settings-btn"
+        class="settings-button"
+        type="button"
+        aria-label="Open settings"
+        title="Settings"
       >
         <Settings size={24} />
       </button>
-      <div id='overlay' class='overlay'>
-        <div id='level-current' class='level-current'>
-          <span id='level-title' class='level-title'>LEVEL</span>
-          <span id='level-value' class='level-value'></span>
+      <div id="overlay" class="overlay">
+        <div id="level-current" class="level-current">
+          <span id="level-title" class="level-title">LEVEL</span>
+          <span id="level-value" class="level-value"></span>
         </div>
-        <div id='level-record-container' class='level-record-container'>
-          <div class='level-record'>
-            <span class='icon'>
+        <div id="level-record-container" class="level-record-container">
+          <div class="level-record">
+            <span class="icon">
               <svg
-                xmlns='http://www.w3.org/2000/svg'
-                width='75%'
-                height='75%'
-                viewBox='0 0 24 24'
-                preserveAspectRatio='xMidYMid meet'
-                fill='currentcolor'
+                xmlns="http://www.w3.org/2000/svg"
+                width="75%"
+                height="75%"
+                viewBox="0 0 24 24"
+                preserveAspectRatio="xMidYMid meet"
+                fill="currentcolor"
               >
                 <path
-                  d='M12 6a7 7 0 1 0 0 14 7 7 0 0 0 0-14zm1 8h-2V8h2v6z'
-                  opacity='.3'></path>
-                <path d='M9 1h6v2H9z'></path>
+                  d="M12 6a7 7 0 1 0 0 14 7 7 0 0 0 0-14zm1 8h-2V8h2v6z"
+                  opacity=".3"></path>
+                <path d="M9 1h6v2H9z"></path>
                 <path
-                  d='m19 7 1-1-1-1-1 1a9 9 0 0 0-15 7 9 9 0 1 0 16-6zm-7 13a7 7 0 1 1 0-14 7 7 0 0 1 0 14z'
+                  d="m19 7 1-1-1-1-1 1a9 9 0 0 0-15 7 9 9 0 1 0 16-6zm-7 13a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"
                 ></path>
-                <path d='M11 8h2v6h-2z'></path>
+                <path d="M11 8h2v6h-2z"></path>
               </svg>
             </span>
-            <span id='pb-value' class='level-record-value'></span>
+            <span id="pb-value" class="level-record-value"></span>
           </div>
-          <div class='level-record'>
-            <span class='icon'>
+          <div class="level-record">
+            <span class="icon">
               <svg
-                xmlns='http://www.w3.org/2000/svg'
-                width='75%'
-                height='75%'
-                viewBox='0 0 24 24'
-                preserveAspectRatio='xMidYMid meet'
-                fill='currentcolor'
+                xmlns="http://www.w3.org/2000/svg"
+                width="75%"
+                height="75%"
+                viewBox="0 0 24 24"
+                preserveAspectRatio="xMidYMid meet"
+                fill="currentcolor"
               >
-                <path fill='none' d='M0 0h24v24H0z'></path>
-                <path d='M12 14c-2 0-3-1-3-3V5h6v6c0 2-1 3-3 3z' opacity='.3'
+                <path fill="none" d="M0 0h24v24H0z"></path>
+                <path d="M12 14c-2 0-3-1-3-3V5h6v6c0 2-1 3-3 3z" opacity=".3"
                 ></path>
                 <path
-                  d='M19 5h-2V3H7v2H5L3 7v1c0 3 2 5 4 5 1 1 2 3 4 3v3H7v2h10v-2h-4v-3c2 0 3-2 4-3 2 0 4-2 4-5V7l-2-2zM5 8V7h2v4L5 8zm7 6c-2 0-3-1-3-3V5h6v6c0 2-1 3-3 3zm7-6-2 3V7h2v1z'
+                  d="M19 5h-2V3H7v2H5L3 7v1c0 3 2 5 4 5 1 1 2 3 4 3v3H7v2h10v-2h-4v-3c2 0 3-2 4-3 2 0 4-2 4-5V7l-2-2zM5 8V7h2v4L5 8zm7 6c-2 0-3-1-3-3V5h6v6c0 2-1 3-3 3zm7-6-2 3V7h2v1z"
                 ></path>
               </svg>
             </span>
-            <span id='daily-pb-value' class='level-record-value'></span>
+            <span id="daily-pb-value" class="level-record-value"></span>
           </div>
-          <div class='level-record'>
-            <span class='icon'>
+          <div class="level-record">
+            <span class="icon">
               <svg
-                xmlns='http://www.w3.org/2000/svg'
-                width='75%'
-                height='75%'
-                viewBox='0 0 24 24'
-                preserveAspectRatio='xMidYMid meet'
-                fill='currentcolor'
+                xmlns="http://www.w3.org/2000/svg"
+                width="75%"
+                height="75%"
+                viewBox="0 0 24 24"
+                preserveAspectRatio="xMidYMid meet"
+                fill="currentcolor"
               >
                 <path
-                  d='M19.36 2.72L20.78 4.14L15.06 9.85C16.13 11.39 16.28 13.24 15.38 14.44L9.06 8.12C10.26 7.22 12.11 7.37 13.65 8.44L19.36 2.72M5.93 17.57C3.92 15.56 2.69 13.16 2.35 10.92L7.23 8.83L14.67 16.27L12.58 21.15C10.34 20.81 7.94 19.58 5.93 17.57Z'
+                  d="M19.36 2.72L20.78 4.14L15.06 9.85C16.13 11.39 16.28 13.24 15.38 14.44L9.06 8.12C10.26 7.22 12.11 7.37 13.65 8.44L19.36 2.72M5.93 17.57C3.92 15.56 2.69 13.16 2.35 10.92L7.23 8.83L14.67 16.27L12.58 21.15C10.34 20.81 7.94 19.58 5.93 17.57Z"
                 ></path>
               </svg>
             </span>
-            <span id='daily-clear-value' class='level-record-value'></span>
+            <span id="daily-clear-value" class="level-record-value"></span>
           </div>
         </div>
       </div>
     </div>
-    <div class='player-twitch-chat-frame'>
-      <iframe id='player-twitch-chat-widget' src=''></iframe>
+    <div class="player-twitch-chat-frame">
+      <iframe id="player-twitch-chat-widget" src=""></iframe>
     </div>
-    <div class='player-bottom-container'>
-      <div id='player-correct-words-log-container'>
-        <div class='correct-words-header'>
+    <div class="player-bottom-container">
+      <div id="player-correct-words-log-container">
+        <div class="correct-words-header">
           <span>Correct Words: (*missed words)</span>
           <MadeBy />
         </div>
-        <div id='correct-words-log' class='player-correct-words-log'>
+        <div id="correct-words-log" class="player-correct-words-log">
           <!-- <div class='word-group'>
             <div class='word-group__title'>4:</div><div
               class='word-group__words'
@@ -242,23 +246,23 @@ import MadeBy from '../components/MadeBy.astro';
           </div> -->
         </div>
       </div>
-      <div class='player-level-data-grid-container'>
-        <div class='level-data-container'>
+      <div class="player-level-data-grid-container">
+        <div class="level-data-container">
           <div>
-            <span id='letters-label' class='letters-label'>Letters:</span>
-            <span id='letters' class='letters'></span>
+            <span id="letters-label" class="letters-label">Letters:</span>
+            <span id="letters" class="letters"></span>
           </div>
           <div>
-            <span id='hidden-letter-label' class='hidden-letter-label'
+            <span id="hidden-letter-label" class="hidden-letter-label"
               >Hidden Letters:</span
             >
-            <span id='hidden-letter' class='hidden-letter'></span>
+            <span id="hidden-letter" class="hidden-letter"></span>
           </div>
           <div>
-            <span id='fake-letter-label' class='fake-letter-label'
+            <span id="fake-letter-label" class="fake-letter-label"
               >Fake Letters:</span
             >
-            <span id='fake-letter' class='fake-letter'></span>
+            <span id="fake-letter" class="fake-letter"></span>
           </div>
         </div>
       </div>
@@ -267,21 +271,21 @@ import MadeBy from '../components/MadeBy.astro';
 </WosBaseLayout>
 
 <script>
-  import { GameSpectator } from '../scripts/wos-plus-main';
+  import { GameSpectator } from "../scripts/wos-plus-main";
 
   const boardContainer = document.getElementById(
-    'wos-board'
+    "wos-board",
   ) as HTMLDivElement | null;
   const boardIframe = document.getElementById(
-    'player-wos-board-iframe'
+    "player-wos-board-iframe",
   ) as HTMLIFrameElement | null;
-  let currentMirrorUrl = '';
-  let twitchChannel = 'clarkio';
+  let currentMirrorUrl = "";
+  let twitchChannel = "clarkio";
 
   const normalizeMirrorUrl = (input: string): string => {
     const trimmed = input.trim();
     // If it already starts with http:// or https://, return as-is
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
       return trimmed;
     }
     // Otherwise, prepend the base URL
@@ -290,7 +294,7 @@ import MadeBy from '../components/MadeBy.astro';
 
   const isBoardVisible = () =>
     boardContainer
-      ? window.getComputedStyle(boardContainer).display !== 'none'
+      ? window.getComputedStyle(boardContainer).display !== "none"
       : true;
 
   const loadBoardIframeIfVisible = () => {
@@ -298,8 +302,8 @@ import MadeBy from '../components/MadeBy.astro';
       return;
     }
 
-    if (boardIframe.getAttribute('src') !== currentMirrorUrl) {
-      boardIframe.setAttribute('src', currentMirrorUrl);
+    if (boardIframe.getAttribute("src") !== currentMirrorUrl) {
+      boardIframe.setAttribute("src", currentMirrorUrl);
     }
   };
 
@@ -308,8 +312,8 @@ import MadeBy from '../components/MadeBy.astro';
       return;
     }
 
-    if (boardIframe.hasAttribute('src')) {
-      boardIframe.removeAttribute('src');
+    if (boardIframe.hasAttribute("src")) {
+      boardIframe.removeAttribute("src");
     }
   };
 
@@ -320,54 +324,54 @@ import MadeBy from '../components/MadeBy.astro';
 
   const populateSettingsFormFromUrl = (urlParams: URLSearchParams) => {
     const mirrorUrlInput = document.getElementById(
-      'mirror-url-input'
+      "mirror-url-input",
     ) as HTMLInputElement | null;
     const twitchChannelInput = document.getElementById(
-      'twitch-channel-input'
+      "twitch-channel-input",
     ) as HTMLInputElement | null;
     const chatEnabledInput = document.getElementById(
-      'chat-enabled-input'
+      "chat-enabled-input",
     ) as HTMLInputElement | null;
     const wosEnabledInput = document.getElementById(
-      'wos-enabled-input'
+      "wos-enabled-input",
     ) as HTMLInputElement | null;
     const clearSoundInput = document.getElementById(
-      'clear-sound-input'
+      "clear-sound-input",
     ) as HTMLInputElement | null;
 
-    if (mirrorUrlInput && urlParams.has('mirrorUrl')) {
-      mirrorUrlInput.value = urlParams.get('mirrorUrl') || '';
+    if (mirrorUrlInput && urlParams.has("mirrorUrl")) {
+      mirrorUrlInput.value = urlParams.get("mirrorUrl") || "";
     }
 
-    if (twitchChannelInput && urlParams.has('twitchChannel')) {
-      twitchChannelInput.value = urlParams.get('twitchChannel') || '';
+    if (twitchChannelInput && urlParams.has("twitchChannel")) {
+      twitchChannelInput.value = urlParams.get("twitchChannel") || "";
     }
 
     if (chatEnabledInput) {
-      const chatParam = urlParams.get('chat');
+      const chatParam = urlParams.get("chat");
       chatEnabledInput.checked = chatParam
-        ? chatParam.toLowerCase() === 'true'
+        ? chatParam.toLowerCase() === "true"
         : true;
     }
 
     if (wosEnabledInput) {
-      const boardParam = urlParams.get('board');
+      const boardParam = urlParams.get("board");
       wosEnabledInput.checked = boardParam
-        ? boardParam.toLowerCase() === 'true'
+        ? boardParam.toLowerCase() === "true"
         : true;
     }
 
     if (clearSoundInput) {
-      const clearSoundParam = urlParams.get('clearSound');
+      const clearSoundParam = urlParams.get("clearSound");
       clearSoundInput.checked = clearSoundParam
-        ? clearSoundParam.toLowerCase() === 'true'
+        ? clearSoundParam.toLowerCase() === "true"
         : true;
     }
   };
 
   const initializeSettingsDialog = (event?: Event) => {
     const dialog = document.getElementById(
-      'player-settings'
+      "player-settings",
     ) as HTMLDialogElement;
 
     if (dialog && (dialog as any).__api) {
@@ -385,28 +389,28 @@ import MadeBy from '../components/MadeBy.astro';
 
       // Update the settings parameters
       if (data.mirrorUrl) {
-        params.set('mirrorUrl', data.mirrorUrl);
+        params.set("mirrorUrl", data.mirrorUrl);
       }
       if (data.twitchChannel) {
-        params.set('twitchChannel', data.twitchChannel);
+        params.set("twitchChannel", data.twitchChannel);
       }
       // Handle chat enabled toggle
-      params.set('chat', data.chatEnabled ? 'true' : 'false');
+      params.set("chat", data.chatEnabled ? "true" : "false");
       // Handle WoS board visibility toggle
-      params.set('board', data.wosEnabled ? 'true' : 'false');
+      params.set("board", data.wosEnabled ? "true" : "false");
       // Handle clear sound toggle
-      params.set('clearSound', data.clearSound ? 'true' : 'false');
+      params.set("clearSound", data.clearSound ? "true" : "false");
 
       // Navigate to the updated URL
-      const newUrl = window.location.pathname + '?' + params.toString();
+      const newUrl = window.location.pathname + "?" + params.toString();
       window.location.href = newUrl;
     });
   };
 
   const checkRequiredParams = () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const hasMirrorUrl = urlParams.has('mirrorUrl');
-    const hasTwitchChannel = urlParams.has('twitchChannel');
+    const hasMirrorUrl = urlParams.has("mirrorUrl");
+    const hasTwitchChannel = urlParams.has("twitchChannel");
 
     // If either parameter is missing, show the settings dialog
     if (!hasMirrorUrl || !hasTwitchChannel) {
@@ -416,7 +420,7 @@ import MadeBy from '../components/MadeBy.astro';
       // Ensure dialog is ready and set up callbacks before opening
       const attemptOpenDialog = () => {
         const dialog = document.getElementById(
-          'player-settings'
+          "player-settings",
         ) as HTMLDialogElement;
         if (dialog && (dialog as any).__api) {
           settingsDialog = (dialog as any).__api;
@@ -443,7 +447,7 @@ import MadeBy from '../components/MadeBy.astro';
 
     // Initialize settings dialog
     const dialog = document.getElementById(
-      'player-settings'
+      "player-settings",
     ) as HTMLDialogElement;
     if (dialog) {
       // Try to get the API immediately if it exists
@@ -453,20 +457,20 @@ import MadeBy from '../components/MadeBy.astro';
       } else {
         // If not ready yet, wait for the event
         dialog.addEventListener(
-          'dialog-ready',
+          "dialog-ready",
           (event) => {
             initializeSettingsDialog(event);
             setupDialogCallbacks();
           },
-          { once: true }
+          { once: true },
         );
       }
     }
 
     // Set up settings button click handler
-    const settingsBtn = document.getElementById('open-settings-btn');
+    const settingsBtn = document.getElementById("open-settings-btn");
     if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
+      settingsBtn.addEventListener("click", () => {
         // Ensure dialog is ready and callbacks are set up
         if (!settingsDialog && dialog && (dialog as any).__api) {
           settingsDialog = (dialog as any).__api;
@@ -488,34 +492,34 @@ import MadeBy from '../components/MadeBy.astro';
     // Check if required parameters are present (this will trigger dialog if needed)
     const hasRequiredParams = checkRequiredParams();
 
-    if (urlParams.has('mirrorUrl')) {
-      const url = urlParams.get('mirrorUrl') || '';
+    if (urlParams.has("mirrorUrl")) {
+      const url = urlParams.get("mirrorUrl") || "";
       currentMirrorUrl = normalizeMirrorUrl(url);
       loadBoardIframeIfVisible();
       console.log(currentMirrorUrl);
     }
 
-    if (urlParams.has('chat')) {
-      const isChatEnabled = urlParams.get('chat')?.toLowerCase() === 'true';
+    if (urlParams.has("chat")) {
+      const isChatEnabled = urlParams.get("chat")?.toLowerCase() === "true";
       const twitchChatWidget = document.getElementById(
-        'player-twitch-chat-widget'
+        "player-twitch-chat-widget",
       ) as HTMLIFrameElement;
       const grid = document.querySelector(
-        '.player-wos-main-grid'
+        ".player-wos-main-grid",
       ) as HTMLElement;
       if (isChatEnabled) {
-        twitchChatWidget.style.display = '';
-        grid.classList.remove('chat-hidden');
+        twitchChatWidget.style.display = "";
+        grid.classList.remove("chat-hidden");
       } else {
-        twitchChatWidget.style.display = 'none';
-        grid.classList.add('chat-hidden');
+        twitchChatWidget.style.display = "none";
+        grid.classList.add("chat-hidden");
       }
     }
 
-    if (urlParams.has('twitchChannel')) {
-      twitchChannel = urlParams.get('twitchChannel') || 'clarkio';
+    if (urlParams.has("twitchChannel")) {
+      twitchChannel = urlParams.get("twitchChannel") || "clarkio";
       const twitchChatWidget = document.getElementById(
-        'player-twitch-chat-widget'
+        "player-twitch-chat-widget",
       ) as HTMLIFrameElement;
       twitchChatWidget.src = `https://www.twitch.tv/embed/${twitchChannel}/chat?darkpopout&parent=${location.hostname}`;
     }
@@ -523,22 +527,23 @@ import MadeBy from '../components/MadeBy.astro';
     // Only connect if we have required parameters
     if (hasRequiredParams) {
       // Handle clear sound setting
-      if (urlParams.has('clearSound')) {
-        spectator.clearSoundEnabled = urlParams.get('clearSound')?.toLowerCase() === 'true';
+      if (urlParams.has("clearSound")) {
+        spectator.clearSoundEnabled =
+          urlParams.get("clearSound")?.toLowerCase() === "true";
       }
 
       spectator.connectToWosGame(currentMirrorUrl);
       spectator.connectToTwitch(twitchChannel);
     }
 
-    if (urlParams.has('board')) {
-      const boardEnabled = urlParams.get('board')?.toLowerCase() === 'true';
+    if (urlParams.has("board")) {
+      const boardEnabled = urlParams.get("board")?.toLowerCase() === "true";
       if (boardContainer) {
         if (boardEnabled) {
-          boardContainer.style.display = '';
+          boardContainer.style.display = "";
           loadBoardIframeIfVisible();
         } else {
-          boardContainer.style.display = 'none';
+          boardContainer.style.display = "none";
           clearBoardIframe();
         }
       }
@@ -548,8 +553,8 @@ import MadeBy from '../components/MadeBy.astro';
   };
 
   // Listen for both events to handle initial load and navigation
-  document.addEventListener('DOMContentLoaded', initializePage);
-  document.addEventListener('astro:page-load', initializePage);
+  document.addEventListener("DOMContentLoaded", initializePage);
+  document.addEventListener("astro:page-load", initializePage);
 </script>
 
 <style>
@@ -568,9 +573,6 @@ import MadeBy from '../components/MadeBy.astro';
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    /* display: flex;
-    justify-content: center;
-    align-items: center; */
   }
 
   .player-grid {
@@ -578,122 +580,5 @@ import MadeBy from '../components/MadeBy.astro';
     max-width: min(100vw, calc(100vh * 16 / 9));
     max-height: 100vh;
     aspect-ratio: 16 / 9;
-  }
-
-  /* Override wrapper max-width when in widget mode */
-  :global(.widget-mode .wrapper) {
-    max-width: 100% !important;
-    padding: 0 !important;
-  }
-
-  /* Settings form styles */
-  .settings-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .form-group label {
-    color: var(--text-lightest, #f5efff);
-    font-weight: 600;
-    font-size: 0.95rem;
-  }
-
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    padding: 0.75rem;
-    border: 1px solid var(--border-primary, rgba(199, 156, 255, 0.4));
-    border-radius: 6px;
-    background: var(--bg-tertiary, #4b1a81);
-    color: var(--text-primary, #dacfe6);
-    font-size: 1rem;
-    font-family: var(--font-main, 'Inter', sans-serif);
-    transition: all 0.2s ease;
-  }
-
-  .form-group input:focus,
-  .form-group select:focus,
-  .form-group textarea:focus {
-    outline: none;
-    border-color: var(--accent-violet, #c79cff);
-    background: var(--bg-dark, #161625);
-  }
-
-  .form-group input::placeholder {
-    color: rgba(218, 207, 230, 0.5);
-  }
-
-  .form-help {
-    color: rgba(218, 207, 230, 0.7);
-    font-size: 0.85rem;
-    font-style: italic;
-  }
-
-  /* Toggle switch styles */
-  .toggle-label {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-    position: relative;
-  }
-
-  .toggle-input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .toggle-slider {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 26px;
-    background: var(--bg-tertiary, #4b1a81);
-    border: 2px solid var(--border-primary, rgba(199, 156, 255, 0.4));
-    border-radius: 26px;
-    transition: all 0.3s ease;
-    flex-shrink: 0;
-  }
-
-  .toggle-slider::before {
-    content: '';
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    left: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: var(--text-primary, #dacfe6);
-    border-radius: 50%;
-    transition: all 0.3s ease;
-  }
-
-  .toggle-input:checked + .toggle-slider {
-    background: var(--bg-secondary, #7736c6);
-    border-color: var(--accent-violet, #c79cff);
-  }
-
-  .toggle-input:checked + .toggle-slider::before {
-    left: 26px;
-    background: var(--text-lightest, #f5efff);
-  }
-
-  .toggle-input:focus + .toggle-slider {
-    box-shadow: 0 0 0 3px rgba(199, 156, 255, 0.3);
-  }
-
-  .toggle-text {
-    color: var(--text-lightest, #f5efff);
-    font-weight: 600;
-    font-size: 0.95rem;
   }
 </style>
