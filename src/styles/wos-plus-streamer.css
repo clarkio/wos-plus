@@ -141,6 +141,10 @@
   color: #f5efff;
 }
 
+.correct-words-log {
+  min-height: 0;
+}
+
 #streamer-twitch-chat-widget {
   width: 100%;
   height: 100%;
