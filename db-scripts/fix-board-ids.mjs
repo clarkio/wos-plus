@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import { loadDevEnv } from "./load-dev-env.mjs";
+
+// Load .dev.vars into process.env if present (non-fatal)
+await loadDevEnv();
 
 function parseArgs(argv) {
   const args = {
