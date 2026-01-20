@@ -317,10 +317,107 @@ export class GameSpectator {
     }
 
     if (missingWords.length > 0) {
-      missingWords.forEach(word => {
+      // Filter missing words to only include those that fit in empty slots
+      // and respect alphabetical ordering with adjacent filled slots
+      const validMissingWords = this.filterMissingWordsBySlotFit(missingWords);
+
+      validMissingWords.forEach(word => {
         this.updateCorrectWordsDisplayed(word + "*");
       });
     }
+  }
+
+  /**
+   * Filters missing words to only include those that can fit into empty slots
+   * while respecting alphabetical ordering constraints with adjacent filled slots.
+   * Words in WOS are organized by length groups, and within each group they are alphabetical.
+   */
+  private filterMissingWordsBySlotFit(missingWords: string[]): string[] {
+    const emptySlots = this.currentLevelSlots.filter(slot => !slot.user);
+
+    if (emptySlots.length === 0) {
+      console.log('[WOS Helper] No empty slots found, no missing words to validate');
+      return [];
+    }
+
+    const validWords: string[] = [];
+
+    for (const word of missingWords) {
+      const wordLength = word.length;
+
+      // Find empty slots that match this word's length
+      const matchingEmptySlots = emptySlots.filter(slot => slot.letters.length === wordLength);
+
+      if (matchingEmptySlots.length === 0) {
+        console.log(`[WOS Helper] No empty slots for word "${word}" (length ${wordLength})`);
+        continue;
+      }
+
+      // Check if the word can fit in any of the matching empty slots
+      // considering alphabetical order with adjacent slots
+      const canFit = matchingEmptySlots.some(emptySlot => {
+        return this.wordFitsInSlotAlphabetically(word, emptySlot.index);
+      });
+
+      if (canFit) {
+        validWords.push(word);
+        console.log(`[WOS Helper] Word "${word}" can fit in an empty slot`);
+      } else {
+        console.log(`[WOS Helper] Word "${word}" doesn't fit alphabetically in any empty slot`);
+      }
+    }
+
+    return validWords;
+  }
+
+  /**
+   * Checks if a word fits alphabetically in a slot by comparing with adjacent filled slots.
+   * Adjacent slots must have the same word length for alphabetical comparison to apply.
+   */
+  private wordFitsInSlotAlphabetically(word: string, slotIndex: number): boolean {
+    const wordLower = word.toLowerCase();
+    const wordLength = word.length;
+
+    // Find the nearest filled slot before this index with the same length
+    let prevFilledSlot: Slots | null = null;
+    for (let i = slotIndex - 1; i >= 0; i--) {
+      const slot = this.currentLevelSlots[i];
+      if (slot.length === wordLength && slot.user && slot.word) {
+        prevFilledSlot = slot;
+        break;
+      }
+    }
+
+    // Find the nearest filled slot after this index with the same length
+    let nextFilledSlot: Slots | null = null;
+    for (let i = slotIndex + 1; i < this.currentLevelSlots.length; i++) {
+      const slot = this.currentLevelSlots[i];
+      if (slot.length === wordLength && slot.user && slot.word) {
+        nextFilledSlot = slot;
+        break;
+      }
+    }
+
+    // Check alphabetical ordering
+    // Word must come after the previous filled slot (if any)
+    if (prevFilledSlot) {
+      const prevWord = prevFilledSlot.word.toLowerCase();
+      if (wordLower.localeCompare(prevWord) <= 0) {
+        console.log(`[WOS Helper] "${word}" fails: must come after "${prevFilledSlot.word}"`);
+        return false;
+      }
+    }
+
+    // Word must come before the next filled slot (if any)
+    if (nextFilledSlot) {
+      const nextWord = nextFilledSlot.word.toLowerCase();
+      if (wordLower.localeCompare(nextWord) >= 0) {
+        console.log(`[WOS Helper] "${word}" fails: must come before "${nextFilledSlot.word}"`);
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private clearBoard() {
@@ -367,7 +464,8 @@ export class GameSpectator {
         console.warn(
           `[WOS Helper] Could not find matching message for ${lowerUsername}`,
           `[WOS Helper] Last message: ${JSON.stringify(this.lastTwitchMessage)}`,
-          `[WOS Helper] Chat log entry: ${JSON.stringify(latestMessage)}`
+          `[WOS Helper] Chat log entry: ${JSON.stringify(latestMessage)}`,
+          `[WOS Helper] Expected word length: ${this.twitchChatLog.entries()}`
         );
         return; // Skip updating UI if we can't find the word
       }
