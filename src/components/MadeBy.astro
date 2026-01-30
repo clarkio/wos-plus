@@ -16,7 +16,7 @@ const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL
   // Module-scoped interval variable
   let cyclingInterval = null;
   let twitchIconHTML = '';
-  
+
   // Capture the Twitch icon HTML on first load
   function captureInitialState() {
     const textElement = document.getElementById('made-by-content');
@@ -25,14 +25,14 @@ const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL
       twitchIconHTML = textElement.innerHTML;
     }
   }
-  
+
   const texts = [
     { content: () => twitchIconHTML }, // Use the captured HTML with proper Twitch icon
     { content: () => 'Try it → wosplus.com' }
   ];
-  
+
   let currentIndex = 0;
-  
+
   function updateText() {
     const textElement = document.getElementById('made-by-content');
     if (textElement && twitchIconHTML) {
@@ -40,22 +40,22 @@ const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL
       textElement.innerHTML = texts[currentIndex].content();
     }
   }
-  
+
   // Initialize page handler
   function initCycling() {
     // Capture the initial state with Twitch icon
     captureInitialState();
-    
+
     // Clear any existing interval
     if (cyclingInterval !== null) {
       clearInterval(cyclingInterval);
       cyclingInterval = null;
     }
-    
+
     // Set up new interval using the configurable interval time
     cyclingInterval = setInterval(updateText, cyclingIntervalMs);
   }
-  
+
   // Clean up on page unload
   function cleanup() {
     if (cyclingInterval !== null) {
@@ -63,7 +63,7 @@ const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL
       cyclingInterval = null;
     }
   }
-  
+
   // Listen for both events to handle initial load and navigation
   document.addEventListener('DOMContentLoaded', initCycling);
   document.addEventListener('astro:page-load', initCycling);
@@ -78,13 +78,18 @@ const cyclingIntervalMs = parseInt(import.meta.env.PUBLIC_MADE_BY_CYCLE_INTERVAL
     opacity: 0.95;
     flex-shrink: 0;
   }
-  
+
   .made-by-text {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
+    font-size: clamp(0.65rem, min(2vw, 4cqh), 1.5rem) !important;
   }
-  
+
+  .made-by-text span {
+    font-size: inherit !important;
+  }
+
   /* Ensure Twitch icon is aligned properly */
   .made-by-text :global(svg) {
     display: inline-block;
