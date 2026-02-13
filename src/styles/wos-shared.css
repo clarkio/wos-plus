@@ -35,34 +35,64 @@ body {
   gap: 0.2rem;
 }
 
-#correct-words-log-container>span {
+#correct-words-log-container > span {
   font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   color: var(--text-primary);
 }
 
+.correct-words-header > span {
+  font-size: clamp(0.65rem, min(2vw, 4cqh), 1.5rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .correct-words-log {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   height: 100%;
-  min-height: 225px;
-  /* max-height: 269px; */
   width: 100%;
   font-family: var(--font-mono);
   box-sizing: border-box;
   color: var(--text-muted);
   border-radius: var(--border-radius);
   border: 5px solid var(--border-primary);
-  padding: 0.5rem;
+  padding: clamp(0.25rem, 2cqh, 0.75rem);
   background: var(--bg-overlay);
-  container-type: inline-size;
+  container-type: size;
   container-name: word-log;
+
+  /* Dynamic scaling based on available space */
+  --word-log-height: 100%;
+  --padding-vertical: clamp(0.25rem, 2cqh, 0.75rem);
+  --padding-horizontal: clamp(0.25rem, 3cqi, 0.75rem);
+
+  gap: clamp(0.1rem, 1cqh, 0.25rem);
+
+  /* Smooth scroll behavior for content overflow */
+  scroll-behavior: smooth;
 }
 
 .correct-words-log::-webkit-scrollbar {
-  display: none;
+  width: 4px;
+}
+
+.correct-words-log::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.correct-words-log::-webkit-scrollbar-thumb {
+  background: rgba(199, 156, 255, 0.3);
+  border-radius: 2px;
+}
+
+.correct-words-log::-webkit-scrollbar-thumb:hover {
+  background: rgba(199, 156, 255, 0.6);
 }
 
 .correct-words-log.auto-scroll {
@@ -70,7 +100,6 @@ body {
 }
 
 @keyframes autoScroll {
-
   0%,
   25% {
     transform: translateY(0);
@@ -91,22 +120,33 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
+  gap: clamp(0.15rem, 2cqi, 0.5rem);
   border-bottom: 1px solid var(--border-secondary);
+  padding: clamp(0.1rem, 1.5cqh, 0.25rem) 0;
+  flex-shrink: 0;
+  min-height: 0;
 }
 
 .word-group__title {
-  font-size: 2rem;
+  font-size: clamp(1rem, 8cqh, 2.5rem);
   font-weight: 700;
-  padding-right: 5px;
-  vertical-align: center;
+  flex-shrink: 0;
   text-transform: uppercase;
   color: var(--text-light);
+  line-height: 1;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .word-group__words {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
+  gap: clamp(0.15rem, 1.5cqi, 0.4rem);
+  flex: 1;
+  align-items: center;
+  min-width: 0;
 }
 
 /* Correct Word Styles */
@@ -114,14 +154,17 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding-right: 0.5rem;
+  padding: clamp(0.1rem, 0.75cqh, 0.35rem) clamp(0.15rem, 1cqi, 0.5rem);
   font-family: var(--font-code);
-  /* font-size: 2.0rem; */
-  font-size: clamp(1rem, 3cqi, 2.75rem);
-  /* Scales based on container width */
+  /* Dynamic font size based on container height and width */
+  /* Increased base sizing so words use more of available space */
+  font-size: clamp(0.6rem, min(6cqi, 12cqh), 3.5rem);
   font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--text-lightest);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
 }
 
 .correct-word.missing-word {
@@ -131,21 +174,120 @@ body {
   color: var(--missing-text);
 }
 
+/* Scale correct-word sizing based on the word-log container size so
+   words fill the available space dynamically */
+@container word-log (min-width: 300px) {
+  .correct-word {
+    font-size: clamp(0.9rem, min(8cqi, 14cqh), 3.75rem);
+    padding: clamp(0.12rem, 0.9cqh, 0.45rem) clamp(0.2rem, 1.2cqi, 0.6rem);
+  }
+
+  .word-group__title {
+    font-size: clamp(0.9rem, 3.5cqi, 1.8rem);
+  }
+}
+
+@container word-log (min-width: 600px) {
+  .correct-word {
+    font-size: clamp(1.2rem, min(10cqi, 18cqh), 4rem);
+  }
+  .word-group__title {
+    font-size: clamp(1.2rem, 4.5cqi, 2.25rem);
+  }
+}
+
+/* Level data container queries moved to granular ranges section below */
+
+/* Granular container size ranges to better match parent container widths
+   and ensure text uses available space without leaving large gaps. */
+@container word-log (max-width: 360px) {
+  .correct-word {
+    font-size: clamp(0.55rem, min(5cqi, 8cqh), 1.6rem);
+    padding: clamp(0.06rem, 0.6cqh, 0.18rem) clamp(0.08rem, 0.6cqi, 0.2rem);
+  }
+  .word-group__title {
+    font-size: clamp(0.7rem, 2.5cqi, 1rem);
+  }
+}
+
+@container word-log (min-width: 361px) and (max-width: 700px) {
+  .correct-word {
+    font-size: clamp(0.9rem, min(7cqi, 11cqh), 2.6rem);
+    padding: clamp(0.1rem, 0.8cqh, 0.3rem) clamp(0.15rem, 1cqi, 0.4rem);
+  }
+  .word-group__title {
+    font-size: clamp(1rem, 3.2cqi, 1.6rem);
+  }
+}
+
+@container word-log (min-width: 701px) {
+  .correct-word {
+    font-size: clamp(1.3rem, min(9cqi, 14cqh), 4rem);
+    padding: clamp(0.12rem, 1cqh, 0.45rem) clamp(0.2rem, 1.2cqi, 0.6rem);
+  }
+  .word-group__title {
+    font-size: clamp(1.4rem, 4.5cqi, 2.2rem);
+  }
+}
+
+/* Level-data granular ranges */
+@container level-data (max-width: 240px) {
+  .letters,
+  .letters-label,
+  .hidden-letter,
+  .hidden-letter-label,
+  .fake-letter,
+  .fake-letter-label,
+  #big-word {
+    font-size: clamp(0.5rem, min(40cqi, 50cqh), 5rem);
+  }
+}
+
+@container level-data (min-width: 241px) and (max-width: 420px) {
+  .letters,
+  .letters-label,
+  .hidden-letter,
+  .hidden-letter-label,
+  .fake-letter,
+  .fake-letter-label,
+  #big-word {
+    font-size: clamp(0.8rem, min(50cqi, 60cqh), 8rem);
+  }
+}
+
+@container level-data (min-width: 421px) {
+  .letters,
+  .letters-label,
+  .hidden-letter,
+  .hidden-letter-label,
+  .fake-letter,
+  .fake-letter-label,
+  #big-word {
+    font-size: clamp(1rem, min(60cqi, 70cqh), 12rem);
+  }
+}
+
 /* Level Data Components */
 .level-data-container {
   position: relative;
+  /* allow container queries to consider both inline and block sizes */
+  container-type: size;
+  container-name: level-data;
 }
 
 .level-data-container label {
   min-width: 100px;
 }
 
-.level-data-container>div:not(#correct-words-log-container) {
+.level-data-container > div:not(#correct-words-log-container) {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.25rem;
   width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Overlay Components */
@@ -220,11 +362,70 @@ body {
   font-weight: 800;
 }
 
+/* Container-driven scaling for level-data box elements */
+@container level-data (max-width: 240px) {
+  .level-current {
+    font-size: clamp(0.9rem, 3.5cqh, 1.4rem);
+  }
+  .level-title {
+    font-size: clamp(0.6rem, 2.5cqi, 0.95rem);
+  }
+  .level-value {
+    font-size: clamp(1rem, 3.5cqi, 1.6rem);
+  }
+  .level-record {
+    font-size: clamp(0.7rem, 2.5cqi, 1rem);
+  }
+  .level-record-value {
+    font-size: clamp(0.85rem, 2.8cqi, 1.15rem);
+  }
+}
+
+@container level-data (min-width: 241px) and (max-width: 420px) {
+  .level-current {
+    font-size: clamp(1.1rem, 2.8cqh, 1.8rem);
+  }
+  .level-title {
+    font-size: clamp(0.8rem, 2.8cqi, 1.1rem);
+  }
+  .level-value {
+    font-size: clamp(1.4rem, 3.8cqi, 2rem);
+  }
+  .level-record {
+    font-size: clamp(0.9rem, 2.8cqi, 1.3rem);
+  }
+  .level-record-value {
+    font-size: clamp(1.1rem, 3.2cqi, 1.6rem);
+  }
+}
+
+@container level-data (min-width: 421px) {
+  .level-current {
+    font-size: clamp(1.6rem, 3.5cqh, 2.6rem);
+  }
+  .level-title {
+    font-size: clamp(1rem, 3.2cqi, 1.6rem);
+  }
+  .level-value {
+    font-size: clamp(2rem, 4.5cqi, 3.2rem);
+  }
+  .level-record {
+    font-size: clamp(1.2rem, 3.5cqi, 1.8rem);
+  }
+  .level-record-value {
+    font-size: clamp(1.6rem, 3.8cqi, 2.4rem);
+  }
+}
+
 /* Common Text Sizes */
-#big-word,
 .level-value {
   font-size: 1.875rem;
   font-weight: bold;
+}
+
+#big-word {
+  font-weight: bold;
+  /* font-size controlled by level-data container queries */
 }
 
 span {
@@ -290,7 +491,7 @@ button {
   background: var(--bg-tertiary, #4b1a81);
   color: var(--text-primary, #dacfe6);
   font-size: 1rem;
-  font-family: var(--font-main, 'Inter', sans-serif);
+  font-family: var(--font-main, "Inter", sans-serif);
   transition: all 0.2s ease;
 }
 
@@ -344,7 +545,7 @@ button {
 }
 
 .toggle-slider::before {
-  content: '';
+  content: "";
   position: absolute;
   width: 18px;
   height: 18px;
@@ -356,17 +557,17 @@ button {
   transition: all 0.3s ease;
 }
 
-.toggle-input:checked+.toggle-slider {
+.toggle-input:checked + .toggle-slider {
   background: var(--bg-secondary, #7736c6);
   border-color: var(--accent-violet, #c79cff);
 }
 
-.toggle-input:checked+.toggle-slider::before {
+.toggle-input:checked + .toggle-slider::before {
   left: 26px;
   background: var(--text-lightest, #f5efff);
 }
 
-.toggle-input:focus+.toggle-slider {
+.toggle-input:focus + .toggle-slider {
   box-shadow: 0 0 0 3px rgba(199, 156, 255, 0.3);
 }
 
