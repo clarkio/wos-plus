@@ -2,7 +2,7 @@ import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
 import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb } from './wos-words';
-import { saveBoard, fetchBoard } from './db-service';
+import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
 
 
 const twitchWorker = new Worker(
@@ -31,11 +31,8 @@ export class GameSpectator {
   twitchClient: tmiClient | void = undefined;
   currentChannel: string = '';
   personalBest: number = 0;
-  pbStorageKey: string = '';
   dailyBest: number = 0;
-  dailyPbStorageKey: string = '';
   dailyClears: number = 0;
-  dailyClearsStorageKey: string = '';
   currentLevelBigWord: string = '';
   currentLevelCorrectWords: string[] = [];
   wosEventQueue: any[] = [];
@@ -56,24 +53,26 @@ export class GameSpectator {
     this.startEventProcessors();
   }
 
-  private getTodayKey() {
-    return new Date().toISOString().slice(0, 10);
+  private async loadChannelRecords(channel: string) {
+    const stats = await fetchChannelStats(channel);
+    this.personalBest = stats.allTimePersonalBest;
+    this.dailyBest = stats.dailyBest;
+    this.dailyClears = stats.dailyClears;
+    this.updateStatsDisplay();
   }
 
-  private loadChannelRecords(channel: string) {
-    this.pbStorageKey = `pb_${channel.toLowerCase()}`;
-    const stored = localStorage.getItem(this.pbStorageKey);
-    this.personalBest = stored ? parseInt(stored) : 0;
+  private async refreshChannelStats() {
+    if (!this.currentChannel) return;
+    const stats = await fetchChannelStats(this.currentChannel);
+    // Use Math.max to avoid overwriting optimistic local updates
+    // when the bot hasn't written to the DB yet
+    this.personalBest = Math.max(this.personalBest, stats.allTimePersonalBest);
+    this.dailyBest = Math.max(this.dailyBest, stats.dailyBest);
+    this.dailyClears = Math.max(this.dailyClears, stats.dailyClears);
+    this.updateStatsDisplay();
+  }
 
-    this.dailyPbStorageKey = `pb_${channel.toLowerCase()}_${this.getTodayKey()}`;
-    const storedDaily = localStorage.getItem(this.dailyPbStorageKey);
-    console.log('Stored Daily Best Value:', storedDaily);
-    this.dailyBest = storedDaily ? parseInt(storedDaily) : 0;
-
-    this.dailyClearsStorageKey = `clears_${channel.toLowerCase()}_${this.getTodayKey()}`;
-    const storedClears = localStorage.getItem(this.dailyClearsStorageKey);
-    this.dailyClears = storedClears ? parseInt(storedClears) : 0;
-
+  private updateStatsDisplay() {
     const pbElement = document.getElementById('pb-value');
     if (pbElement) {
       pbElement.innerText = `${this.personalBest}`;
@@ -81,44 +80,6 @@ export class GameSpectator {
     const dailyElement = document.getElementById('daily-pb-value');
     if (dailyElement) {
       dailyElement.innerText = `${this.dailyBest}`;
-    }
-
-    const clearElement = document.getElementById('daily-clear-value');
-    if (clearElement) {
-      clearElement.innerText = `${this.dailyClears}`;
-    }
-  }
-
-  private updateChannelDailyRecord(level: number) {
-    if (level > this.dailyBest) {
-      this.dailyBest = level;
-      if (this.dailyPbStorageKey) {
-        localStorage.setItem(this.dailyPbStorageKey, String(this.dailyBest));
-      }
-      const dailyElement = document.getElementById('daily-pb-value');
-      if (dailyElement) {
-        dailyElement.innerText = `${this.dailyBest}`;
-      }
-    }
-  }
-
-  private updateChannelAllTimeRecord(record: number) {
-    if (record > this.personalBest) {
-      this.personalBest = record;
-      if (this.pbStorageKey) {
-        localStorage.setItem(this.pbStorageKey, String(this.personalBest));
-      }
-      const pbElement = document.getElementById('pb-value');
-      if (pbElement) {
-        pbElement.innerText = `${this.personalBest}`;
-      }
-    }
-  }
-
-  private recordBoardClear() {
-    this.dailyClears += 1;
-    if (this.dailyClearsStorageKey) {
-      localStorage.setItem(this.dailyClearsStorageKey, String(this.dailyClears));
     }
     const clearElement = document.getElementById('daily-clear-value');
     if (clearElement) {
@@ -130,23 +91,25 @@ export class GameSpectator {
     // Set up WOS worker message handler
     wosWorker.onmessage = async (e) => {
       if (e.data.type === 'wos_event') {
-        const { wosEventType, wosEventName, username, letters, hitMax, stars, level, falseLetters, hiddenLetters, slots, index, record } = e.data;
-
-        if (record && typeof record === 'number') {
-          this.updateChannelAllTimeRecord(record);
-        }
+        const { wosEventType, wosEventName, username, letters, hitMax, stars, level, falseLetters, hiddenLetters, slots, index } = e.data;
 
         const message = username ? `:${username} - ${letters.join('')} - Big Word: ${hitMax}` : '';
         console.log(`[WOS Event] <${wosEventName}>${message}`);
 
         if (wosEventType === 1 || wosEventType === 12) {
           this.handleGameInitialization(level, wosEventType, letters, slots);
+          await this.refreshChannelStats();
         } else if (wosEventType === 3) {
           await this.handleCorrectGuess(username, letters, index, hitMax);
         } else if (wosEventType === 4) {
           await this.handleLevelResults(stars);
+          // Delay to allow the chatbot to update the DB before reading
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await this.refreshChannelStats();
         } else if (wosEventType === 5) {
           await this.handleLevelEnd();
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await this.refreshChannelStats();
         } else if (wosEventType === 10) {
           this.handleLetterReveal(hiddenLetters, falseLetters);
         }
@@ -198,7 +161,6 @@ export class GameSpectator {
     this.log(`[WOS Helper] Total slots for level ${this.currentLevel}: ${this.currentLevelSlots.length}`, this.wosGameLogId);
 
     this.currentLevel += parseInt(stars);
-    this.updateChannelDailyRecord(this.currentLevel);
     const levelTitleEl = document.getElementById('level-title')!;
     levelTitleEl.innerText = 'NEXT LEVEL';
     levelTitleEl.classList.add('long');
@@ -206,8 +168,6 @@ export class GameSpectator {
 
     if (stars === 5 || this.currentLevelSlots.every(slot => slot.user)) {
       // Level completed successfully with all words found on the board (CLEAR)
-      this.recordBoardClear();
-
       // Capture board data
       if (this.currentLevelBigWord && this.currentLevelSlots) {
         console.log('[WOS Helper] Saving board data to database...');
@@ -269,8 +229,6 @@ export class GameSpectator {
     this.currentLevelSlots = slots;
     this.log(`Level ${level} ${wosEventType === 1 ? 'Started' : 'In Progress'}`, this.wosGameLogId);
     this.currentLevel = parseInt(level);
-    this.updateChannelAllTimeRecord(this.currentLevel);
-    this.updateChannelDailyRecord(this.currentLevel);
     const levelTitleEl = document.getElementById('level-title')!;
     levelTitleEl.innerText = 'LEVEL';
     levelTitleEl.classList.remove('long');
@@ -293,14 +251,14 @@ export class GameSpectator {
     console.log('Known Letters:', knownLetters);
     console.log('Minimum Word Length:', minLength);
     console.log('Calculating missing words...');
-    
+
     let missingWords: string[] = [];
-    
+
     // Try to fetch board data if we have a big word
     if (this.currentLevelBigWord !== '') {
       console.log('Attempting to fetch board with ID:', this.currentLevelBigWord);
       const board = await fetchBoard(this.currentLevelBigWord);
-      
+
       if (board && board.slots) {
         console.log('Board found in database, using board slots for missed words detection');
         // Use board-based detection

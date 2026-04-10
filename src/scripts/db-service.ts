@@ -1,3 +1,50 @@
+export interface ChannelStats {
+  allTimePersonalBest: number;
+  dailyBest: number;
+  dailyClears: number;
+}
+
+const defaultStats: ChannelStats = { allTimePersonalBest: 0, dailyBest: 0, dailyClears: 0 };
+
+export async function fetchChannelStats(channel: string): Promise<ChannelStats> {
+  if (typeof channel !== 'string' || channel.length === 0) {
+    console.warn('Cannot fetch channel stats: channel must be a non-empty string.');
+    return defaultStats;
+  }
+
+  const cleanChannel = channel.toLowerCase().trim();
+
+  if (!/^[a-z0-9_]+$/.test(cleanChannel)) {
+    console.warn('Cannot fetch channel stats: channel contains invalid characters.');
+    return defaultStats;
+  }
+
+  if (cleanChannel.length > 50) {
+    console.warn('Cannot fetch channel stats: channel name too long.');
+    return defaultStats;
+  }
+
+  try {
+    const url = `/api/channel-stats/${encodeURIComponent(cleanChannel)}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error(`Failed to fetch channel stats: ${response.status} ${response.statusText}`);
+      return defaultStats;
+    }
+
+    const data = await response.json();
+    return {
+      allTimePersonalBest: data.allTimePersonalBest ?? 0,
+      dailyBest: data.dailyBest ?? 0,
+      dailyClears: data.dailyClears ?? 0,
+    };
+  } catch (error) {
+    console.error('Error fetching channel stats:', error);
+    return defaultStats;
+  }
+}
+
 export interface Slot {
   letters: string[];
   user?: string | null;
