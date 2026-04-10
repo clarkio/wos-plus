@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GameSpectator } from '@scripts/wos-plus-main';
 import * as wosWords from '@scripts/wos-words';
-import { createMockLocalStorage } from '../test-utils';
+import { fetchChannelStats } from '@scripts/db-service';
 
 // Mock the worker modules
 vi.mock('@scripts/wos-worker', () => ({
@@ -23,6 +23,7 @@ vi.mock('@scripts/wos-words', () => ({
 vi.mock('@scripts/db-service', () => ({
   saveBoard: vi.fn(),
   fetchBoard: vi.fn(),
+  fetchChannelStats: vi.fn().mockResolvedValue({ allTimePersonalBest: 0, dailyBest: 0, dailyClears: 0 }),
 }));
 
 // Mock socket.io-client
@@ -48,7 +49,6 @@ vi.mock('@tmi.js/chat', () => ({
 
 describe('GameSpectator class', () => {
   let spectator: GameSpectator;
-  let mockLocalStorage: ReturnType<typeof createMockLocalStorage>;
 
   const getMockWorkers = (): any[] => ((global as any).MockWorker?.instances ?? []);
   const findWorkerByUrlSubstring = (substr: string) =>
@@ -70,10 +70,6 @@ describe('GameSpectator class', () => {
       <div id="wos-game-log"></div>
       <div id="twitch-chat-log"></div>
     `;
-
-    // Mock localStorage
-    mockLocalStorage = createMockLocalStorage();
-    global.localStorage = mockLocalStorage as any;
 
     // Mock Audio
     (global as any).Audio = vi.fn(() => ({
@@ -132,19 +128,6 @@ describe('GameSpectator class', () => {
     });
   });
 
-  describe('getTodayKey', () => {
-    it('should return today\'s date in ISO format (YYYY-MM-DD)', () => {
-      spectator = new GameSpectator();
-      const today = new Date().toISOString().slice(0, 10);
-
-      // Access private method through any cast for testing
-      const todayKey = (spectator as any).getTodayKey();
-
-      expect(todayKey).toBe(today);
-      expect(todayKey).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    });
-  });
-
   describe('getMirrorCode', () => {
     it('should extract game code from valid mirror URL', () => {
       spectator = new GameSpectator();
@@ -183,164 +166,47 @@ describe('GameSpectator class', () => {
       spectator = new GameSpectator();
     });
 
-    it('should load personal best from localStorage', () => {
-      mockLocalStorage.setItem('pb_testchannel', '15');
+    it('should load stats from database via fetchChannelStats', async () => {
+      vi.mocked(fetchChannelStats).mockResolvedValueOnce({
+        allTimePersonalBest: 15,
+        dailyBest: 10,
+        dailyClears: 3,
+      });
 
-      (spectator as any).loadChannelRecords('testchannel');
+      await (spectator as any).loadChannelRecords('testchannel');
 
+      expect(fetchChannelStats).toHaveBeenCalledWith('testchannel');
       expect(spectator.personalBest).toBe(15);
-      expect(spectator.pbStorageKey).toBe('pb_testchannel');
-    });
-
-    it('should default to 0 if no personal best exists', () => {
-      (spectator as any).loadChannelRecords('newchannel');
-
-      expect(spectator.personalBest).toBe(0);
-    });
-
-    it('should load daily best from localStorage', () => {
-      const today = new Date().toISOString().slice(0, 10);
-      mockLocalStorage.setItem(`pb_testchannel_${today}`, '10');
-
-      (spectator as any).loadChannelRecords('testchannel');
-
       expect(spectator.dailyBest).toBe(10);
-    });
-
-    it('should load daily clears from localStorage', () => {
-      const today = new Date().toISOString().slice(0, 10);
-      mockLocalStorage.setItem(`clears_testchannel_${today}`, '3');
-
-      (spectator as any).loadChannelRecords('testchannel');
-
       expect(spectator.dailyClears).toBe(3);
     });
 
-    it('should update UI with loaded values', () => {
-      mockLocalStorage.setItem('pb_testchannel', '20');
-      const today = new Date().toISOString().slice(0, 10);
-      mockLocalStorage.setItem(`pb_testchannel_${today}`, '15');
-      mockLocalStorage.setItem(`clears_testchannel_${today}`, '5');
+    it('should default to 0 if no stats exist', async () => {
+      vi.mocked(fetchChannelStats).mockResolvedValueOnce({
+        allTimePersonalBest: 0,
+        dailyBest: 0,
+        dailyClears: 0,
+      });
 
-      (spectator as any).loadChannelRecords('testchannel');
+      await (spectator as any).loadChannelRecords('newchannel');
+
+      expect(spectator.personalBest).toBe(0);
+      expect(spectator.dailyBest).toBe(0);
+      expect(spectator.dailyClears).toBe(0);
+    });
+
+    it('should update UI with loaded values', async () => {
+      vi.mocked(fetchChannelStats).mockResolvedValueOnce({
+        allTimePersonalBest: 20,
+        dailyBest: 15,
+        dailyClears: 5,
+      });
+
+      await (spectator as any).loadChannelRecords('testchannel');
 
       expect(document.getElementById('pb-value')!.innerText).toBe('20');
       expect(document.getElementById('daily-pb-value')!.innerText).toBe('15');
       expect(document.getElementById('daily-clear-value')!.innerText).toBe('5');
-    });
-  });
-
-  describe('updateChannelDailyRecord', () => {
-    beforeEach(() => {
-      spectator = new GameSpectator();
-      (spectator as any).loadChannelRecords('testchannel');
-    });
-
-    it('should update daily best if level exceeds current', () => {
-      spectator.dailyBest = 10;
-
-      (spectator as any).updateChannelDailyRecord(15);
-
-      expect(spectator.dailyBest).toBe(15);
-    });
-
-    it('should not update daily best if level does not exceed current', () => {
-      spectator.dailyBest = 15;
-
-      (spectator as any).updateChannelDailyRecord(10);
-
-      expect(spectator.dailyBest).toBe(15);
-    });
-
-    it('should save updated daily best to localStorage', () => {
-      spectator.dailyBest = 10;
-
-      (spectator as any).updateChannelDailyRecord(15);
-
-      const today = new Date().toISOString().slice(0, 10);
-      const stored = mockLocalStorage.getItem(`pb_testchannel_${today}`);
-      expect(stored).toBe('15');
-    });
-
-    it('should update UI element with new daily best', () => {
-      spectator.dailyBest = 10;
-
-      (spectator as any).updateChannelDailyRecord(15);
-
-      expect(document.getElementById('daily-pb-value')!.innerText).toBe('15');
-    });
-  });
-
-  describe('updateChannelAllTimeRecord', () => {
-    beforeEach(() => {
-      spectator = new GameSpectator();
-      (spectator as any).loadChannelRecords('testchannel');
-    });
-
-    it('should update personal best if record exceeds current', () => {
-      spectator.personalBest = 20;
-
-      (spectator as any).updateChannelAllTimeRecord(25);
-
-      expect(spectator.personalBest).toBe(25);
-    });
-
-    it('should not update personal best if record does not exceed current', () => {
-      spectator.personalBest = 25;
-
-      (spectator as any).updateChannelAllTimeRecord(20);
-
-      expect(spectator.personalBest).toBe(25);
-    });
-
-    it('should save updated personal best to localStorage', () => {
-      spectator.personalBest = 20;
-
-      (spectator as any).updateChannelAllTimeRecord(25);
-
-      const stored = mockLocalStorage.getItem('pb_testchannel');
-      expect(stored).toBe('25');
-    });
-
-    it('should update UI element with new personal best', () => {
-      spectator.personalBest = 20;
-
-      (spectator as any).updateChannelAllTimeRecord(25);
-
-      expect(document.getElementById('pb-value')!.innerText).toBe('25');
-    });
-  });
-
-  describe('recordBoardClear', () => {
-    beforeEach(() => {
-      spectator = new GameSpectator();
-      (spectator as any).loadChannelRecords('testchannel');
-    });
-
-    it('should increment daily clears count', () => {
-      spectator.dailyClears = 5;
-
-      (spectator as any).recordBoardClear();
-
-      expect(spectator.dailyClears).toBe(6);
-    });
-
-    it('should save updated clears count to localStorage', () => {
-      spectator.dailyClears = 5;
-
-      (spectator as any).recordBoardClear();
-
-      const today = new Date().toISOString().slice(0, 10);
-      const stored = mockLocalStorage.getItem(`clears_testchannel_${today}`);
-      expect(stored).toBe('6');
-    });
-
-    it('should update UI element with new clears count', () => {
-      spectator.dailyClears = 5;
-
-      (spectator as any).recordBoardClear();
-
-      expect(document.getElementById('daily-clear-value')!.innerText).toBe('6');
     });
   });
 
@@ -635,12 +501,19 @@ describe('GameSpectator class', () => {
       expect(spectator.currentChannel).toBe('testchannel');
     });
 
-    it('should load channel records on connect', () => {
-      mockLocalStorage.setItem('pb_testchannel', '10');
+    it('should load channel records on connect', async () => {
+      vi.mocked(fetchChannelStats).mockResolvedValueOnce({
+        allTimePersonalBest: 10,
+        dailyBest: 5,
+        dailyClears: 2,
+      });
 
       spectator.connectToTwitch('testchannel');
 
-      expect(spectator.personalBest).toBe(10);
+      // loadChannelRecords is async, wait for it to complete
+      await vi.waitFor(() => {
+        expect(spectator.personalBest).toBe(10);
+      });
     });
   });
 
@@ -756,7 +629,6 @@ describe('GameSpectator class', () => {
       spectator = new GameSpectator();
       spectator.currentLevel = 10;
       spectator.clearSoundEnabled = false; // Disable sound for tests
-      (spectator as any).loadChannelRecords('testchannel');
     });
 
     it('should increment level by number of stars', async () => {
@@ -765,54 +637,11 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevel).toBe(15);
     });
 
-    it('should update daily record if level increases', async () => {
-      spectator.dailyBest = 10;
-
-      await (spectator as any).handleLevelResults(5);
-
-      expect(spectator.dailyBest).toBe(15);
-    });
-
     it('should update UI to show next level', async () => {
       await (spectator as any).handleLevelResults(3);
 
       expect(document.getElementById('level-title')!.innerText).toBe('NEXT LEVEL');
       expect(document.getElementById('level-value')!.innerText).toBe('13');
-    });
-
-    it('should record board clear on 5-star completion', async () => {
-      spectator.dailyClears = 2;
-      spectator.currentLevelSlots = [
-        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 }
-      ];
-
-      await (spectator as any).handleLevelResults(5);
-
-      expect(spectator.dailyClears).toBe(3);
-    });
-
-    it('should record board clear when all slots filled', async () => {
-      spectator.dailyClears = 2;
-      spectator.currentLevelSlots = [
-        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
-        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false, index: 1, length: 4 }
-      ];
-
-      await (spectator as any).handleLevelResults(3);
-
-      expect(spectator.dailyClears).toBe(3);
-    });
-
-    it('should not record clear if slots are incomplete', async () => {
-      spectator.dailyClears = 2;
-      spectator.currentLevelSlots = [
-        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
-        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: undefined, hitMax: false, index: 1, length: 4 }
-      ];
-
-      await (spectator as any).handleLevelResults(3);
-
-      expect(spectator.dailyClears).toBe(2);
     });
   });
 
@@ -1064,32 +893,27 @@ describe('GameSpectator class', () => {
       );
     });
 
-    it('should apply record updates from wos worker event payload', async () => {
+    it('should handle Game Connected event and initialize game state', async () => {
       const wosWorker = findWorkerByUrlSubstring('wos-worker');
       expect(wosWorker).toBeTruthy();
-
-      (spectator as any).pbStorageKey = 'pb_testchannel';
-      spectator.personalBest = 0;
 
       await wosWorker.emitMessage({
         type: 'wos_event',
         wosEventType: 12,
         wosEventName: 'Game Connected',
         username: '',
-        letters: [],
+        letters: ['a', 'b', 'c'],
         hitMax: false,
         stars: 0,
-        level: 1,
+        level: 5,
         falseLetters: [],
         hiddenLetters: [],
-        slots: [],
+        slots: [{ letters: ['a', 'b'], word: '', hitMax: false, index: 0, length: 4 }],
         index: 0,
-        record: 42,
       });
 
-      expect(spectator.personalBest).toBe(42);
-      expect(mockLocalStorage.getItem('pb_testchannel')).toBe('42');
-      expect(document.getElementById('pb-value')!.innerText).toBe('42');
+      expect(spectator.currentLevel).toBe(5);
+      expect(document.getElementById('level-value')!.innerText).toBe('5');
     });
 
     it('should route wos letter reveal events to update displays', async () => {
