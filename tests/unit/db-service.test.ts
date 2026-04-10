@@ -109,11 +109,20 @@ describe('db-service module', () => {
 
     describe('boardId cleanup', () => {
       it('should remove spaces from boardId', async () => {
-        global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
         await saveBoard('W O R D', validSlots);
 
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          2,
           '/api/boards',
           expect.objectContaining({
             body: expect.stringContaining('"id":"WORD"'),
@@ -122,11 +131,20 @@ describe('db-service module', () => {
       });
 
       it('should convert boardId to uppercase', async () => {
-        global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
         await saveBoard('test', validSlots);
 
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          2,
           '/api/boards',
           expect.objectContaining({
             body: expect.stringContaining('"id":"TEST"'),
@@ -135,11 +153,20 @@ describe('db-service module', () => {
       });
 
       it('should remove multiple spaces and convert to uppercase', async () => {
-        global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
         await saveBoard('t e s t   w o r d', validSlots);
 
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          2,
           '/api/boards',
           expect.objectContaining({
             body: expect.stringContaining('"id":"TESTWORD"'),
@@ -358,11 +385,20 @@ describe('db-service module', () => {
     describe('successful save', () => {
       it('should successfully save valid board data', async () => {
         const mockResponse = { success: true, id: 'TEST' };
-        global.fetch = vi.fn(() => mockFetchResponse(mockResponse));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse(mockResponse));
 
         const result = await saveBoard('test', validSlots);
 
-        expect(global.fetch).toHaveBeenCalledWith(
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          2,
           '/api/boards',
           expect.objectContaining({
             method: 'POST',
@@ -377,11 +413,19 @@ describe('db-service module', () => {
       });
 
       it('should send correct request body structure', async () => {
-        global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
         await saveBoard('TEST', validSlots);
 
-        const fetchCall = (global.fetch as any).mock.calls[0];
+        const fetchCall = (global.fetch as any).mock.calls[1];
         const requestBody = JSON.parse(fetchCall[1].body);
 
         expect(requestBody).toHaveProperty('id', 'TEST');
@@ -392,7 +436,15 @@ describe('db-service module', () => {
       });
 
       it('should accept slots with optional user field', async () => {
-        global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
         const slotsWithoutUser: Slot[] = [
           {
@@ -409,7 +461,15 @@ describe('db-service module', () => {
       });
 
       it('should accept slots with null user field', async () => {
-        global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
         const slotsWithNullUser: Slot[] = [
           {
@@ -427,7 +487,15 @@ describe('db-service module', () => {
       });
 
       it('should accept slots with optional originalIndex field', async () => {
-        global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
         const slotsWithOriginalIndex: Slot[] = [
           {
@@ -447,6 +515,29 @@ describe('db-service module', () => {
     });
 
     describe('error handling', () => {
+      it('should skip POST when board already exists', async () => {
+        global.fetch = vi.fn(() =>
+          Promise.resolve({
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+          } as Response)
+        );
+
+        const result = await saveBoard('TEST', validSlots);
+
+        expect(result).toEqual({
+          error: 'Board already exists',
+          message: 'Board TEST has already been saved.',
+          code: 'BOARD_EXISTS',
+        });
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(global.fetch).toHaveBeenCalledWith('/api/boards/TEST', {
+          method: 'GET',
+        });
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Board TEST has already been saved.');
+      });
+
       it('should handle duplicate board responses gracefully', async () => {
         const duplicateResponse = {
           error: 'Board already exists',
@@ -454,24 +545,40 @@ describe('db-service module', () => {
           code: 'BOARD_EXISTS',
         };
 
-        global.fetch = vi.fn(() =>
-          Promise.resolve({
-            ok: false,
-            status: 409,
-            json: () => Promise.resolve(duplicateResponse),
-          } as Response)
-        );
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 409,
+              json: () => Promise.resolve(duplicateResponse),
+            } as Response)
+          );
 
         const result = await saveBoard('TEST', validSlots);
 
         expect(result).toEqual(duplicateResponse);
-        expect(consoleLogSpy).toHaveBeenCalledWith('Board TEST has already been saved.');
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Board TEST has already been saved.');
         expect(consoleErrorSpy).not.toHaveBeenCalled();
       });
 
       it('should handle network errors gracefully', async () => {
         const networkError = new Error('Network failure');
-        global.fetch = vi.fn(() => Promise.reject(networkError));
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => Promise.reject(networkError));
 
         const result = await saveBoard('TEST', validSlots);
 
@@ -480,14 +587,22 @@ describe('db-service module', () => {
       });
 
       it('should handle non-ok response status', async () => {
-        global.fetch = vi.fn(() =>
-          Promise.resolve({
-            ok: false,
-            status: 500,
-            statusText: 'Internal Server Error',
-            json: () => Promise.resolve({}),
-          } as Response)
-        );
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 500,
+              statusText: 'Internal Server Error',
+              json: () => Promise.resolve({}),
+            } as Response)
+          );
 
         const result = await saveBoard('TEST', validSlots);
 
@@ -499,14 +614,22 @@ describe('db-service module', () => {
       });
 
       it('should handle 404 response', async () => {
-        global.fetch = vi.fn(() =>
-          Promise.resolve({
-            ok: false,
-            status: 404,
-            statusText: 'Not Found',
-            json: () => Promise.resolve({}),
-          } as Response)
-        );
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+              json: () => Promise.resolve({}),
+            } as Response)
+          );
 
         const result = await saveBoard('TEST', validSlots);
 
@@ -515,13 +638,21 @@ describe('db-service module', () => {
       });
 
       it('should handle JSON parsing errors', async () => {
-        global.fetch = vi.fn(() =>
-          Promise.resolve({
-            ok: true,
-            status: 200,
-            json: () => Promise.reject(new Error('Invalid JSON')),
-          } as Response)
-        );
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: true,
+              status: 200,
+              json: () => Promise.reject(new Error('Invalid JSON')),
+            } as Response)
+          );
 
         const result = await saveBoard('TEST', validSlots);
 

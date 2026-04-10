@@ -12,6 +12,23 @@ export interface Board {
   created_at: string;
 }
 
+async function boardExists(boardId: string): Promise<boolean> {
+  const url = `/api/boards/${encodeURIComponent(boardId)}`;
+  const response = await fetch(url, {
+    method: 'GET',
+  });
+
+  if (response.status === 404) {
+    return false;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify board existence: ${response.status} ${response.statusText}`);
+  }
+
+  return true;
+}
+
 export async function saveBoard(boardId: string, slots: Slot[]) {
   // Validate boardId is a string and not too long
   if (typeof boardId !== 'string' || boardId.length === 0) {
@@ -60,6 +77,22 @@ export async function saveBoard(boardId: string, slots: Slot[]) {
   if (isMissingWords === true) {
     console.warn('Cannot save board: some words are incomplete.');
     return;
+  }
+
+  try {
+    const exists = await boardExists(cleanBoardId);
+    if (exists) {
+      const duplicateMessage = `Board ${cleanBoardId} has already been saved.`;
+      console.warn(duplicateMessage);
+      return {
+        error: 'Board already exists',
+        message: duplicateMessage,
+        code: 'BOARD_EXISTS',
+      };
+    }
+  } catch (error) {
+    // If the pre-check fails, continue with POST and let API validation handle conflicts.
+    console.warn('Unable to verify whether board exists before save; proceeding with save attempt.', error);
   }
 
   try {
