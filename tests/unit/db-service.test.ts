@@ -13,9 +13,9 @@ describe('db-service module', () => {
 
   beforeEach(() => {
     // Mock console methods to avoid cluttering test output
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => { });
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
     vi.clearAllMocks();
   });
 
@@ -44,21 +44,21 @@ describe('db-service module', () => {
     describe('boardId validation', () => {
       it('should reject empty boardId string', async () => {
         const result = await saveBoard('', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId must be a non-empty string.');
       });
 
       it('should reject non-string boardId', async () => {
         const result = await saveBoard(null as any, validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId must be a non-empty string.');
       });
 
       it('should reject undefined boardId', async () => {
         const result = await saveBoard(undefined as any, validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId must be a non-empty string.');
       });
@@ -66,42 +66,42 @@ describe('db-service module', () => {
       it('should reject boardId longer than 20 characters after cleanup', async () => {
         const longBoardId = 'a'.repeat(21);
         const result = await saveBoard(longBoardId, validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId length must be between 4 and 20 characters.');
       });
 
       it('should reject boardId shorter than 4 characters', async () => {
         const result = await saveBoard('ABC', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId length must be between 4 and 20 characters.');
       });
 
       it('should reject boardId with special characters', async () => {
         const result = await saveBoard('TEST123', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
       });
 
       it('should reject boardId with SQL injection attempt', async () => {
         const result = await saveBoard("TEST'; DROP TABLE boards; --", validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
       });
 
       it('should reject boardId with path traversal attempt', async () => {
         const result = await saveBoard('../../../etc/passwd', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
       });
 
       it('should reject boardId with symbols', async () => {
         const result = await saveBoard('TEST@WORD', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
       });
@@ -110,9 +110,9 @@ describe('db-service module', () => {
     describe('boardId cleanup', () => {
       it('should remove spaces from boardId', async () => {
         global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
-        
+
         await saveBoard('W O R D', validSlots);
-        
+
         expect(global.fetch).toHaveBeenCalledWith(
           '/api/boards',
           expect.objectContaining({
@@ -123,9 +123,9 @@ describe('db-service module', () => {
 
       it('should convert boardId to uppercase', async () => {
         global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
-        
+
         await saveBoard('test', validSlots);
-        
+
         expect(global.fetch).toHaveBeenCalledWith(
           '/api/boards',
           expect.objectContaining({
@@ -136,9 +136,9 @@ describe('db-service module', () => {
 
       it('should remove multiple spaces and convert to uppercase', async () => {
         global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
-        
+
         await saveBoard('t e s t   w o r d', validSlots);
-        
+
         expect(global.fetch).toHaveBeenCalledWith(
           '/api/boards',
           expect.objectContaining({
@@ -151,21 +151,21 @@ describe('db-service module', () => {
     describe('slots array validation', () => {
       it('should reject empty slots array', async () => {
         const result = await saveBoard('TEST', []);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: slots must be a non-empty array.');
       });
 
       it('should reject non-array slots', async () => {
         const result = await saveBoard('TEST', null as any);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: slots must be a non-empty array.');
       });
 
       it('should reject undefined slots', async () => {
         const result = await saveBoard('TEST', undefined as any);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: slots must be a non-empty array.');
       });
@@ -180,9 +180,9 @@ describe('db-service module', () => {
             word: 'test',
           } as any,
         ];
-        
+
         const result = await saveBoard('TEST', invalidSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: invalid slot structure detected.');
       });
@@ -196,9 +196,9 @@ describe('db-service module', () => {
             word: 'test',
           } as any,
         ];
-        
+
         const result = await saveBoard('TEST', invalidSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: invalid slot structure detected.');
       });
@@ -211,9 +211,9 @@ describe('db-service module', () => {
             word: 'test',
           } as any,
         ];
-        
+
         const result = await saveBoard('TEST', invalidSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: invalid slot structure detected.');
       });
@@ -227,9 +227,9 @@ describe('db-service module', () => {
             word: 'test',
           } as any,
         ];
-        
+
         const result = await saveBoard('TEST', invalidSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: invalid slot structure detected.');
       });
@@ -242,9 +242,9 @@ describe('db-service module', () => {
             hitMax: false,
           } as any,
         ];
-        
+
         const result = await saveBoard('TEST', invalidSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: invalid slot structure detected.');
       });
@@ -258,9 +258,9 @@ describe('db-service module', () => {
             word: 123,
           } as any,
         ];
-        
+
         const result = await saveBoard('TEST', invalidSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: invalid slot structure detected.');
       });
@@ -275,9 +275,9 @@ describe('db-service module', () => {
             word: 'test',
           },
         ] as any;
-        
+
         const result = await saveBoard('TEST', invalidSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: invalid slot structure detected.');
       });
@@ -293,9 +293,9 @@ describe('db-service module', () => {
             word: 't.st',
           },
         ];
-        
+
         const result = await saveBoard('TEST', slotsWithDots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: some words are incomplete.');
       });
@@ -309,9 +309,9 @@ describe('db-service module', () => {
             word: 't?st',
           },
         ];
-        
+
         const result = await saveBoard('TEST', slotsWithQuestionMarks);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: some words are incomplete.');
       });
@@ -325,9 +325,9 @@ describe('db-service module', () => {
             word: '',
           },
         ];
-        
+
         const result = await saveBoard('TEST', slotsWithEmptyWord);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: some words are incomplete.');
       });
@@ -347,9 +347,9 @@ describe('db-service module', () => {
             word: 'w?rd',
           },
         ];
-        
+
         const result = await saveBoard('TEST', mixedSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: some words are incomplete.');
       });
@@ -359,9 +359,9 @@ describe('db-service module', () => {
       it('should successfully save valid board data', async () => {
         const mockResponse = { success: true, id: 'TEST' };
         global.fetch = vi.fn(() => mockFetchResponse(mockResponse));
-        
+
         const result = await saveBoard('test', validSlots);
-        
+
         expect(global.fetch).toHaveBeenCalledWith(
           '/api/boards',
           expect.objectContaining({
@@ -378,12 +378,12 @@ describe('db-service module', () => {
 
       it('should send correct request body structure', async () => {
         global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
-        
+
         await saveBoard('TEST', validSlots);
-        
+
         const fetchCall = (global.fetch as any).mock.calls[0];
         const requestBody = JSON.parse(fetchCall[1].body);
-        
+
         expect(requestBody).toHaveProperty('id', 'TEST');
         expect(requestBody).toHaveProperty('slots');
         expect(requestBody.slots).toEqual(validSlots);
@@ -393,7 +393,7 @@ describe('db-service module', () => {
 
       it('should accept slots with optional user field', async () => {
         global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
-        
+
         const slotsWithoutUser: Slot[] = [
           {
             letters: ['t', 'e', 's', 't'],
@@ -401,16 +401,16 @@ describe('db-service module', () => {
             word: 'test',
           },
         ];
-        
+
         const result = await saveBoard('TEST', slotsWithoutUser);
-        
+
         expect(result).toBeDefined();
         expect(global.fetch).toHaveBeenCalled();
       });
 
       it('should accept slots with null user field', async () => {
         global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
-        
+
         const slotsWithNullUser: Slot[] = [
           {
             letters: ['t', 'e', 's', 't'],
@@ -419,16 +419,16 @@ describe('db-service module', () => {
             word: 'test',
           },
         ];
-        
+
         const result = await saveBoard('TEST', slotsWithNullUser);
-        
+
         expect(result).toBeDefined();
         expect(global.fetch).toHaveBeenCalled();
       });
 
       it('should accept slots with optional originalIndex field', async () => {
         global.fetch = vi.fn(() => mockFetchResponse({ success: true }));
-        
+
         const slotsWithOriginalIndex: Slot[] = [
           {
             letters: ['t', 'e', 's', 't'],
@@ -438,27 +438,49 @@ describe('db-service module', () => {
             word: 'test',
           },
         ];
-        
+
         const result = await saveBoard('TEST', slotsWithOriginalIndex);
-        
+
         expect(result).toBeDefined();
         expect(global.fetch).toHaveBeenCalled();
       });
     });
 
     describe('error handling', () => {
+      it('should handle duplicate board responses gracefully', async () => {
+        const duplicateResponse = {
+          error: 'Board already exists',
+          message: 'Board TEST has already been saved.',
+          code: 'BOARD_EXISTS',
+        };
+
+        global.fetch = vi.fn(() =>
+          Promise.resolve({
+            ok: false,
+            status: 409,
+            json: () => Promise.resolve(duplicateResponse),
+          } as Response)
+        );
+
+        const result = await saveBoard('TEST', validSlots);
+
+        expect(result).toEqual(duplicateResponse);
+        expect(consoleLogSpy).toHaveBeenCalledWith('Board TEST has already been saved.');
+        expect(consoleErrorSpy).not.toHaveBeenCalled();
+      });
+
       it('should handle network errors gracefully', async () => {
         const networkError = new Error('Network failure');
         global.fetch = vi.fn(() => Promise.reject(networkError));
-        
+
         const result = await saveBoard('TEST', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving board to Cloudflare Worker:', networkError);
       });
 
       it('should handle non-ok response status', async () => {
-        global.fetch = vi.fn(() => 
+        global.fetch = vi.fn(() =>
           Promise.resolve({
             ok: false,
             status: 500,
@@ -466,9 +488,9 @@ describe('db-service module', () => {
             json: () => Promise.resolve({}),
           } as Response)
         );
-        
+
         const result = await saveBoard('TEST', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           'Error saving board to Cloudflare Worker:',
@@ -477,7 +499,7 @@ describe('db-service module', () => {
       });
 
       it('should handle 404 response', async () => {
-        global.fetch = vi.fn(() => 
+        global.fetch = vi.fn(() =>
           Promise.resolve({
             ok: false,
             status: 404,
@@ -485,24 +507,24 @@ describe('db-service module', () => {
             json: () => Promise.resolve({}),
           } as Response)
         );
-        
+
         const result = await saveBoard('TEST', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleErrorSpy).toHaveBeenCalled();
       });
 
       it('should handle JSON parsing errors', async () => {
-        global.fetch = vi.fn(() => 
+        global.fetch = vi.fn(() =>
           Promise.resolve({
             ok: true,
             status: 200,
             json: () => Promise.reject(new Error('Invalid JSON')),
           } as Response)
         );
-        
+
         const result = await saveBoard('TEST', validSlots);
-        
+
         expect(result).toBeUndefined();
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           'Error saving board to Cloudflare Worker:',
@@ -516,42 +538,42 @@ describe('db-service module', () => {
     describe('boardId validation', () => {
       it('should reject empty boardId string', async () => {
         const result = await fetchBoard('');
-        
+
         expect(result).toBeNull();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId must be a non-empty string.');
       });
 
       it('should reject non-string boardId', async () => {
         const result = await fetchBoard(null as any);
-        
+
         expect(result).toBeNull();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId must be a non-empty string.');
       });
 
       it('should reject boardId with special characters', async () => {
         const result = await fetchBoard('TEST123');
-        
+
         expect(result).toBeNull();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId contains invalid characters. Only letters are allowed.');
       });
 
       it('should reject boardId with SQL injection attempt', async () => {
         const result = await fetchBoard("TEST'; DROP TABLE boards; --");
-        
+
         expect(result).toBeNull();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId contains invalid characters. Only letters are allowed.');
       });
 
       it('should reject boardId with path traversal attempt', async () => {
         const result = await fetchBoard('../../../etc/passwd');
-        
+
         expect(result).toBeNull();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId contains invalid characters. Only letters are allowed.');
       });
 
       it('should reject boardId shorter than 4 characters', async () => {
         const result = await fetchBoard('ABC');
-        
+
         expect(result).toBeNull();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId length must be between 4 and 20 characters.');
       });
@@ -559,7 +581,7 @@ describe('db-service module', () => {
       it('should reject boardId longer than 20 characters', async () => {
         const longBoardId = 'A'.repeat(21);
         const result = await fetchBoard(longBoardId);
-        
+
         expect(result).toBeNull();
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId length must be between 4 and 20 characters.');
       });
@@ -570,9 +592,9 @@ describe('db-service module', () => {
           slots: [],
           created_at: '2024-01-01T00:00:00Z'
         }));
-        
+
         const result = await fetchBoard('T E S T I N G');
-        
+
         expect(result).not.toBeNull();
         expect(global.fetch).toHaveBeenCalledWith('/api/boards/TESTING');
       });
@@ -583,9 +605,9 @@ describe('db-service module', () => {
           slots: [],
           created_at: '2024-01-01T00:00:00Z'
         }));
-        
+
         await fetchBoard('TESTING');
-        
+
         // Verify encodeURIComponent is used (though in this case TESTING is already safe)
         expect(global.fetch).toHaveBeenCalledWith('/api/boards/TESTING');
       });
@@ -593,24 +615,24 @@ describe('db-service module', () => {
 
     describe('error handling', () => {
       it('should handle 404 responses gracefully', async () => {
-        global.fetch = vi.fn(() => 
+        global.fetch = vi.fn(() =>
           Promise.resolve({
             ok: false,
             status: 404,
           } as Response)
         );
-        
+
         const result = await fetchBoard('NOTFOUND');
-        
+
         expect(result).toBeNull();
         expect(consoleLogSpy).toHaveBeenCalledWith('Board NOTFOUND not found in database.');
       });
 
       it('should handle network errors gracefully', async () => {
         global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));
-        
+
         const result = await fetchBoard('TESTING');
-        
+
         expect(result).toBeNull();
         expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching board:', expect.any(Error));
       });

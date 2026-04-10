@@ -75,8 +75,31 @@ export async function saveBoard(boardId: string, slots: Slot[]) {
       }),
     });
 
+    if (response.status === 409) {
+      let duplicateBody: any = null;
+      try {
+        duplicateBody = await response.json();
+      } catch {
+        duplicateBody = {
+          message: `Board ${cleanBoardId} has already been saved.`,
+          code: 'BOARD_EXISTS',
+        };
+      }
+
+      console.warn(duplicateBody?.message || `Board ${cleanBoardId} has already been saved.`);
+      return duplicateBody;
+    }
+
     if (!response.ok) {
-      throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+      let errorBody: any = null;
+      try {
+        errorBody = await response.json();
+      } catch {
+        errorBody = null;
+      }
+
+      const apiMessage = errorBody?.message || errorBody?.error;
+      throw new Error(apiMessage || `Network response was not ok: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();

@@ -46,7 +46,27 @@ export const POST: APIRoute = async ({ locals, request }) => {
       .insert(body)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      const isDuplicateBoard =
+        error.code === '23505' ||
+        /duplicate key value/i.test(error.message || '');
+
+      if (isDuplicateBoard) {
+        return new Response(
+          JSON.stringify({
+            error: 'Board already exists',
+            message: `Board ${body?.id || 'ID'} has already been saved.`,
+            code: 'BOARD_EXISTS',
+          }),
+          {
+            status: 409,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+
+      throw error;
+    }
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
