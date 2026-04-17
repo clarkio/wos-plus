@@ -1,21 +1,23 @@
 ---
-import Logo from "../components/Icons/Logo.astro";
 import WosBaseLayout from "../layouts/WosBaseLayout.astro";
 import Twitch from "../components/Icons/Twitch.astro";
 ---
 
 <WosBaseLayout
-  title="WoS+ | Words on Stream Plus"
-  description="Enhance your Words on Stream experience with WoS+. The ultimate tool for players and streamers to elevate their gameplay."
-  keywords="words on stream, wos, wos plus, twitch, streaming, game helper, wordsonstream, tool, clarkio"
+  title="WoS+ Bot | Twitch Chatbot for Words on Stream"
+  description="Add the WoS+ Bot to your Twitch channel for automatic game tracking, word definitions, player stats, and more."
+  keywords="words on stream, wos, chatbot, twitch bot, wos plus bot, commands, define, streamer tools"
 >
   <div class="landing-page">
-    <!-- Header/Navigation -->
+    <!-- Header -->
     <header class="header">
       <div class="header-content">
-        <div class="logo-section">
-          <span class="brand-name" id="brand-name">WoS<span class="plus">+</span></span>
-        </div>
+        <a href="/" class="logo-section">
+          <span class="brand-name">WoS<span class="plus">+</span></span>
+        </a>
+        <nav class="nav">
+          <a href="/" class="nav-link">Home</a>
+        </nav>
       </div>
     </header>
 
@@ -23,104 +25,29 @@ import Twitch from "../components/Icons/Twitch.astro";
     <section class="hero">
       <div class="hero-content">
         <div class="hero-badge">
-          <Twitch width={75} height={75} />
-          <span>Built for Twitch Streamers & Players</span>
+          <Twitch width={24} height={24} />
+          <span>Twitch Chatbot for WoS Streamers</span>
         </div>
         <h1 class="hero-title">
-          Words on Stream<span class="gradient-text">+</span>
+          WoS<span class="gradient-text">+</span> Bot
         </h1>
         <p class="hero-subtitle">
-          Enhance your Words on Stream experience with powerful tools for
-          players and additional features for streamers hosting the game on
-          their channel.
+          A Twitch chatbot that automatically tracks your Words on Stream
+          sessions, looks up word definitions on demand, and keeps stats for
+          your channel &mdash; so you can focus on playing.
         </p>
         <div class="hero-cta">
-          <div class="launch-menu-container">
-            <button id="launch-menu-trigger" class="btn btn-primary">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              Launch Tool
-              <svg
-                class="chevron-icon"
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="currentColor"
-              >
-                <path
-                  d="M4.427 6.573l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 6H4.604a.25.25 0 00-.177.573z"
-                ></path>
-              </svg>
-            </button>
-            <div class="launch-menu-dropdown">
-              <a href="./player" class="launch-menu-item">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                <div>
-                  <div class="launch-menu-title">Player View</div>
-                  <div class="launch-menu-desc">
-                    Track words and improve your game
-                  </div>
-                </div>
-              </a>
-              <a href="./streamer" class="launch-menu-item">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M23 7l-7 5 7 5V7z"></path>
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                </svg>
-                <div>
-                  <div class="launch-menu-title">Streamer View</div>
-                  <div class="launch-menu-desc">
-                    Enhanced layout for streaming
-                  </div>
-                </div>
-              </a>
-            <a href="./bot" class="launch-menu-item">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <div>
-                  <div class="launch-menu-title">Chatbot</div>
-                  <div class="launch-menu-desc">
-                    Add the WoS+ Bot to your Twitch channel
-                  </div>
-                </div>
-              </a>
-            </div>
-          </div>
-          <a href="#features" class="btn btn-secondary">
-            Learn More
+          <a
+            href="https://wos-plus-bot.onrender.com/auth"
+            class="btn btn-primary"
+            target="_blank"
+            rel="noopener"
+          >
+            <Twitch width={20} height={20} />
+            Add Bot to Your Channel
+          </a>
+          <a href="#commands" class="btn btn-secondary">
+            See Commands
             <svg
               width="20"
               height="20"
@@ -134,94 +61,111 @@ import Twitch from "../components/Icons/Twitch.astro";
           </a>
         </div>
       </div>
-      <div class="hero-visual">
-        <div class="floating-card card-1">
-          <div class="card-icon">📝</div>
-          <div class="card-text">Track correct words</div>
-        </div>
-        <div class="floating-card card-2">
-          <div class="card-icon">⏱️</div>
-          <div class="card-text">Personal best times</div>
-        </div>
-        <div class="floating-card card-3">
-          <div class="card-icon">🎮</div>
-          <div class="card-text">Live game state</div>
-        </div>
-      </div>
     </section>
 
     <!-- Features Section -->
     <section id="features" class="features">
       <div class="section-header">
-        <h2 class="section-title">Everything you need to level up</h2>
+        <h2 class="section-title">Why add WoS+ Bot?</h2>
         <p class="section-subtitle">
-          Powerful features designed for both players and streamers
+          Automatic enhancements for your Words on Stream channel
         </p>
       </div>
 
       <div class="features-grid">
         <div class="feature-card">
-          <div class="feature-icon">🎯</div>
-          <h3 class="feature-title">Real-time Game Tracking</h3>
+          <div class="feature-icon">🤖</div>
+          <h3 class="feature-title">Automatic Session Tracking</h3>
           <p class="feature-description">
-            Automatically track current level, letters, hidden letters, and fake
-            letters in real-time as you play.
+            The bot detects when a WoS game starts and automatically tracks
+            levels, results, and player participation in your channel.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📖</div>
+          <h3 class="feature-title">Instant Word Definitions</h3>
+          <p class="feature-description">
+            Players can type <code>!define</code> in chat to look up any word's
+            definition without leaving the stream.
           </p>
         </div>
 
         <div class="feature-card">
           <div class="feature-icon">📊</div>
-          <h3 class="feature-title">Word History Log</h3>
+          <h3 class="feature-title">Channel Stats & Records</h3>
           <p class="feature-description">
-            Keep track of all correct words found, organized by length in
-            alphabetical order. Never lose track of what's been discovered.
+            Track your channel's best levels, daily achievements, and
+            top-performing players over time.
           </p>
         </div>
 
         <div class="feature-card">
-          <div class="feature-icon">🏆</div>
-          <h3 class="feature-title">Personal Records</h3>
+          <div class="feature-icon">⚡</div>
+          <h3 class="feature-title">Zero Configuration</h3>
           <p class="feature-description">
-            Monitor your personal best levels reached and daily clear records.
-            Challenge yourself to beat your high scores.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">💬</div>
-          <h3 class="feature-title">Twitch Chat Integration</h3>
-          <p class="feature-description">
-            Connect directly to Twitch chat to track chat participation and
-            coordinate with other players.
-          </p>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon">📺</div>
-          <h3 class="feature-title">Streamer Dashboard</h3>
-          <p class="feature-description">
-            Enhanced view for streamers with a minimal layout, perfect for OBS
-            integration and stream overlays.
+            Authorize once and the bot auto-joins your channel. No setup files,
+            no config, no maintenance required.
           </p>
         </div>
       </div>
     </section>
 
+    <!-- Commands Section -->
+    <section id="commands" class="commands-section">
+      <div class="section-header">
+        <h2 class="section-title">Available Commands</h2>
+        <p class="section-subtitle">Type these in your Twitch chat</p>
+      </div>
+
+      <div class="commands-grid">
+        <div class="command-card">
+          <code class="command-name">!define &lt;word&gt;</code>
+          <span class="command-alias">aliases: !def, !d, !definition</span>
+          <p class="command-desc">
+            Look up the definition of any word directly in chat.
+          </p>
+        </div>
+
+        <div class="command-card">
+          <code class="command-name">!help</code>
+          <span class="command-alias">aliases: !commands, !h</span>
+          <p class="command-desc">
+            List all available bot commands and their descriptions.
+          </p>
+        </div>
+
+        <div class="command-card">
+          <code class="command-name">!ping</code>
+          <span class="command-alias">alias: !p</span>
+          <p class="command-desc">
+            Check if the bot is online and responding in your channel.
+          </p>
+        </div>
+      </div>
+
+      <p class="commands-footer">
+        More commands coming soon &mdash; including channel achievements and
+        player stats.
+      </p>
+    </section>
+
     <!-- How It Works Section -->
     <section class="how-it-works">
       <div class="section-header">
-        <h2 class="section-title">Get started in seconds</h2>
+        <h2 class="section-title">Get started in three steps</h2>
         <p class="section-subtitle">
-          Three simple steps to enhance your gameplay
+          Add the bot to your channel in under a minute
         </p>
       </div>
 
       <div class="steps">
         <div class="step">
           <div class="step-number">1</div>
-          <h3 class="step-title">Get Your Mirror Link</h3>
+          <h3 class="step-title">Authorize with Twitch</h3>
           <p class="step-description">
-            Copy the Words on Stream mirror link from your active game session.
+            Click "Add Bot to Your Channel" and log in with your Twitch account
+            to grant access.
           </p>
         </div>
 
@@ -229,9 +173,10 @@ import Twitch from "../components/Icons/Twitch.astro";
 
         <div class="step">
           <div class="step-number">2</div>
-          <h3 class="step-title">Connect to WoS+</h3>
+          <h3 class="step-title">Bot Joins Your Channel</h3>
           <p class="step-description">
-            Paste the mirror link into WoS+ and enter your Twitch channel name.
+            After authorization, WoS+ Bot automatically joins your Twitch chat.
+            No extra setup needed.
           </p>
         </div>
 
@@ -239,10 +184,10 @@ import Twitch from "../components/Icons/Twitch.astro";
 
         <div class="step">
           <div class="step-number">3</div>
-          <h3 class="step-title">Start Playing!</h3>
+          <h3 class="step-title">Start Streaming</h3>
           <p class="step-description">
-            Enjoy real-time tracking, word history, and all the enhanced
-            features.
+            Play Words on Stream as usual. The bot tracks sessions and responds
+            to commands in chat.
           </p>
         </div>
       </div>
@@ -251,13 +196,18 @@ import Twitch from "../components/Icons/Twitch.astro";
     <!-- CTA Section -->
     <section class="cta-section">
       <div class="cta-content">
-        <h2 class="cta-title">Ready to enhance your experience?</h2>
+        <h2 class="cta-title">Ready to add WoS+ Bot to your channel?</h2>
         <p class="cta-subtitle">
-          Join streamers and players using WoS+ to take their Words on Stream
-          gameplay to the next level.
+          One-click authorization. No configuration needed. Just connect and
+          play.
         </p>
-        <a href="./streamer" class="btn btn-primary btn-large">
-          Get Started Now
+        <a
+          href="https://wos-plus-bot.onrender.com/auth"
+          class="btn btn-primary btn-large"
+          target="_blank"
+          rel="noopener"
+        >
+          Add Bot Now
           <svg
             width="20"
             height="20"
@@ -278,15 +228,17 @@ import Twitch from "../components/Icons/Twitch.astro";
       <div class="footer-content">
         <div class="footer-brand">
           <div class="logo-section">
-            <span class="brand-name small">WoS<span class="plus">+</span></span>
+            <span class="brand-name small"
+              >WoS<span class="plus">+</span></span
+            >
           </div>
           <p class="footer-tagline">
             Enhancing Words on Stream, one word at a time.
           </p>
         </div>
         <div class="footer-links">
-          <a href="./streamer" class="footer-link">Streamer View</a>
-          <a href="./bot" class="footer-link">Chatbot</a>
+          <a href="/" class="footer-link">Home</a>
+          <a href="/streamer" class="footer-link">Streamer View</a>
           <a
             href="https://wos.gg"
             target="_blank"
@@ -340,25 +292,10 @@ import Twitch from "../components/Icons/Twitch.astro";
     display: flex;
     align-items: center;
     gap: 0.75rem;
-  }
-
-  .logo {
-    width: 40px;
-    height: 40px;
-  }
-
-  .logo.small {
-    width: 32px;
-    height: 32px;
+    text-decoration: none;
   }
 
   .brand-name {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  #brand-name {
     font-size: 1.5rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.9);
@@ -379,21 +316,34 @@ import Twitch from "../components/Icons/Twitch.astro";
     gap: 1.5rem;
   }
 
+  .nav-link {
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+
+  .nav-link:hover {
+    color: #8b5cf6;
+  }
+
   /* Hero Section */
   .hero {
-    max-width: 1200px;
+    max-width: 800px;
     margin: 0 auto;
-    padding: 4rem 2rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
+    padding: 6rem 2rem;
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    text-align: center;
     min-height: calc(100vh - 80px);
+    justify-content: center;
   }
 
   .hero-content {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 2rem;
   }
 
@@ -435,93 +385,18 @@ import Twitch from "../components/Icons/Twitch.astro";
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.6);
     margin: 0;
+    max-width: 600px;
   }
 
   .hero-cta {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+    justify-content: center;
   }
 
-  /* Launch Menu */
-  .launch-menu-container {
-    position: relative;
-  }
-
-  #launch-menu-trigger {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .chevron-icon {
-    transition: transform 0.2s ease;
-  }
-
-  #launch-menu-trigger.active .chevron-icon {
-    transform: rotate(180deg);
-  }
-
-  .launch-menu-dropdown {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    left: 0;
-    min-width: 280px;
-    background: #1e1e2e;
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 0.75rem;
-    box-shadow:
-      0 10px 25px rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(139, 92, 246, 0.1);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-0.5rem);
-    transition: all 0.2s ease;
-    z-index: 100;
-    overflow: hidden;
-  }
-
-  .launch-menu-dropdown.show {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-  }
-
-  .launch-menu-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    text-decoration: none;
-    color: rgba(255, 255, 255, 0.9);
-    transition: all 0.2s ease;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  .launch-menu-item:last-child {
-    border-bottom: none;
-  }
-
-  .launch-menu-item:hover {
-    background: rgba(139, 92, 246, 0.1);
-  }
-
-  .launch-menu-item svg {
-    flex-shrink: 0;
-    margin-top: 0.125rem;
-  }
-
-  .launch-menu-title {
-    font-weight: 600;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
-    color: rgba(255, 255, 255, 0.95);
-  }
-
-  .launch-menu-desc {
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.5);
-    line-height: 1.3;
+  .hero-cta .btn-primary :global(svg) {
+    fill: white;
   }
 
   /* Buttons */
@@ -565,61 +440,6 @@ import Twitch from "../components/Icons/Twitch.astro";
     font-size: 1.125rem;
   }
 
-  /* Hero Visual */
-  .hero-visual {
-    position: relative;
-    height: 400px;
-  }
-
-  .floating-card {
-    position: absolute;
-    background: #1e1e2e;
-    padding: 1.25rem 1.5rem;
-    border-radius: 1rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    animation: float 3s ease-in-out infinite;
-  }
-
-  .card-icon {
-    font-size: 2rem;
-  }
-
-  .card-text {
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  .card-1 {
-    top: 20%;
-    left: 10%;
-    animation-delay: 0s;
-  }
-
-  .card-2 {
-    top: 50%;
-    right: 5%;
-    animation-delay: 1s;
-  }
-
-  .card-3 {
-    bottom: 15%;
-    left: 20%;
-    animation-delay: 2s;
-  }
-
-  @keyframes float {
-    0%,
-    100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-20px);
-    }
-  }
-
   /* Features Section */
   .features {
     max-width: 1200px;
@@ -647,7 +467,7 @@ import Twitch from "../components/Icons/Twitch.astro";
 
   .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 2rem;
   }
 
@@ -681,6 +501,74 @@ import Twitch from "../components/Icons/Twitch.astro";
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.6);
     margin: 0;
+  }
+
+  .feature-description code {
+    background: rgba(139, 92, 246, 0.15);
+    color: #8b5cf6;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.9em;
+  }
+
+  /* Commands Section */
+  .commands-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 6rem 2rem;
+  }
+
+  .commands-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .command-card {
+    padding: 1.5rem 2rem;
+    background: #1e1e2e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .command-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .command-name {
+    display: inline-block;
+    font-family: "Fira Code", "Courier New", Courier, monospace;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.15);
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .command-alias {
+    display: block;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 0.75rem;
+  }
+
+  .command-desc {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+  }
+
+  .commands-footer {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    margin-top: 2rem;
+    font-size: 0.95rem;
   }
 
   /* How It Works Section */
@@ -857,13 +745,8 @@ import Twitch from "../components/Icons/Twitch.astro";
   /* Responsive Design */
   @media (max-width: 968px) {
     .hero {
-      grid-template-columns: 1fr;
-      gap: 3rem;
       padding: 3rem 1.5rem;
-    }
-
-    .hero-visual {
-      height: 300px;
+      min-height: auto;
     }
 
     .hero-title {
@@ -919,6 +802,7 @@ import Twitch from "../components/Icons/Twitch.astro";
 
     .hero-cta {
       flex-direction: column;
+      width: 100%;
     }
 
     .btn {
@@ -928,6 +812,18 @@ import Twitch from "../components/Icons/Twitch.astro";
 
     .features {
       padding: 3rem 1rem;
+    }
+
+    .features-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .commands-section {
+      padding: 3rem 1rem;
+    }
+
+    .commands-grid {
+      grid-template-columns: 1fr;
     }
 
     .how-it-works {
@@ -941,31 +837,5 @@ import Twitch from "../components/Icons/Twitch.astro";
     .cta-content {
       padding: 2rem 1rem;
     }
-
-    .features-grid {
-      grid-template-columns: 1fr;
-    }
   }
 </style>
-
-<script>
-  import initLaunchMenu from '../lib/launch-menu';
-
-  const setup = () => {
-    try {
-      initLaunchMenu();
-    } catch (err) {
-      // swallow errors during init to avoid breaking page
-      console.error('There was an issue setting things up for this page', err);
-    }
-  };
-
-  // Call once immediately in case load events already fired
-  setup();
-
-  // Initialize on DOMContentLoaded and Astro page load
-  // Astro page load event is needed for SPA navigation
-  // Any functions in here should be idempotent
-  document.addEventListener('DOMContentLoaded', setup);
-  document.addEventListener('astro:page-load', setup);
-</script>
