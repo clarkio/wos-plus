@@ -71,10 +71,12 @@ describe('GameSpectator class', () => {
       <div id="twitch-chat-log"></div>
     `;
 
-    // Mock Audio
-    (global as any).Audio = vi.fn(() => ({
-      play: vi.fn().mockResolvedValue(undefined)
-    }));
+    // Mock Audio as a real constructor so `new Audio(src)` works.
+    // vi.fn rejects arrow-function implementations when invoked with `new`.
+    (global as any).Audio = vi.fn(function (this: any, src?: string) {
+      this.src = src;
+      this.play = vi.fn().mockResolvedValue(undefined);
+    });
 
     vi.clearAllMocks();
   });
@@ -98,7 +100,7 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelCorrectWords).toEqual([]);
       expect(spectator.currentLevelLetters).toEqual([]);
       expect(spectator.currentLevelSlots).toEqual([]);
-      expect(spectator.clearSoundEnabled).toBe(true);
+      expect(spectator.isSoundsEnabled).toBe(true);
     });
 
     it('should initialize twitchChatLog as Map', () => {
@@ -628,7 +630,7 @@ describe('GameSpectator class', () => {
     beforeEach(() => {
       spectator = new GameSpectator();
       spectator.currentLevel = 10;
-      spectator.clearSoundEnabled = false; // Disable sound for tests
+      spectator.isSoundsEnabled = false; // Disable sound for tests
     });
 
     it('should increment level by number of stars', async () => {
@@ -649,17 +651,119 @@ describe('GameSpectator class', () => {
     beforeEach(() => {
       spectator = new GameSpectator();
       spectator.currentLevel = 15;
+      spectator.isSoundsEnabled = false; // Avoid Audio side-effects in tests
     });
 
-    it('should log game ended message', () => {
+    it('should log game ended message', async () => {
       const logSpy = vi.spyOn(spectator, 'log');
 
-      (spectator as any).handleLevelEnd();
+      await (spectator as any).handleLevelEnd();
 
       expect(logSpy).toHaveBeenCalledWith(
         'Game Ended on Level 15',
         spectator.wosGameLogId
       );
+    });
+
+    it('should play the level_end sound when sounds are enabled', async () => {
+      spectator.isSoundsEnabled = true;
+      const playSoundSpy = vi.spyOn(spectator as any, 'playSound');
+
+      await (spectator as any).handleLevelEnd();
+
+      expect(playSoundSpy).toHaveBeenCalledWith('level_end');
+    });
+  });
+
+  describe('playSound', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+    });
+
+    it('should not create Audio when sounds are disabled', () => {
+      spectator.isSoundsEnabled = false;
+
+      (spectator as any).playSound('level_clear');
+
+      expect((global as any).Audio).not.toHaveBeenCalled();
+    });
+
+    it('should construct Audio with the file mapped to the event type', () => {
+      spectator.isSoundsEnabled = true;
+
+      (spectator as any).playSound('level_clear');
+
+      expect((global as any).Audio).toHaveBeenCalledWith('/assets/clear.mp3');
+    });
+
+    it('should fall back to /assets/nothing.mp3 for unmapped event types', () => {
+      spectator.isSoundsEnabled = true;
+
+      (spectator as any).playSound('new_all_time_pb');
+
+      expect((global as any).Audio).toHaveBeenCalledWith('/assets/nothing.mp3');
+    });
+
+    it('should call play() on the constructed Audio instance', () => {
+      spectator.isSoundsEnabled = true;
+
+      (spectator as any).playSound('one_star');
+
+      const audioMock = (global as any).Audio as ReturnType<typeof vi.fn>;
+      const audioInstance = audioMock.mock.instances[audioMock.mock.instances.length - 1];
+      expect(audioInstance.play).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleLevelResults sound effects', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+      spectator.currentLevel = 10;
+      spectator.isSoundsEnabled = true;
+    });
+
+    it('should play level_clear when stars === 5', async () => {
+      const playSoundSpy = vi.spyOn(spectator as any, 'playSound');
+
+      await (spectator as any).handleLevelResults(5);
+
+      expect(playSoundSpy).toHaveBeenCalledWith('level_clear');
+    });
+
+    it('should play level_clear when every slot has a user', async () => {
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'user1', hitMax: false, index: 0, length: 4 },
+        { letters: ['w', 'o', 'r', 'd'], word: 'word', user: 'user2', hitMax: false, index: 1, length: 4 },
+      ];
+      const playSoundSpy = vi.spyOn(spectator as any, 'playSound');
+
+      await (spectator as any).handleLevelResults(2);
+
+      expect(playSoundSpy).toHaveBeenCalledWith('level_clear');
+    });
+
+    it('should play one_star when stars === 1 and not all slots filled', async () => {
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: '', user: undefined, hitMax: false, index: 0, length: 4 },
+      ];
+      const playSoundSpy = vi.spyOn(spectator as any, 'playSound');
+
+      await (spectator as any).handleLevelResults(1);
+
+      expect(playSoundSpy).toHaveBeenCalledWith('one_star');
+      expect(playSoundSpy).not.toHaveBeenCalledWith('level_clear');
+    });
+
+    it('should play three_stars when stars === 3 and not all slots filled', async () => {
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: '', user: undefined, hitMax: false, index: 0, length: 4 },
+      ];
+      const playSoundSpy = vi.spyOn(spectator as any, 'playSound');
+
+      await (spectator as any).handleLevelResults(3);
+
+      expect(playSoundSpy).toHaveBeenCalledWith('three_stars');
+      expect(playSoundSpy).not.toHaveBeenCalledWith('level_clear');
     });
   });
 
