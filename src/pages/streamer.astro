@@ -314,17 +314,50 @@ import MadeBy from "../components/MadeBy.astro";
       if (data.mirrorUrl) {
         params.set("mirrorUrl", data.mirrorUrl);
       }
+      let newChannel = twitchChannel;
       if (data.twitchChannel) {
         const channel = extractTwitchChannel(data.twitchChannel);
         if (channel) {
           params.set("twitchChannel", channel);
+          newChannel = channel;
         }
       }
       // Handle clear sound toggle
       params.set("clearSound", data.clearSound ? "true" : "false");
 
-      // Reload the page with new parameters
-      window.location.href = window.location.pathname + "?" + params.toString();
+      // Update the URL without a full page reload. A reload would discard the
+      // user activation from the Save click, which the browser's autoplay
+      // policy requires for `audio.play()` calls to succeed.
+      const newUrl = window.location.pathname + "?" + params.toString();
+      window.history.replaceState({}, "", newUrl);
+
+      // Apply settings in place
+      const newMirrorUrl = data.mirrorUrl
+        ? normalizeMirrorUrl(data.mirrorUrl)
+        : currentMirrorUrl;
+      const mirrorUrlChanged = newMirrorUrl !== currentMirrorUrl;
+      currentMirrorUrl = newMirrorUrl;
+
+      spectator.isSoundsEnabled = !!data.clearSound;
+
+      const channelChanged = newChannel !== twitchChannel;
+      twitchChannel = newChannel;
+      if (channelChanged) {
+        const twitchChatWidget = document.getElementById(
+          "streamer-twitch-chat-widget",
+        ) as HTMLIFrameElement | null;
+        if (twitchChatWidget) {
+          twitchChatWidget.src = `https://www.twitch.tv/embed/${twitchChannel}/chat?darkpopout&parent=${location.hostname}`;
+        }
+        spectator.connectToTwitch(twitchChannel);
+      }
+
+      if (mirrorUrlChanged) {
+        loadBoardIframeIfVisible();
+        if (currentMirrorUrl) {
+          spectator.connectToWosGame(currentMirrorUrl);
+        }
+      }
     });
   };
 

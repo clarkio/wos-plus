@@ -389,6 +389,34 @@ import MadeBy from "../components/MadeBy.astro";
     }
   };
 
+  const applyChatVisibility = (isChatEnabled: boolean) => {
+    const twitchChatWidget = document.getElementById(
+      "player-twitch-chat-widget",
+    ) as HTMLIFrameElement | null;
+    const grid = document.querySelector(
+      ".player-wos-main-grid",
+    ) as HTMLElement | null;
+    if (!twitchChatWidget || !grid) return;
+    if (isChatEnabled) {
+      twitchChatWidget.style.display = "";
+      grid.classList.remove("chat-hidden");
+    } else {
+      twitchChatWidget.style.display = "none";
+      grid.classList.add("chat-hidden");
+    }
+  };
+
+  const applyBoardVisibility = (boardEnabled: boolean) => {
+    if (!boardContainer) return;
+    if (boardEnabled) {
+      boardContainer.style.display = "";
+      loadBoardIframeIfVisible();
+    } else {
+      boardContainer.style.display = "none";
+      clearBoardIframe();
+    }
+  };
+
   // Separate function to set up save callback
   const setupDialogCallbacks = () => {
     if (!settingsDialog) return;
@@ -401,10 +429,12 @@ import MadeBy from "../components/MadeBy.astro";
       if (data.mirrorUrl) {
         params.set("mirrorUrl", data.mirrorUrl);
       }
+      let newChannel = twitchChannel;
       if (data.twitchChannel) {
         const channel = extractTwitchChannel(data.twitchChannel);
         if (channel) {
           params.set("twitchChannel", channel);
+          newChannel = channel;
         }
       }
       // Handle chat enabled toggle
@@ -414,9 +444,41 @@ import MadeBy from "../components/MadeBy.astro";
       // Handle clear sound toggle
       params.set("clearSound", data.clearSound ? "true" : "false");
 
-      // Navigate to the updated URL
+      // Update the URL without a full page reload. A reload would discard the
+      // user activation from the Save click, which the browser's autoplay
+      // policy requires for `audio.play()` calls to succeed.
       const newUrl = window.location.pathname + "?" + params.toString();
-      window.location.href = newUrl;
+      window.history.replaceState({}, "", newUrl);
+
+      // Apply settings in place
+      const newMirrorUrl = data.mirrorUrl
+        ? normalizeMirrorUrl(data.mirrorUrl)
+        : currentMirrorUrl;
+      const mirrorUrlChanged = newMirrorUrl !== currentMirrorUrl;
+      currentMirrorUrl = newMirrorUrl;
+
+      applyChatVisibility(!!data.chatEnabled);
+      applyBoardVisibility(!!data.wosEnabled);
+      spectator.isSoundsEnabled = !!data.clearSound;
+
+      const channelChanged = newChannel !== twitchChannel;
+      twitchChannel = newChannel;
+      if (channelChanged) {
+        const twitchChatWidget = document.getElementById(
+          "player-twitch-chat-widget",
+        ) as HTMLIFrameElement | null;
+        if (twitchChatWidget) {
+          twitchChatWidget.src = `https://www.twitch.tv/embed/${twitchChannel}/chat?darkpopout&parent=${location.hostname}`;
+        }
+        spectator.connectToTwitch(twitchChannel);
+      }
+
+      if (mirrorUrlChanged) {
+        loadBoardIframeIfVisible();
+        if (currentMirrorUrl) {
+          spectator.connectToWosGame(currentMirrorUrl);
+        }
+      }
     });
   };
 
