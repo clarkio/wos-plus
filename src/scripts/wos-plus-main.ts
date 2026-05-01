@@ -16,6 +16,8 @@ const wosWorker = new Worker(
 
 type Slots = { letters: string[], word: string, user?: string, hitMax: boolean; index: number, length: number };
 
+type EventTypes = 'level_end' | 'level_clear' | 'one_star' | 'three_stars' | 'new_all_time_pb' | 'new_daily_pb' | 'new_daily_clear';
+
 export class GameSpectator {
   private msgProcessDelay = parseInt(import.meta.env.WOS_MSG_PROCESS_DELAY || '400');
   private lastTwitchMessage: {
@@ -27,6 +29,12 @@ export class GameSpectator {
   twitchChatLogId = 'twitch-chat-log';
   currentLevel: number = 0;
   twitchChatLog: Map<string, { message: string; timestamp: number; }>;
+  soundEventTypes: Map<EventTypes, string> = new Map([
+    ['level_end', '/assets/loser.wav'],
+    ['level_clear', '/assets/clear.mp3'],
+    ['one_star', '/assets/ooo_close_one.wav'],
+    ['three_stars', '/assets/not_too_shabby.wav']
+  ]);
   wosSocket: any;
   twitchClient: tmiClient | void = undefined;
   currentChannel: string = '';
@@ -44,7 +52,7 @@ export class GameSpectator {
   currentLevelFakeLetters: string[] = [];
   currentLevelSlots: Slots[] = [];
   currentLevelEmptySlotsCount: { [key: number]: number; } = {};
-  clearSoundEnabled: boolean = true;
+  isSoundsEnabled: boolean = true;
 
   constructor() {
     this.twitchChatLog = new Map();
@@ -153,6 +161,20 @@ export class GameSpectator {
     this.log(`Game Ended on Level ${this.currentLevel}`, this.wosGameLogId);
 
     await this.logMissingWords();
+
+    this.playSound('level_end');
+  }
+
+  private playSound(eventType: EventTypes) {
+    if (!this.isSoundsEnabled) {
+      return;
+    }
+
+    const soundFile = this.soundEventTypes.get(eventType);
+    const audio = new Audio(soundFile || '/assets/nothing.mp3');
+    audio.play().catch((error) => {
+      console.error('Error playing audio:', error);
+    });
   }
 
   private async handleLevelResults(stars: any) {
@@ -178,13 +200,14 @@ export class GameSpectator {
         await saveBoard(this.currentLevelBigWord, this.currentLevelSlots);
       }
 
-      if (this.clearSoundEnabled) {
-        const audio = new Audio('/assets/clear.mp3');
-        audio.play().catch((error) => {
-          console.error('Error playing audio:', error);
-        });
-      }
+      this.playSound('level_clear');
     } else {
+      if (stars === 1) {
+        this.playSound('one_star');
+      }
+      if (stars === 3) {
+        this.playSound('three_stars');
+      }
       await this.logMissingWords();
       this.logEmptySlots();
     }

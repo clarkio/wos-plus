@@ -47,10 +47,10 @@ import MadeBy from "../components/MadeBy.astro";
             checked
           />
           <span class="toggle-slider"></span>
-          <span class="toggle-text">Play Clear Sound</span>
+          <span class="toggle-text">Play Sounds</span>
         </label>
         <small class="form-help"
-          >Play a sound when all words are found on a level</small
+          >Play custom clarkio sounds for in game events such as "CLEAR!" when all words on the board are found</small
         >
       </div>
     </form>
@@ -437,7 +437,7 @@ import MadeBy from "../components/MadeBy.astro";
     if (hasRequiredParams) {
       // Handle clear sound setting
       if (urlParams.has("clearSound")) {
-        spectator.clearSoundEnabled =
+        spectator.isSoundsEnabled =
           urlParams.get("clearSound")?.toLowerCase() === "true";
       }
 
