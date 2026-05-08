@@ -360,7 +360,76 @@ describe('GameSpectator class', () => {
       (spectator as any).calculateHiddenLetters('t e s t t');
 
       const hiddenEl = document.getElementById('hidden-letter')!;
-      expect(hiddenEl.innerText).toContain('T');
+      // Big word has 3 Ts; level letters has 1 T → 2 hidden Ts.
+      expect(hiddenEl.innerText).toBe('T T');
+    });
+
+    it('should report multiple hidden instances of the same letter (CIRCLES regression #83)', () => {
+      // Scenario from issue #83: CIRCLES board with two unrevealed Cs.
+      // Level letters typically present as I R L E S with two ? placeholders
+      // for the two hidden Cs.
+      spectator.currentLevelLetters = ['i', 'r', 'l', 'e', 's', '?', '?'];
+
+      (spectator as any).calculateHiddenLetters('c i r c l e s');
+
+      const hiddenEl = document.getElementById('hidden-letter')!;
+      // Two Cs are hidden - both should be reported, not just one.
+      const cCount = (hiddenEl.innerText.match(/C/g) || []).length;
+      expect(cCount).toBe(2);
+    });
+
+    it('should report two distinct hidden letters from CIRCLES (C and R hidden)', () => {
+      // CIRCLES with one C visible and the second C + R hidden.
+      // bigWord: c i r c l e s -> {c:2, i:1, r:1, l:1, e:1, s:1}
+      // level:   c i l e s ? ?  -> {c:1, i:1, l:1, e:1, s:1}
+      // missing: c (2-1=1), r (1-0=1) -> "C R"
+      spectator.currentLevelLetters = ['c', 'i', 'l', 'e', 's', '?', '?'];
+
+      (spectator as any).calculateHiddenLetters('c i r c l e s');
+
+      const hiddenEl = document.getElementById('hidden-letter')!;
+      expect(hiddenEl.innerText).toBe('C R');
+    });
+
+    it('should display all hidden letters when one was already discovered via dictionary detection (ADMIRE regression)', () => {
+      // Scenario reported in follow-up to #83:
+      // Initial board: R ? E D Q F ? I (hidden = A and M, fake = Q and F)
+      // Big word ADMIRE is guessed.
+      // Earlier in the level, dictionary-based detection identified one hidden
+      // letter (M) and merged it into currentLevelLetters via the partial
+      // replacement branch, recording it in currentLevelHiddenLetters.
+      spectator.currentLevelLetters = ['r', 'm', 'e', 'd', 'q', 'f', '?', 'i'];
+      spectator.currentLevelHiddenLetters = ['m'];
+
+      (spectator as any).calculateHiddenLetters('a d m i r e');
+
+      const hiddenEl = document.getElementById('hidden-letter')!;
+      // Both M (previously discovered) and A (newly discovered) must show.
+      expect(hiddenEl.innerText.split(' ').sort()).toEqual(['A', 'M']);
+    });
+
+    it('should display all hidden letters when both were already discovered (ADMIRE all-pre-discovered)', () => {
+      // Dictionary path detected both A and M before the big word was guessed
+      // and replaced both ? slots in currentLevelLetters with the discovered
+      // letters (the new consistent invariant).
+      spectator.currentLevelLetters = ['r', 'a', 'e', 'd', 'q', 'f', 'm', 'i'];
+      spectator.currentLevelHiddenLetters = ['a', 'm'];
+
+      (spectator as any).calculateHiddenLetters('a d m i r e');
+
+      const hiddenEl = document.getElementById('hidden-letter')!;
+      expect(hiddenEl.innerText.split(' ').sort()).toEqual(['A', 'M']);
+    });
+
+    it('should display all hidden letters when none were pre-discovered (ADMIRE clean state)', () => {
+      // No dictionary detection happened before the big word was found.
+      spectator.currentLevelLetters = ['r', '?', 'e', 'd', 'q', 'f', '?', 'i'];
+      spectator.currentLevelHiddenLetters = [];
+
+      (spectator as any).calculateHiddenLetters('a d m i r e');
+
+      const hiddenEl = document.getElementById('hidden-letter')!;
+      expect(hiddenEl.innerText.split(' ').sort()).toEqual(['A', 'M']);
     });
 
     it('should not update UI if all letters are present', () => {
@@ -1147,6 +1216,53 @@ describe('GameSpectator class', () => {
 
       expect(spectator.currentLevelBigWord).toBe('T E S T I N G');
       expect(document.getElementById('letters-label')!.innerText).toBe('Big Word:');
+    });
+
+    it('should reveal both hidden letters after big word found following dictionary detection of one (ADMIRE end-to-end)', () => {
+      // Reproduces the bug reported after #83: starting board "R ? E D Q F ? I"
+      // with hidden letters A and M, fake letters Q and F.
+      // 1) An earlier guess containing M makes the dictionary path detect M and
+      //    set the hidden display to just "M" while replacing one ? with M.
+      // 2) The big word ADMIRE is then guessed (hitMax=true). Both A and M
+      //    must show up in the hidden letter display.
+      spectator.currentLevelLetters = ['r', '?', 'e', 'd', 'q', 'f', '?', 'i'];
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 5 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 6 },
+      ];
+
+      // Step 1: simulate a non-big-word guess that triggers dictionary
+      // detection of "M" via the word DREAM (contains M which isn't visible).
+      spectator.lastTwitchMessage = {
+        username: 'player1',
+        message: 'dream',
+        timestamp: Date.now(),
+      };
+      (spectator as any).updateGameState('player1', ['d', 'r', 'e', 'a', 'm'], 0, false);
+
+      // The dictionary path should have detected at least one hidden letter
+      // and the corresponding ? should be replaced.
+      expect(spectator.currentLevelHiddenLetters.length).toBeGreaterThan(0);
+
+      // Step 2: simulate the big word ADMIRE being guessed.
+      spectator.lastTwitchMessage = {
+        username: 'player2',
+        message: 'admire',
+        timestamp: Date.now(),
+      };
+      (spectator as any).updateGameState('player2', ['a', 'd', 'm', 'i', 'r', 'e'], 1, true);
+
+      const hiddenEl = document.getElementById('hidden-letter')!;
+      const fakeEl = document.getElementById('fake-letter')!;
+
+      // Both A and M must appear in the hidden letter display.
+      const displayedHidden = hiddenEl.innerText.split(' ').filter(Boolean).sort();
+      expect(displayedHidden).toContain('A');
+      expect(displayedHidden).toContain('M');
+
+      // Fake letters should still resolve to Q and F.
+      const displayedFake = fakeEl.innerText.split(' ').filter(Boolean).sort();
+      expect(displayedFake).toEqual(['F', 'Q']);
     });
   });
 });

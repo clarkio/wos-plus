@@ -443,36 +443,49 @@ export class GameSpectator {
       if (potentialHiddenLetters.length > 0) {
         this.log(`Potential hidden letters: ${potentialHiddenLetters.join(' ')}`, this.wosGameLogId);
 
-        // Update the hidden letters display
-        const currentHiddenLetters = document.getElementById('hidden-letter')!.innerText;
-        if (!currentHiddenLetters) {
-          document.getElementById('hidden-letter')!.innerText = potentialHiddenLetters.join(' ').toUpperCase();
-
-          // Check if currentLevelLetters contains more than one '?'
-          if (this.currentLevelLetters.filter(letter => letter === '?').length === 1) {
-            this.currentLevelLetters = this.currentLevelLetters.filter(letter => letter !== '?');
-            this.currentLevelHiddenLetters.push(...potentialHiddenLetters);
-            document.getElementById('letters')!.innerText = this.currentLevelLetters.join(' ').toUpperCase();
-          } else {
-            // If there are multiple '?' check how many potential hidden letters we have and if it matches the number of '?'
-            const questionMarksCount = this.currentLevelLetters.filter(letter => letter === '?').length;
-            if (potentialHiddenLetters.length === questionMarksCount) {
-              this.currentLevelLetters = this.currentLevelLetters.filter(letter => letter !== '?');
-              this.currentLevelHiddenLetters.push(...potentialHiddenLetters);
-              document.getElementById('letters')!.innerText = this.currentLevelLetters.join(' ').toUpperCase();
-            } else {
-              // If not, only replace the same number of '?' with the same number of potential hidden letters
-              const lettersToReplace = Math.min(potentialHiddenLetters.length, questionMarksCount);
-              for (let i = 0; i < lettersToReplace; i++) {
-                const index = this.currentLevelLetters.indexOf('?');
-                if (index !== -1) {
-                  this.currentLevelLetters[index] = potentialHiddenLetters[i];
-                }
-              }
-              this.currentLevelHiddenLetters.push(...potentialHiddenLetters.slice(0, lettersToReplace));
-            }
+        // Note: previously this whole block was skipped if the hidden-letter
+        // DOM already had text, which silently dropped any *additional* hidden
+        // letters discovered in later guesses. We now always update state and
+        // let currentLevelHiddenLetters track the cumulative set.
+        // Skip letters we've already recorded so re-running detection on later
+        // guesses is idempotent.
+        const knownHidden = this.currentLevelHiddenLetters.map(l => l.toLowerCase());
+        const newlyFound: string[] = [];
+        for (const letter of potentialHiddenLetters) {
+          const lower = letter.toLowerCase();
+          // Use letter counts in case of duplicates being discovered.
+          const knownCount = knownHidden.filter(l => l === lower).length
+            + newlyFound.filter(l => l === lower).length;
+          const totalCount = potentialHiddenLetters.filter(l => l.toLowerCase() === lower).length;
+          if (knownCount < totalCount) {
+            newlyFound.push(lower);
           }
         }
+
+        if (newlyFound.length > 0) {
+          // Always REPLACE ? slots with the newly-discovered letters so that
+          // currentLevelLetters stays a consistent source of truth (visible +
+          // discovered-hidden). Earlier code instead removed ? slots in some
+          // branches without inserting the letter, which made it impossible
+          // to reconstruct what was actually on the board.
+          const questionMarksCount = this.currentLevelLetters.filter(letter => letter === '?').length;
+          const lettersToReplace = Math.min(newlyFound.length, questionMarksCount);
+          for (let i = 0; i < lettersToReplace; i++) {
+            const idx = this.currentLevelLetters.indexOf('?');
+            if (idx !== -1) {
+              this.currentLevelLetters[idx] = newlyFound[i];
+            }
+          }
+          // Record the cumulative set of discovered hidden letters.
+          this.currentLevelHiddenLetters.push(...newlyFound.slice(0, lettersToReplace));
+
+          document.getElementById('letters')!.innerText = this.currentLevelLetters.join(' ').toUpperCase();
+        }
+
+        // Always reflect the cumulative set of hidden letters in the DOM so
+        // that a second/third discovery is visible to viewers.
+        document.getElementById('hidden-letter')!.innerText =
+          this.currentLevelHiddenLetters.map(l => l.toUpperCase()).join(' ');
       }
     }
   }
@@ -587,21 +600,48 @@ export class GameSpectator {
     const bigWordLetters = bigWord.split(' ').map(letter => letter.toLowerCase());
     console.log(`Big Word Letters: ${bigWordLetters.join(' ')}`, this.wosGameLogId);
     console.log(`Current Level Letters: ${this.currentLevelLetters.join(' ')}`, this.wosGameLogId);
-    // compare bigWordLetters with currentLevelLetters
-    // if a letter is in the bigWordLetters but not in currentLevelLetters, it is hidden
-    // if a letter is in the bigWordLetters more than once and is in currentLevelLetters, it is hidden as well
-    const hiddenLettersSet = new Set<string>();
+    console.log(`Previously Discovered Hidden Letters: ${this.currentLevelHiddenLetters.join(' ')}`, this.wosGameLogId);
+
+    // Hidden letters = letters in the big word that aren't accounted for in
+    // currentLevelLetters. Thanks to the dictionary detection path always
+    // *replacing* ? slots with the discovered letter (rather than removing
+    // them), currentLevelLetters is a faithful representation of what's on
+    // the board: visible letters + already-discovered hidden letters + any
+    // remaining ? placeholders for undiscovered hidden letters.
+    const bigWordCounts = new Map<string, number>();
     bigWordLetters.forEach(letter => {
-      const bigWordLetterCount = bigWordLetters.filter(l => l === letter).length;
-      const currentLevelLetterCount = this.currentLevelLetters.filter(l => l === letter).length;
-      if (currentLevelLetterCount < bigWordLetterCount) {
-        hiddenLettersSet.add(letter);
+      bigWordCounts.set(letter, (bigWordCounts.get(letter) || 0) + 1);
+    });
+
+    const levelLetterCounts = new Map<string, number>();
+    this.currentLevelLetters.forEach(letter => {
+      const lower = letter.toLowerCase();
+      levelLetterCounts.set(lower, (levelLetterCounts.get(lower) || 0) + 1);
+    });
+
+    // Newly-discovered hidden letters: the deficit between big word counts
+    // and current level letter counts (? slots count toward neither, so they
+    // surface as missing letters here).
+    const newlyDiscovered: string[] = [];
+    bigWordCounts.forEach((bigCount, letter) => {
+      const levelCount = levelLetterCounts.get(letter) || 0;
+      const missing = bigCount - levelCount;
+      for (let i = 0; i < missing; i++) {
+        newlyDiscovered.push(letter);
       }
     });
-    const hiddenLetters = Array.from(hiddenLettersSet);
-    this.log(`Hidden Letters: ${hiddenLetters.join(' ')}`, this.wosGameLogId);
-    if (hiddenLetters.length > 0 && hiddenLetters.length !== this.currentLevelLetters.length) {
-      document.getElementById('hidden-letter')!.innerText = hiddenLetters.join(' ').toUpperCase();
+
+    // Persist newly-discovered ones so the cumulative set stays consistent
+    // for any subsequent reads (e.g., logMissingWords, save board, etc.).
+    if (newlyDiscovered.length > 0) {
+      this.currentLevelHiddenLetters.push(...newlyDiscovered);
+    }
+
+    // Display the full cumulative set: previously known + newly found.
+    const allHidden = this.currentLevelHiddenLetters.map(l => l.toLowerCase());
+    this.log(`Hidden Letters: ${allHidden.join(' ')}`, this.wosGameLogId);
+    if (allHidden.length > 0 && allHidden.length !== this.currentLevelLetters.length) {
+      document.getElementById('hidden-letter')!.innerText = allHidden.join(' ').toUpperCase();
     }
   }
 
