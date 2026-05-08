@@ -613,28 +613,69 @@ export class GameSpectator {
       bigWordCounts.set(letter, (bigWordCounts.get(letter) || 0) + 1);
     });
 
+    // Skip ? placeholders so they surface as a deficit below. Letters that
+    // were merged into currentLevelLetters by the dictionary detection
+    // path (replacing a ?) are naturally counted here, so re-running this
+    // function after a successful discovery computes a zero deficit.
     const levelLetterCounts = new Map<string, number>();
     this.currentLevelLetters.forEach(letter => {
+      if (letter === '?') return;
       const lower = letter.toLowerCase();
       levelLetterCounts.set(lower, (levelLetterCounts.get(lower) || 0) + 1);
     });
 
-    // Newly-discovered hidden letters: the deficit between big word counts
-    // and current level letter counts (? slots count toward neither, so they
-    // surface as missing letters here).
-    const newlyDiscovered: string[] = [];
+    // Deficit: letters in the big word not accounted for by visible board
+    // letters (? slots and any hidden letters not yet merged into
+    // currentLevelLetters surface here).
+    const deficit: string[] = [];
     bigWordCounts.forEach((bigCount, letter) => {
       const levelCount = levelLetterCounts.get(letter) || 0;
       const missing = bigCount - levelCount;
       for (let i = 0; i < missing; i++) {
-        newlyDiscovered.push(letter);
+        deficit.push(letter);
       }
     });
 
-    // Persist newly-discovered ones so the cumulative set stays consistent
-    // for any subsequent reads (e.g., logMissingWords, save board, etc.).
-    if (newlyDiscovered.length > 0) {
-      this.currentLevelHiddenLetters.push(...newlyDiscovered);
+    // Idempotency: this method may be invoked multiple times in a single
+    // level (every guess where hitMax === true triggers it). When a level
+    // has multiple anagram big words — e.g. BROOMED / BEDROOM / BOREDOM —
+    // each one fires hitMax and we re-enter here. Without this guard the
+    // same hidden letters get appended on every call (see regression test).
+    const deficitCounts = new Map<string, number>();
+    deficit.forEach(l => deficitCounts.set(l, (deficitCounts.get(l) || 0) + 1));
+
+    const knownHiddenCounts = new Map<string, number>();
+    this.currentLevelHiddenLetters.forEach(letter => {
+      const lower = letter.toLowerCase();
+      knownHiddenCounts.set(lower, (knownHiddenCounts.get(lower) || 0) + 1);
+    });
+
+    const trulyNew: string[] = [];
+    deficitCounts.forEach((needed, letter) => {
+      const have = knownHiddenCounts.get(letter) || 0;
+      const toAdd = Math.max(0, needed - have);
+      for (let i = 0; i < toAdd; i++) trulyNew.push(letter);
+    });
+
+    if (trulyNew.length > 0) {
+      // Replace ? slots in currentLevelLetters with the newly-discovered
+      // letters so subsequent reads see a consistent board state. This
+      // matches the convention used by the dictionary detection branch
+      // and is what makes future invocations idempotent.
+      const questionMarksCount = this.currentLevelLetters.filter(l => l === '?').length;
+      const lettersToReplace = Math.min(trulyNew.length, questionMarksCount);
+      for (let i = 0; i < lettersToReplace; i++) {
+        const idx = this.currentLevelLetters.indexOf('?');
+        if (idx !== -1) {
+          this.currentLevelLetters[idx] = trulyNew[i];
+        }
+      }
+      // Record the cumulative set of discovered hidden letters. Unlike
+      // the dictionary branch we record all `trulyNew` (not just
+      // `lettersToReplace`-many) — the big word is authoritative, so
+      // every deficit letter is a real hidden letter even if there
+      // happens to be no ? slot to merge it into.
+      this.currentLevelHiddenLetters.push(...trulyNew);
     }
 
     // Display the full cumulative set: previously known + newly found.

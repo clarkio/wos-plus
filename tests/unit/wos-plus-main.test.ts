@@ -440,6 +440,58 @@ describe('GameSpectator class', () => {
       const hiddenEl = document.getElementById('hidden-letter')!;
       expect(hiddenEl.innerText).toBe('');
     });
+
+    it('should be idempotent across multiple calls with the same big word', () => {
+      // Regression: calling calculateHiddenLetters twice should not
+      // double-record hidden letters in currentLevelHiddenLetters.
+      spectator.currentLevelLetters = ['b', 'o', 'm', 'd', 't', 's', '?', '?', '?'];
+
+      (spectator as any).calculateHiddenLetters('B R O O M E D');
+      (spectator as any).calculateHiddenLetters('B R O O M E D');
+
+      const hidden = document.getElementById('hidden-letter')!.innerText
+        .split(' ')
+        .filter(Boolean)
+        .sort();
+      expect(hidden).toEqual(['E', 'O', 'R']);
+      expect(spectator.currentLevelHiddenLetters.length).toBe(3);
+    });
+
+    it('should not duplicate hidden letters across multiple anagram big-word hits (BROOMED/BEDROOM/BOREDOM regression)', () => {
+      // Regression: when a level has multiple anagram big words (BROOMED,
+      // BEDROOM, BOREDOM are all 7-letter anagrams), each guess fires
+      // hitMax=true and triggers calculateHiddenLetters. Without the
+      // idempotency guard, each invocation re-pushed the same hidden
+      // letters onto currentLevelHiddenLetters. Previously this produced
+      // a 9-letter display like "E R O O R E R O E" instead of "E R O".
+      spectator.currentLevelLetters = ['b', 'o', 'm', 'd', 't', 's', '?', '?', '?'];
+
+      (spectator as any).calculateHiddenLetters('B E D R O O M');
+      (spectator as any).calculateHiddenLetters('B O R E D O M');
+      (spectator as any).calculateHiddenLetters('B R O O M E D');
+
+      const hidden = document.getElementById('hidden-letter')!.innerText
+        .split(' ')
+        .filter(Boolean)
+        .sort();
+      expect(hidden).toEqual(['E', 'O', 'R']);
+      expect(spectator.currentLevelHiddenLetters.length).toBe(3);
+    });
+
+    it('should replace ? slots in currentLevelLetters with discovered hidden letters', () => {
+      // Convention shared with the dictionary detection branch: discovered
+      // hidden letters get merged into currentLevelLetters so the board
+      // stays a consistent source of truth.
+      spectator.currentLevelLetters = ['b', 'o', 'm', 'd', 't', 's', '?', '?', '?'];
+
+      (spectator as any).calculateHiddenLetters('B R O O M E D');
+
+      // No ? slots should remain after a successful big-word discovery.
+      expect(spectator.currentLevelLetters).not.toContain('?');
+      // The merged board should account for all big-word letters.
+      const merged = spectator.currentLevelLetters.map(l => l.toLowerCase()).sort();
+      expect(merged).toEqual(['b', 'd', 'e', 'm', 'o', 'o', 'r', 's', 't']);
+    });
   });
 
   describe('calculateFakeLetters', () => {
