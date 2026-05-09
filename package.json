@@ -15,22 +15,20 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^12.6.12",
-    "@sentry/astro": "^10.49.0",
-    "@sentry/cloudflare": "^10.49.0",
-    "@supabase/supabase-js": "^2.87.0",
-    "@tmi.js/chat": "^0.4.1",
-    "astro": "^5.16.4",
-    "socket.io-client": "^2.5.0",
-    "tmi.js": "^1.8.5"
+    "@astrojs/cloudflare": "12.6.13",
+    "@sentry/astro": "10.52.0",
+    "@sentry/cloudflare": "10.52.0",
+    "@supabase/supabase-js": "2.105.4",
+    "@tmi.js/chat": "0.4.1",
+    "astro": "5.18.1",
+    "socket.io-client": "2.5.0",
+    "tmi.js": "1.8.5"
   },
   "devDependencies": {
-    "@types/socket.io-client": "^1.4.36",
-    "@types/tmi.js": "^1.8.6",
-    "@vitest/coverage-v8": "^4.0.16",
-    "@vitest/ui": "^4.0.16",
-    "agent-browser": "^0.6.0",
-    "happy-dom": "^20.0.11",
-    "vitest": "^4.0.16"
+    "@types/socket.io-client": "1.4.36",
+    "@types/tmi.js": "1.8.6",
+    "@vitest/coverage-v8": "4.1.5",
+    "@vitest/ui": "4.1.5",
+    "vitest": "4.1.5"
   }
 }
