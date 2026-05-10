@@ -2,6 +2,7 @@
   "name": "wos-plus",
   "type": "module",
   "version": "0.1.1",
+  "packageManager": "pnpm@11.0.9",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
