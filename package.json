@@ -30,6 +30,7 @@
     "@types/tmi.js": "1.8.6",
     "@vitest/coverage-v8": "4.1.5",
     "@vitest/ui": "4.1.5",
+    "happy-dom": "^20.9.0",
     "vitest": "4.1.5"
   }
 }
