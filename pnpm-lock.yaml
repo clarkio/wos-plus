@@ -51,6 +51,9 @@ importers:
       vitest:
         specifier: 4.1.5
         version: 4.1.5(@opentelemetry/api@1.9.1)(@types/node@25.6.2)(@vitest/coverage-v8@4.1.5)(@vitest/ui@4.1.5)(happy-dom@20.9.0)(vite@7.3.3(@types/node@25.6.2))
+      wrangler:
+        specifier: ^4.59.2
+        version: 4.59.2(@cloudflare/workers-types@4.20260508.1)
 
 packages:
 
