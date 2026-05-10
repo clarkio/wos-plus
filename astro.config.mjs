@@ -14,6 +14,9 @@ export default defineConfig({
       project: "javascript-astro",
       org: "clarkio",
       authToken: process.env.SENTRY_AUTH_TOKEN,
+      sourceMapsUploadOptions: {
+        filesToDeleteAfterUpload: ["./dist/**/*.map"],
+      },
     }),
   ],
 });
