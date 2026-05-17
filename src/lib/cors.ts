@@ -1,3 +1,7 @@
+type CorsEnv = {
+  CORS_ALLOWED_ORIGINS?: unknown;
+};
+
 /**
  * CORS utility for API endpoints
  * Validates request origin against a whitelist of allowed origins
@@ -42,7 +46,7 @@ export function getCorsOrigin(request: Request, allowedOrigins: string[]): strin
  * @param request - The incoming request
  * @param env - Environment object containing CORS_ALLOWED_ORIGINS
  */
-export function getCorsHeaders(request: Request, env?: Record<string, unknown>): Record<string, string> {
+export function getCorsHeaders(request: Request, env?: CorsEnv): Record<string, string> {
   const corsOrigins = typeof env?.CORS_ALLOWED_ORIGINS === 'string' ? env.CORS_ALLOWED_ORIGINS : undefined;
   const allowedOrigins = parseAllowedOrigins(corsOrigins);
   return {
@@ -58,7 +62,7 @@ export function getCorsHeaders(request: Request, env?: Record<string, unknown>):
  * @param request - The incoming request
  * @param env - Environment object containing CORS_ALLOWED_ORIGINS
  */
-export function createCorsPreflightResponse(request: Request, env?: Record<string, unknown>): Response {
+export function createCorsPreflightResponse(request: Request, env?: CorsEnv): Response {
   return new Response(null, {
     status: 204,
     headers: getCorsHeaders(request, env),

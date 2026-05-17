@@ -1,12 +1,15 @@
 /// <reference types="astro/client" />
 
-interface Env {
-  SUPABASE_URL: string;
-  SUPABASE_KEY: string;
+declare namespace Cloudflare {
+  interface Env {
+    SUPABASE_URL: string;
+    SUPABASE_KEY: string;
+    CORS_ALLOWED_ORIGINS?: string;
+    MIN_WORD_LENGTH?: string;
+    MAX_WORD_LENGTH?: string;
+  }
 }
 
-type Runtime = import('@astrojs/cloudflare').Runtime<Env>;
-
-declare namespace App {
-  interface Locals extends Runtime { }
+declare module "cloudflare:workers" {
+  export const env: Cloudflare.Env;
 }

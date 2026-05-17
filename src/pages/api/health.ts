@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 export const prerender = false;
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async () => {
   console.log('Health check requested');
   return new Response(JSON.stringify({
     status: 'ok',

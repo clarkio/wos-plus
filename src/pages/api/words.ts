@@ -1,16 +1,16 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { getCorsHeaders, createCorsPreflightResponse } from '../../lib/cors';
+import { env } from 'cloudflare:workers';
+
 export const prerender = false;
 
 // Handle CORS preflight requests
-export const OPTIONS: APIRoute = async ({ request, locals }) => {
-  const { env } = locals.runtime;
+export const OPTIONS: APIRoute = async ({ request }) => {
   return createCorsPreflightResponse(request, env);
 };
 
 // export const POST: APIRoute = async ({ request, locals }) => {
-//   const { env } = locals.runtime;
 //   const corsHeaders = getCorsHeaders(request, env);
 
 //   // Require authentication for write operations
@@ -83,8 +83,7 @@ export const OPTIONS: APIRoute = async ({ request, locals }) => {
 //   }
 // };
 
-export const GET: APIRoute = async ({ request, locals }) => {
-  const { env } = locals.runtime;
+export const GET: APIRoute = async ({ request }) => {
   const corsHeaders = getCorsHeaders(request, env);
   try {
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
@@ -123,4 +122,3 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   }
 };
-

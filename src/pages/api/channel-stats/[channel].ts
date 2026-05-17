@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { env } from 'cloudflare:workers';
+
 export const prerender = false;
 
 const corsHeaders = {
@@ -8,8 +10,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-export const GET: APIRoute = async ({ params, locals }) => {
-  const { env } = locals.runtime;
+export const GET: APIRoute = async ({ params }) => {
   const { channel } = params;
 
   if (!channel) {

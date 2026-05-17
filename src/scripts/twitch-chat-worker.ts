@@ -31,9 +31,10 @@ self.onmessage = function (e: MessageEvent<TwitchWorkerMessage>) {
       self.postMessage(result);
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     self.postMessage({
       type: 'error',
-      error: error.message
+      error: message
     });
   }
 };

@@ -715,7 +715,7 @@ describe('GameSpectator class', () => {
 
     it('should clear board when event type is 1 (Level Started)', () => {
       spectator.currentLevelCorrectWords = ['word1', 'word2'];
-      const slots = [];
+      const slots: any[] = [];
 
       (spectator as any).handleGameInitialization(1, 1, ['a', 'b', 'c'], slots);
 
@@ -724,7 +724,7 @@ describe('GameSpectator class', () => {
 
     it('should not clear board when event type is 12 (Game Connected)', () => {
       spectator.currentLevelCorrectWords = ['word1', 'word2'];
-      const slots = [];
+      const slots: any[] = [];
 
       (spectator as any).handleGameInitialization(5, 12, ['a', 'b', 'c'], slots);
 
@@ -1220,7 +1220,7 @@ describe('GameSpectator class', () => {
     });
 
     it('should use twitch message for word when available', () => {
-      spectator.lastTwitchMessage = {
+      (spectator as any).lastTwitchMessage = {
         username: 'testuser',
         message: 'test',
         timestamp: Date.now()
@@ -1232,7 +1232,7 @@ describe('GameSpectator class', () => {
     });
 
     it('should fall back to chat log when last message not matching', () => {
-      spectator.lastTwitchMessage = {
+      (spectator as any).lastTwitchMessage = {
         username: 'otheruser',
         message: 'other',
         timestamp: Date.now()
@@ -1258,7 +1258,7 @@ describe('GameSpectator class', () => {
     });
 
     it('should set big word when hitMax is true', () => {
-      spectator.lastTwitchMessage = {
+      (spectator as any).lastTwitchMessage = {
         username: 'testuser',
         message: 'testing',
         timestamp: Date.now()
@@ -1285,7 +1285,7 @@ describe('GameSpectator class', () => {
 
       // Step 1: simulate a non-big-word guess that triggers dictionary
       // detection of "M" via the word DREAM (contains M which isn't visible).
-      spectator.lastTwitchMessage = {
+      (spectator as any).lastTwitchMessage = {
         username: 'player1',
         message: 'dream',
         timestamp: Date.now(),
@@ -1297,7 +1297,7 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelHiddenLetters.length).toBeGreaterThan(0);
 
       // Step 2: simulate the big word ADMIRE being guessed.
-      spectator.lastTwitchMessage = {
+      (spectator as any).lastTwitchMessage = {
         username: 'player2',
         message: 'admire',
         timestamp: Date.now(),

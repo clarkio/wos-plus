@@ -8,7 +8,10 @@ import sentry from "@sentry/astro";
 // https://astro.build/config
 export default defineConfig({
   site: "https://wosplus.com",
-  adapter: cloudflare(),
+  adapter: cloudflare({
+    imageService: "compile",
+    prerenderEnvironment: "node",
+  }),
   integrations: [
     sentry({
       project: "javascript-astro",

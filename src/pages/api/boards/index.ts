@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { env } from 'cloudflare:workers';
+
 export const prerender = false;
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,9 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
-export const GET: APIRoute = async ({ locals }) => {
-  const { env } = locals.runtime;
-
+export const GET: APIRoute = async () => {
   try {
     const supabase = createClient(
       env.SUPABASE_URL,
@@ -32,8 +32,7 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  const { env } = locals.runtime;
+export const POST: APIRoute = async ({ request }) => {
   const body = await request.json();
 
   try {

@@ -3,7 +3,7 @@
   "name": "wos-plus",
   "compatibility_date": "2025-12-05",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "./dist/_worker.js/index.js",
+  "main": "@astrojs/cloudflare/entrypoints/server",
   "send_metrics": false,
   "assets": {
     "directory": "./dist",

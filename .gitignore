@@ -141,3 +141,4 @@ vite.config.ts.timestamp-*
 .wrangler/
 .dev.*
 .astro/
+.pnpm-store/
