@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Snyk__snyk_send_feedback"
+    ]
+  }
+}
