@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "mcp__Snyk__snyk_send_feedback"
+      "mcp__Snyk__snyk_send_feedback",
+      "mcp__Snyk__snyk_sca_scan"
     ]
   }
 }
