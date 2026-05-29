@@ -21,6 +21,13 @@ type EventTypes = 'level_end' | 'level_clear' | 'one_star' | 'three_stars' | 'ne
 
 export class GameSpectator {
   private msgProcessDelay = parseInt(import.meta.env.WOS_MSG_PROCESS_DELAY || '400');
+  // Grace period after a level/game end event before running the end-of-level
+  // logic. A word can be guessed correctly at the last millisecond, so we wait
+  // briefly to let any correct-guess events still sitting in the queue finish
+  // processing (and update currentLevelSlots) before we read the board state.
+  // Defaults to slightly longer than msgProcessDelay so an in-flight guess can
+  // fully resolve.
+  private levelEndGraceDelay = parseInt(import.meta.env.WOS_LEVEL_END_DELAY || `${this.msgProcessDelay + 100}`);
   private lastTwitchMessage: {
     username: string;
     message: string;
@@ -111,11 +118,17 @@ export class GameSpectator {
         } else if (wosEventType === 3) {
           await this.handleCorrectGuess(username, letters, index, hitMax);
         } else if (wosEventType === 4) {
+          // Wait for any last-millisecond correct guesses still in the queue
+          // to process before reading the board state for results.
+          await new Promise(resolve => setTimeout(resolve, this.levelEndGraceDelay));
           await this.handleLevelResults(stars);
           // Delay to allow the chatbot to update the DB before reading
           await new Promise(resolve => setTimeout(resolve, 1500));
           await this.refreshChannelStats();
         } else if (wosEventType === 5) {
+          // Wait for any last-millisecond correct guesses still in the queue
+          // to process before running the game-end logic.
+          await new Promise(resolve => setTimeout(resolve, this.levelEndGraceDelay));
           await this.handleLevelEnd();
           await new Promise(resolve => setTimeout(resolve, 1500));
           await this.refreshChannelStats();

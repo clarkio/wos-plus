@@ -1216,6 +1216,74 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelSlots[0].word).toBe('test');
       expect(spectator.currentLevelSlots[0].user).toBe('TestUser');
     });
+
+    it('should let a last-millisecond correct guess process before game-end logic runs', async () => {
+      const wosWorker = findWorkerByUrlSubstring('wos-worker');
+      expect(wosWorker).toBeTruthy();
+
+      spectator.isSoundsEnabled = false; // Avoid Audio side-effects in tests
+      // Ensure updateGameState can resolve the guessed word.
+      (spectator as any).lastTwitchMessage = {
+        username: 'TestUser',
+        message: 'test',
+        timestamp: Date.now(),
+      };
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+
+      const slotsSpy = vi.spyOn(spectator as any, 'updateCurrentLevelSlots');
+      const missingSpy = vi
+        .spyOn(spectator as any, 'logMissingWords')
+        .mockResolvedValue(undefined);
+
+      vi.useFakeTimers();
+
+      // A correct guess lands at the buzzer, immediately followed by game end.
+      const guessP = wosWorker.emitMessage({
+        type: 'wos_event',
+        wosEventType: 3,
+        wosEventName: 'Correct Guess',
+        username: 'TestUser',
+        letters: ['t', 'e', 's', 't'],
+        hitMax: false,
+        stars: 0,
+        level: 1,
+        falseLetters: [],
+        hiddenLetters: [],
+        slots: [],
+        index: 0,
+      });
+      const endP = wosWorker.emitMessage({
+        type: 'wos_event',
+        wosEventType: 5,
+        wosEventName: 'Game Ended',
+        username: '',
+        letters: [],
+        hitMax: false,
+        stars: 0,
+        level: 1,
+        falseLetters: [],
+        hiddenLetters: [],
+        slots: [],
+        index: 0,
+      });
+
+      await vi.runAllTimersAsync();
+      await Promise.all([guessP, endP]);
+      vi.useRealTimers();
+
+      expect(slotsSpy).toHaveBeenCalled();
+      expect(missingSpy).toHaveBeenCalled();
+      // The grace delay must let the guess update the board before the
+      // game-end logic reads it for missing-word detection.
+      expect(slotsSpy.mock.invocationCallOrder[0]).toBeLessThan(
+        missingSpy.mock.invocationCallOrder[0]
+      );
+
+      slotsSpy.mockRestore();
+      missingSpy.mockRestore();
+    });
   });
 
   describe('updateGameState', () => {
