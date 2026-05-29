@@ -248,14 +248,19 @@ const { id = 'settings-dialog', title = 'Settings' } = Astro.props;
         });
       }
 
+      // Run the save callback and close unless it explicitly aborts by
+      // returning false (e.g. validation failed and the dialog should stay
+      // open so the user can fix their input).
+      const trySave = () => {
+        const data = getData();
+        if (saveCallback && saveCallback(data) === false) {
+          return;
+        }
+        close();
+      };
+
       if (saveBtn) {
-        saveBtn.addEventListener('click', () => {
-          const data = getData();
-          if (saveCallback) {
-            saveCallback(data);
-          }
-          close();
-        });
+        saveBtn.addEventListener('click', trySave);
       }
 
       // Handle Enter key press to trigger save
@@ -263,12 +268,7 @@ const { id = 'settings-dialog', title = 'Settings' } = Astro.props;
         if (e.key === 'Enter' && dialog.open) {
           // Prevent default form submission
           e.preventDefault();
-          // Trigger save
-          const data = getData();
-          if (saveCallback) {
-            saveCallback(data);
-          }
-          close();
+          trySave();
         }
       });
 

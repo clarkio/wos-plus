@@ -20,11 +20,16 @@ import MadeBy from "../components/MadeBy.astro";
           type="url"
           id="mirror-url-input"
           name="mirrorUrl"
-          placeholder="https://wos.gg/r/game-mirror-value-here"
+          placeholder="https://wos.gg/r/your-game-id"
+          pattern="https://wos\.gg/r/[0-9a-fA-F-]+"
           required
         />
         <small class="form-help"
-          >The URL to the Words on Stream game mirror</small
+          >The Words on Stream mirror link, e.g. https://wos.gg/r/&lt;game-id&gt;</small
+        >
+        <small class="form-error" id="mirror-url-error" hidden
+          >Enter a valid Words on Stream mirror link that starts with
+          https://wos.gg/r/</small
         >
       </div>
       <div class="form-group">
@@ -275,6 +280,7 @@ import MadeBy from "../components/MadeBy.astro";
 
 <script>
   import { GameSpectator } from "../scripts/wos-plus-main";
+  import { normalizeMirrorUrl } from "../scripts/mirror-url";
 
   const boardContainer = document.getElementById(
     "wos-board",
@@ -285,14 +291,19 @@ import MadeBy from "../components/MadeBy.astro";
   let currentMirrorUrl = "";
   let twitchChannel = "clarkio";
 
-  const normalizeMirrorUrl = (input: string): string => {
-    const trimmed = input.trim();
-    // If it already starts with http:// or https://, return as-is
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-      return trimmed;
-    }
-    // Otherwise, prepend the base URL
-    return `https://wos.gg/r/${trimmed}`;
+  const mirrorUrlErrorEl = () =>
+    document.getElementById("mirror-url-error") as HTMLElement | null;
+  const mirrorUrlInputEl = () =>
+    document.getElementById("mirror-url-input") as HTMLInputElement | null;
+
+  const showMirrorUrlError = () => {
+    mirrorUrlErrorEl()?.removeAttribute("hidden");
+    mirrorUrlInputEl()?.classList.add("input-invalid");
+  };
+
+  const clearMirrorUrlError = () => {
+    mirrorUrlErrorEl()?.setAttribute("hidden", "");
+    mirrorUrlInputEl()?.classList.remove("input-invalid");
   };
 
   const extractTwitchChannel = (input: string): string => {
@@ -423,11 +434,26 @@ import MadeBy from "../components/MadeBy.astro";
 
     // Set up save callback
     settingsDialog.onSave((data: Record<string, any>) => {
+      // Validate the mirror URL before applying anything. Only official WoS
+      // mirror links (https://wos.gg/r/<gameId>) are allowed — anything else
+      // (other sites, other paths) is rejected so the board iframe can't be
+      // pointed at an arbitrary page. Returning false keeps the dialog open.
+      let normalizedMirrorUrl = currentMirrorUrl;
+      if (data.mirrorUrl) {
+        const candidate = normalizeMirrorUrl(data.mirrorUrl);
+        if (!candidate) {
+          showMirrorUrlError();
+          return false;
+        }
+        normalizedMirrorUrl = candidate;
+      }
+      clearMirrorUrlError();
+
       const params = new URLSearchParams(window.location.search);
 
-      // Update the settings parameters
+      // Update the settings parameters with the canonical mirror URL
       if (data.mirrorUrl) {
-        params.set("mirrorUrl", data.mirrorUrl);
+        params.set("mirrorUrl", normalizedMirrorUrl);
       }
       let newChannel = twitchChannel;
       if (data.twitchChannel) {
@@ -451,11 +477,8 @@ import MadeBy from "../components/MadeBy.astro";
       window.history.replaceState({}, "", newUrl);
 
       // Apply settings in place
-      const newMirrorUrl = data.mirrorUrl
-        ? normalizeMirrorUrl(data.mirrorUrl)
-        : currentMirrorUrl;
-      const mirrorUrlChanged = newMirrorUrl !== currentMirrorUrl;
-      currentMirrorUrl = newMirrorUrl;
+      const mirrorUrlChanged = normalizedMirrorUrl !== currentMirrorUrl;
+      currentMirrorUrl = normalizedMirrorUrl;
 
       applyChatVisibility(!!data.chatEnabled);
       applyBoardVisibility(!!data.wosEnabled);
@@ -484,7 +507,9 @@ import MadeBy from "../components/MadeBy.astro";
 
   const checkRequiredParams = () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const hasMirrorUrl = urlParams.has("mirrorUrl");
+    // Treat a missing OR invalid mirror URL the same: prompt via the dialog so
+    // a hand-crafted/legacy query string can never drive the board iframe.
+    const hasMirrorUrl = !!normalizeMirrorUrl(urlParams.get("mirrorUrl") || "");
     const hasTwitchChannel = urlParams.has("twitchChannel");
 
     // If either parameter is missing, show the settings dialog
@@ -567,11 +592,12 @@ import MadeBy from "../components/MadeBy.astro";
     // Check if required parameters are present (this will trigger dialog if needed)
     const hasRequiredParams = checkRequiredParams();
 
-    if (urlParams.has("mirrorUrl")) {
-      const url = urlParams.get("mirrorUrl") || "";
-      currentMirrorUrl = normalizeMirrorUrl(url);
+    const normalizedFromParams = normalizeMirrorUrl(
+      urlParams.get("mirrorUrl") || "",
+    );
+    if (normalizedFromParams) {
+      currentMirrorUrl = normalizedFromParams;
       loadBoardIframeIfVisible();
-      console.log(currentMirrorUrl);
     }
 
     if (urlParams.has("chat")) {

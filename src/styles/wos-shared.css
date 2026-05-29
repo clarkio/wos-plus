@@ -513,6 +513,21 @@ button {
   font-style: italic;
 }
 
+.form-error {
+  color: var(--error, #ff8a8a);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.form-error[hidden] {
+  display: none;
+}
+
+.form-group input.input-invalid,
+.form-group input.input-invalid:focus {
+  border-color: var(--error, #ff8a8a);
+}
+
 /* ==========================================================================
    Toggle Switch Component (Shared across player/streamer pages)
    ========================================================================== */

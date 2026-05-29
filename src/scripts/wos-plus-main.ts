@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 
 import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb } from './wos-words';
 import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
+import { getMirrorGameId } from './mirror-url';
 
 
 const twitchWorker = new Worker(
@@ -696,18 +697,9 @@ export class GameSpectator {
   }
 
   getMirrorCode(mirrorUrl: string) {
-    try {
-      const url = new URL(mirrorUrl);
-      const pathParts = url.pathname.split('/');
-      const codeIndex = pathParts.indexOf('r') + 1;
-      if (codeIndex > 0 && codeIndex < pathParts.length) {
-        return pathParts[codeIndex];
-      }
-      return null;
-    } catch (error) {
-      console.error('Error parsing mirror URL:', error);
-      return null;
-    }
+    // Only accept official WoS mirror references (https://wos.gg/r/<gameId>).
+    // Returns null for anything else so we never connect with a bogus uid.
+    return getMirrorGameId(mirrorUrl);
   }
 
   connectToWosGame(mirrorUrl: string) {
