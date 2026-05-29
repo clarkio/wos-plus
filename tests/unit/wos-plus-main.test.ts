@@ -47,6 +47,38 @@ vi.mock('@tmi.js/chat', () => ({
   }
 }));
 
+// The DOM elements the spectator reads/writes. The test harness builds these
+// programmatically (see buildTestDom) rather than assigning an HTML string to
+// document.body.innerHTML.
+const TEST_DOM_IDS = [
+  'pb-value',
+  'daily-pb-value',
+  'daily-clear-value',
+  'level-title',
+  'level-value',
+  'letters',
+  'letters-label',
+  'hidden-letter',
+  'fake-letter',
+  'correct-words-log',
+  'wos-game-log',
+  'twitch-chat-log',
+];
+
+// Build a fresh set of empty <div> elements the spectator expects to find.
+const buildTestDom = () => {
+  document.body.replaceChildren();
+  for (const id of TEST_DOM_IDS) {
+    const el = document.createElement('div');
+    el.id = id;
+    document.body.appendChild(el);
+  }
+};
+
+// A valid Words on Stream mirror URL: official host + UUID game id.
+const VALID_MIRROR_URL = 'https://wos.gg/r/4fdfc856-0328-4384-a882-8377dcb5a4f6';
+const VALID_GAME_ID = '4fdfc856-0328-4384-a882-8377dcb5a4f6';
+
 describe('GameSpectator class', () => {
   let spectator: GameSpectator;
 
@@ -55,21 +87,7 @@ describe('GameSpectator class', () => {
     getMockWorkers().find((w) => typeof w.url === 'string' && w.url.includes(substr));
 
   beforeEach(() => {
-    // Setup DOM
-    document.body.innerHTML = `
-      <div id="pb-value"></div>
-      <div id="daily-pb-value"></div>
-      <div id="daily-clear-value"></div>
-      <div id="level-title"></div>
-      <div id="level-value"></div>
-      <div id="letters"></div>
-      <div id="letters-label"></div>
-      <div id="hidden-letter"></div>
-      <div id="fake-letter"></div>
-      <div id="correct-words-log"></div>
-      <div id="wos-game-log"></div>
-      <div id="twitch-chat-log"></div>
-    `;
+    buildTestDom();
 
     // Mock Audio as a real constructor so `new Audio(src)` works.
     // vi.fn rejects arrow-function implementations when invoked with `new`.
@@ -134,17 +152,15 @@ describe('GameSpectator class', () => {
     it('should extract game code from valid mirror URL', () => {
       spectator = new GameSpectator();
 
-      const mirrorUrl = 'https://wos2.gartic.es/r/ABC123';
-      const code = spectator.getMirrorCode(mirrorUrl);
+      const code = spectator.getMirrorCode(VALID_MIRROR_URL);
 
-      expect(code).toBe('ABC123');
+      expect(code).toBe(VALID_GAME_ID);
     });
 
-    it('should return null for invalid URL format', () => {
+    it('should return null for a non-mirror path', () => {
       spectator = new GameSpectator();
 
-      const mirrorUrl = 'https://wos2.gartic.es/invalid';
-      const code = spectator.getMirrorCode(mirrorUrl);
+      const code = spectator.getMirrorCode('https://wos.gg/invalid');
 
       expect(code).toBeNull();
     });
@@ -152,14 +168,9 @@ describe('GameSpectator class', () => {
     it('should return null for malformed URL', () => {
       spectator = new GameSpectator();
 
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
-
-      const mirrorUrl = 'not-a-valid-url';
-      const code = spectator.getMirrorCode(mirrorUrl);
+      const code = spectator.getMirrorCode('not-a-valid-url');
 
       expect(code).toBeNull();
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -333,8 +344,8 @@ describe('GameSpectator class', () => {
       (spectator as any).updateCorrectWordsDisplayed('ab');
 
       const logEl = document.getElementById('correct-words-log')!;
-      expect(logEl.innerHTML).toContain('2:'); // 2-letter group
-      expect(logEl.innerHTML).toContain('4:'); // 4-letter group
+      expect(logEl.textContent).toContain('2:'); // 2-letter group
+      expect(logEl.textContent).toContain('4:'); // 4-letter group
     });
   });
 
@@ -585,13 +596,9 @@ describe('GameSpectator class', () => {
     });
 
     it('should not connect with invalid mirror URL', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
-
       spectator.connectToWosGame('invalid-url');
 
       expect(spectator.wosSocket).toBeNull();
-
-      consoleErrorSpy.mockRestore();
     });
 
     it('should disconnect existing socket before connecting', () => {
@@ -601,7 +608,7 @@ describe('GameSpectator class', () => {
       };
       spectator.wosSocket = mockSocket;
 
-      spectator.connectToWosGame('https://wos2.gartic.es/r/ABC123');
+      spectator.connectToWosGame(VALID_MIRROR_URL);
 
       expect(mockSocket.disconnect).toHaveBeenCalled();
     });
@@ -956,7 +963,7 @@ describe('GameSpectator class', () => {
       const dbService = await import('@scripts/db-service');
       const fetchBoardMock = vi.mocked(dbService.fetchBoard);
       fetchBoardMock.mockResolvedValueOnce(null); // Board not found, falls back to dictionary
-      
+
       const findAllMissingWordsMock = vi.mocked(wosWords.findAllMissingWords);
       findAllMissingWordsMock.mockImplementationOnce((knownWords: string[], knownLetters: string, minLength: number) => {
         // Snapshot the args at call time (the array is later mutated by UI updates).
@@ -980,7 +987,7 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelCorrectWords).toEqual(
         expect.arrayContaining(['alpha*', 'beta*'])
       );
-      expect(document.getElementById('correct-words-log')!.innerHTML).toContain('*');
+      expect(document.getElementById('correct-words-log')!.textContent).toContain('*');
     });
 
     it('should call findAllMissingWords using currentLevelLetters when big word is not set', async () => {
@@ -1025,7 +1032,7 @@ describe('GameSpectator class', () => {
     it('should use board data when board is found in database', async () => {
       const dbService = await import('@scripts/db-service');
       const fetchBoardMock = vi.mocked(dbService.fetchBoard);
-      
+
       // Mock board data from database
       const mockBoard = {
         id: 'TESTING',
@@ -1037,10 +1044,10 @@ describe('GameSpectator class', () => {
         ]
       };
       fetchBoardMock.mockResolvedValueOnce(mockBoard);
-      
+
       const findMissingWordsFromBoardMock = vi.mocked(wosWords.findMissingWordsFromBoard);
       findMissingWordsFromBoardMock.mockReturnValueOnce(['miss']);
-      
+
       spectator.currentLevelBigWord = 'T E S T I N G';
       spectator.currentLevelCorrectWords = ['test', 'word'];
       spectator.currentLevelSlots = [
@@ -1065,7 +1072,7 @@ describe('GameSpectator class', () => {
       const dbService = await import('@scripts/db-service');
       const fetchBoardMock = vi.mocked(dbService.fetchBoard);
       fetchBoardMock.mockResolvedValueOnce(null); // Board not found
-      
+
       const findAllMissingWordsMock = vi.mocked(wosWords.findAllMissingWords);
       // Simulate finding words of different lengths (4, 5, 7 letters)
       findAllMissingWordsMock.mockImplementationOnce((knownWords: string[], knownLetters: string, minLength: number) => {
@@ -1075,7 +1082,7 @@ describe('GameSpectator class', () => {
         expect(minLength).toBe(4);
         return ['test', 'word', 'words', 'testing'];
       });
-      
+
       spectator.currentLevelBigWord = 'T E S T I N G'; // Has spaces
       spectator.currentLevelCorrectWords = ['some'];
       spectator.currentLevelSlots = [
@@ -1085,7 +1092,7 @@ describe('GameSpectator class', () => {
       ];
 
       await (spectator as any).logMissingWords();
-      
+
       // Verify all missed words are displayed
       expect(spectator.currentLevelCorrectWords).toEqual(
         expect.arrayContaining(['test*', 'word*', 'words*', 'testing*'])
