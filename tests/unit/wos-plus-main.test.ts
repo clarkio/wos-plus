@@ -371,7 +371,7 @@ describe('GameSpectator class', () => {
       (spectator as any).calculateHiddenLetters('t e s t t');
 
       const hiddenEl = document.getElementById('hidden-letter')!;
-      // Big word has 3 Ts; level letters has 1 T → 2 hidden Ts.
+      // Big word has 3 Ts; level letters has 1 T -> 2 hidden Ts.
       expect(hiddenEl.innerText).toBe('T T');
     });
 
