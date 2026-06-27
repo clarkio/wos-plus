@@ -1294,19 +1294,20 @@ describe('GameSpectator class', () => {
       ];
     });
 
-    it('should use twitch message for word when available', () => {
+    it('should use twitch message to resolve a hidden (masked) word when available', () => {
+      // Level 20+ masks the word with '?' so it must be recovered from chat.
       (spectator as any).lastTwitchMessage = {
         username: 'testuser',
         message: 'test',
         timestamp: Date.now()
       };
 
-      (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't'], 0, false);
+      (spectator as any).updateGameState('testuser', ['?', '?', '?', '?'], 0, false);
 
       expect(spectator.currentLevelCorrectWords).toContain('test');
     });
 
-    it('should fall back to chat log when last message not matching', () => {
+    it('should fall back to chat log when last message not matching (hidden word)', () => {
       (spectator as any).lastTwitchMessage = {
         username: 'otheruser',
         message: 'other',
@@ -1317,19 +1318,66 @@ describe('GameSpectator class', () => {
         timestamp: Date.now()
       });
 
-      (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't'], 0, false);
+      (spectator as any).updateGameState('testuser', ['?', '?', '?', '?'], 0, false);
 
       expect(spectator.currentLevelCorrectWords).toContain('test');
     });
 
-    it('should return early if no matching message found', () => {
+    it('should return early only for a hidden word with no matching message', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
-      (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't'], 0, false);
+      // A masked word that cannot be resolved from chat is the only case that
+      // should be dropped — there is genuinely no way to know the word.
+      (spectator as any).updateGameState('testuser', ['?', '?', '?', '?'], 0, false);
 
       expect(warnSpy).toHaveBeenCalled();
       expect(spectator.currentLevelCorrectWords).toEqual([]);
       warnSpy.mockRestore();
+    });
+
+    it('should capture a non-hidden guess directly from letters without any chat message (issue #96)', () => {
+      // The WoS event carries the full word for non-hidden levels, so a correct
+      // guess must be captured even when no Twitch chat message is available
+      // (e.g. the per-user/last-message state was overwritten by a near-
+      // simultaneous guess before this delayed handler ran).
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+
+      (spectator as any).updateGameState('testuser', ['b', 'e', 'a', 'r'], 0, false);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(spectator.currentLevelCorrectWords).toContain('bear');
+      expect(spectator.currentLevelSlots[0].word).toBe('bear');
+      expect(spectator.currentLevelSlots[0].user).toBe('testuser');
+      warnSpy.mockRestore();
+    });
+
+    it('should capture both near-simultaneous non-hidden guesses even with stale shared chat state (issue #96)', () => {
+      // Two players guess different words within milliseconds of each other.
+      // `lastTwitchMessage` can only hold one message at a time, and a player's
+      // `twitchChatLog` entry may have been overwritten by a newer word of a
+      // different length. Neither guess should be dropped because the words are
+      // fully known from the WoS `letters`.
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 4 },
+      ];
+
+      // Shared state reflects only the most recent, unrelated chat activity.
+      (spectator as any).lastTwitchMessage = {
+        username: 'bob',
+        message: 'longerword',
+        timestamp: Date.now()
+      };
+      spectator.twitchChatLog.set('alice', { message: 'newer', timestamp: Date.now() });
+      spectator.twitchChatLog.set('bob', { message: 'longerword', timestamp: Date.now() });
+
+      (spectator as any).updateGameState('alice', ['b', 'e', 'a', 'r'], 0, false);
+      (spectator as any).updateGameState('bob', ['b', 'o', 'a', 'r'], 1, false);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('bear');
+      expect(spectator.currentLevelSlots[0].user).toBe('alice');
+      expect(spectator.currentLevelSlots[1].word).toBe('boar');
+      expect(spectator.currentLevelSlots[1].user).toBe('bob');
     });
 
     it('should set big word when hitMax is true', () => {
