@@ -17,6 +17,10 @@ vi.mock('@scripts/wos-words', () => ({
   findAllMissingWords: vi.fn(() => []),
   findMissingWordsFromBoard: vi.fn(() => []),
   loadWordsFromDb: vi.fn(),
+  // Default to "unknown word" so hidden-word resolution falls back to its
+  // length/FIFO heuristic. Individual tests override this to exercise the
+  // dictionary-preference path.
+  isWosWord: vi.fn(() => false),
 }));
 
 // Mock the db-service module
@@ -78,6 +82,17 @@ const buildTestDom = () => {
 // A valid Words on Stream mirror URL: official host + UUID game id.
 const VALID_MIRROR_URL = 'https://wos.gg/r/4fdfc856-0328-4384-a882-8377dcb5a4f6';
 const VALID_GAME_ID = '4fdfc856-0328-4384-a882-8377dcb5a4f6';
+
+// Seed a chat message into the spectator's per-user history exactly the way the
+// Twitch worker routing does, so hidden-word resolution can be exercised.
+const seedChat = (
+  spectator: GameSpectator,
+  username: string,
+  message: string,
+  timestamp = Date.now()
+) => {
+  (spectator as any).recordChatMessage(username, message, timestamp);
+};
 
 describe('GameSpectator class', () => {
   let spectator: GameSpectator;
@@ -251,7 +266,7 @@ describe('GameSpectator class', () => {
     });
 
     it('should clear twitch chat log', () => {
-      spectator.twitchChatLog.set('user1', { message: 'test', timestamp: Date.now() });
+      seedChat(spectator, 'user1', 'test');
 
       (spectator as any).clearBoard();
 
@@ -940,10 +955,7 @@ describe('GameSpectator class', () => {
     });
 
     it('should update game state after delay', async () => {
-      spectator.twitchChatLog.set('testuser', {
-        message: 'test',
-        timestamp: Date.now()
-      });
+      seedChat(spectator, 'testuser', 'test');
 
       const updateSpy = vi.spyOn(spectator as any, 'updateGameState');
 
@@ -1116,10 +1128,11 @@ describe('GameSpectator class', () => {
         timestamp: 123,
       });
 
-      expect(spectator.twitchChatLog.get('someuser')).toEqual({
-        message: 'test',
-        timestamp: 123,
-      });
+      // Messages are kept as a per-user history (oldest first) so hidden-word
+      // resolution can disambiguate rapid/simultaneous guesses.
+      expect(spectator.twitchChatLog.get('someuser')).toEqual([
+        { message: 'test', timestamp: 123, consumed: false },
+      ]);
       expect(document.getElementById('twitch-chat-log')!.innerText).toContain(
         '[Twitch Chat] someuser: test'
       );
@@ -1181,12 +1194,8 @@ describe('GameSpectator class', () => {
       const wosWorker = findWorkerByUrlSubstring('wos-worker');
       expect(wosWorker).toBeTruthy();
 
-      // Ensure updateGameState can resolve the hidden word via lastTwitchMessage.
-      (spectator as any).lastTwitchMessage = {
-        username: 'TestUser',
-        message: 'test',
-        timestamp: Date.now(),
-      };
+      // The word is non-hidden, so it resolves straight from the WoS `letters`
+      // with no dependency on chat timing.
       spectator.currentLevelSlots = [
         { letters: [], word: '', hitMax: false, index: 0, length: 4 },
       ];
@@ -1222,12 +1231,7 @@ describe('GameSpectator class', () => {
       expect(wosWorker).toBeTruthy();
 
       spectator.isSoundsEnabled = false; // Avoid Audio side-effects in tests
-      // Ensure updateGameState can resolve the guessed word.
-      (spectator as any).lastTwitchMessage = {
-        username: 'TestUser',
-        message: 'test',
-        timestamp: Date.now(),
-      };
+      // The buzzer-beater guess is non-hidden, so it resolves from `letters`.
       spectator.currentLevelSlots = [
         { letters: [], word: '', hitMax: false, index: 0, length: 4 },
       ];
@@ -1294,29 +1298,21 @@ describe('GameSpectator class', () => {
       ];
     });
 
-    it('should use twitch message to resolve a hidden (masked) word when available', () => {
-      // Level 20+ masks the word with '?' so it must be recovered from chat.
-      (spectator as any).lastTwitchMessage = {
-        username: 'testuser',
-        message: 'test',
-        timestamp: Date.now()
-      };
+    it('should resolve a hidden (masked) word from the player chat history', () => {
+      // Level 19+ masks the word with '?' so it must be recovered from chat.
+      seedChat(spectator, 'testuser', 'test');
 
       (spectator as any).updateGameState('testuser', ['?', '?', '?', '?'], 0, false);
 
       expect(spectator.currentLevelCorrectWords).toContain('test');
     });
 
-    it('should fall back to chat log when last message not matching (hidden word)', () => {
-      (spectator as any).lastTwitchMessage = {
-        username: 'otheruser',
-        message: 'other',
-        timestamp: Date.now()
-      };
-      spectator.twitchChatLog.set('testuser', {
-        message: 'test',
-        timestamp: Date.now()
-      });
+    it('should resolve a hidden word by length, ignoring other-length chat noise', () => {
+      // The player typed several words; only the matching-length one is the
+      // hidden guess.
+      seedChat(spectator, 'testuser', 'longword');
+      seedChat(spectator, 'testuser', 'test');
+      seedChat(spectator, 'testuser', 'bigger');
 
       (spectator as any).updateGameState('testuser', ['?', '?', '?', '?'], 0, false);
 
@@ -1351,25 +1347,19 @@ describe('GameSpectator class', () => {
       warnSpy.mockRestore();
     });
 
-    it('should capture both near-simultaneous non-hidden guesses even with stale shared chat state (issue #96)', () => {
+    it('should capture both near-simultaneous non-hidden guesses even with stale chat state (issue #96)', () => {
       // Two players guess different words within milliseconds of each other.
-      // `lastTwitchMessage` can only hold one message at a time, and a player's
-      // `twitchChatLog` entry may have been overwritten by a newer word of a
-      // different length. Neither guess should be dropped because the words are
-      // fully known from the WoS `letters`.
+      // Even if each player has since typed a newer, unrelated word, neither
+      // guess should be dropped because the words are fully known from the WoS
+      // `letters` and never consult chat.
       spectator.currentLevelSlots = [
         { letters: [], word: '', hitMax: false, index: 0, length: 4 },
         { letters: [], word: '', hitMax: false, index: 1, length: 4 },
       ];
 
-      // Shared state reflects only the most recent, unrelated chat activity.
-      (spectator as any).lastTwitchMessage = {
-        username: 'bob',
-        message: 'longerword',
-        timestamp: Date.now()
-      };
-      spectator.twitchChatLog.set('alice', { message: 'newer', timestamp: Date.now() });
-      spectator.twitchChatLog.set('bob', { message: 'longerword', timestamp: Date.now() });
+      // Stale chat activity that no longer corresponds to the guesses.
+      seedChat(spectator, 'alice', 'newer');
+      seedChat(spectator, 'bob', 'longerword');
 
       (spectator as any).updateGameState('alice', ['b', 'e', 'a', 'r'], 0, false);
       (spectator as any).updateGameState('bob', ['b', 'o', 'a', 'r'], 1, false);
@@ -1380,13 +1370,62 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelSlots[1].user).toBe('bob');
     });
 
-    it('should set big word when hitMax is true', () => {
-      (spectator as any).lastTwitchMessage = {
-        username: 'testuser',
-        message: 'testing',
-        timestamp: Date.now()
-      };
+    it('should resolve two simultaneous hidden guesses from different players without collision (issue #96)', () => {
+      // Hidden level (19+): both words are masked, so each must be reconstructed
+      // from the respective player's chat history. Per-user histories keep the
+      // two players from interfering with each other.
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 5 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 5 },
+      ];
+      seedChat(spectator, 'alice', 'beard');
+      seedChat(spectator, 'bob', 'cloud');
 
+      (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?'], 0, false);
+      (spectator as any).updateGameState('bob', ['?', '?', '?', '?', '?'], 1, false);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('beard');
+      expect(spectator.currentLevelSlots[0].user).toBe('alice');
+      expect(spectator.currentLevelSlots[1].word).toBe('cloud');
+      expect(spectator.currentLevelSlots[1].user).toBe('bob');
+    });
+
+    it('should resolve two same-length hidden guesses from one player in FIFO order with consumption (issue #96)', () => {
+      // A single player lands two same-length words in quick succession. Each
+      // correct-guess event must consume a distinct chat message (oldest first)
+      // so the second event does not re-resolve to the first word.
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 5 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 5 },
+      ];
+      seedChat(spectator, 'alice', 'beard', 1);
+      seedChat(spectator, 'alice', 'bread', 2);
+
+      (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?'], 0, false);
+      (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?'], 1, false);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('beard');
+      expect(spectator.currentLevelSlots[1].word).toBe('bread');
+    });
+
+    it('should prefer a valid dictionary word when disambiguating a hidden guess (issue #96)', () => {
+      // The player typed an invalid word and a valid word of the same length;
+      // the dictionary hint must steer resolution to the real word even though
+      // the invalid one was typed first.
+      vi.mocked(wosWords.isWosWord).mockImplementation((w: string) => w === 'beard');
+
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 5 },
+      ];
+      seedChat(spectator, 'alice', 'zzzzz', 1); // invalid, typed first
+      seedChat(spectator, 'alice', 'beard', 2); // valid
+
+      (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?'], 0, false);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('beard');
+    });
+
+    it('should set big word when hitMax is true', () => {
       (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't', 'i', 'n', 'g'], 0, true);
 
       expect(spectator.currentLevelBigWord).toBe('T E S T I N G');
@@ -1408,11 +1447,7 @@ describe('GameSpectator class', () => {
 
       // Step 1: simulate a non-big-word guess that triggers dictionary
       // detection of "M" via the word DREAM (contains M which isn't visible).
-      (spectator as any).lastTwitchMessage = {
-        username: 'player1',
-        message: 'dream',
-        timestamp: Date.now(),
-      };
+      // The guess is non-hidden, so it resolves straight from `letters`.
       (spectator as any).updateGameState('player1', ['d', 'r', 'e', 'a', 'm'], 0, false);
 
       // The dictionary path should have detected at least one hidden letter
@@ -1420,11 +1455,6 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelHiddenLetters.length).toBeGreaterThan(0);
 
       // Step 2: simulate the big word ADMIRE being guessed.
-      (spectator as any).lastTwitchMessage = {
-        username: 'player2',
-        message: 'admire',
-        timestamp: Date.now(),
-      };
       (spectator as any).updateGameState('player2', ['a', 'd', 'm', 'i', 'r', 'e'], 1, true);
 
       const hiddenEl = document.getElementById('hidden-letter')!;

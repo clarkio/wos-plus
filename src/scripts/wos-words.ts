@@ -1,5 +1,19 @@
 // import localDictionary from './wos_dictionary.json';
 let wosDictionary: string[]; // = localDictionary as string[];
+// Lower-cased lookup set kept in sync with wosDictionary so membership checks
+// (used to disambiguate Twitch chat messages, see isWosWord) are O(1).
+let wosDictionarySet: Set<string> = new Set();
+
+/**
+ * Returns true when `word` is a known Words on Stream dictionary word.
+ * Used to prefer real words when reconstructing a hidden guess from a player's
+ * Twitch chat messages. Returns false (rather than throwing) when the
+ * dictionary hasn't loaded yet, so callers can safely treat it as a soft hint.
+ */
+export function isWosWord(word: string): boolean {
+  if (!word) return false;
+  return wosDictionarySet.has(word.toLowerCase());
+}
 
 export interface Slot {
   letters: string[];
@@ -33,6 +47,7 @@ export async function updateWordsDb(word: string) {
 
     console.log(`Successfully updated dictionary with word: ${word}`);
     wosDictionary.push(word);
+    wosDictionarySet.add(word.toLowerCase());
     console.log(`WOS Dictionary now contains ${wosDictionary.length} words.`);
     return response.json();
   } catch (error) {
@@ -53,6 +68,7 @@ export async function loadWordsFromDb() {
 
     const wordsJson = await response.json();
     wosDictionary = wordsJson.map((word: string) => word.trim());
+    wosDictionarySet = new Set(wosDictionary.map(word => word.toLowerCase()));
     console.log('WOS Dictionary loaded:', wosDictionary.length, 'words');
   } catch (error) {
     console.error('Error loading WOS dictionary:', error);

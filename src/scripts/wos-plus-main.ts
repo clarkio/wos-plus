@@ -1,7 +1,7 @@
 import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
-import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb } from './wos-words';
+import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosWord } from './wos-words';
 import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
 import { getMirrorGameId } from './mirror-url';
 
@@ -17,6 +17,11 @@ const wosWorker = new Worker(
 
 type Slots = { letters: string[], word: string, user?: string, hitMax: boolean; index: number, length: number };
 
+// A single Twitch chat message we may later match to a hidden correct-guess
+// event. `consumed` is flipped once it's been matched so a second event can't
+// claim the same message.
+type ChatMessage = { message: string; timestamp: number; consumed: boolean };
+
 type EventTypes = 'level_end' | 'level_clear' | 'one_star' | 'three_stars' | 'new_all_time_pb' | 'new_daily_pb' | 'new_daily_clear';
 
 export class GameSpectator {
@@ -28,15 +33,20 @@ export class GameSpectator {
   // Defaults to slightly longer than msgProcessDelay so an in-flight guess can
   // fully resolve.
   private levelEndGraceDelay = parseInt(import.meta.env.WOS_LEVEL_END_DELAY || `${this.msgProcessDelay + 100}`);
-  private lastTwitchMessage: {
-    username: string;
-    message: string;
-    timestamp: number;
-  } | null = null;
+  // How many recent chat messages to retain per user for hidden-word matching.
+  // A player rarely types more than a handful of words inside the few seconds
+  // between a guess and its (delayed) correct-guess event, so a small buffer is
+  // plenty and keeps memory bounded within a level.
+  private maxChatHistoryPerUser = parseInt(import.meta.env.WOS_CHAT_HISTORY_PER_USER || '25');
   wosGameLogId = 'wos-game-log';
   twitchChatLogId = 'twitch-chat-log';
   currentLevel: number = 0;
-  twitchChatLog: Map<string, { message: string; timestamp: number; }>;
+  // Per-user history of recent chat messages (oldest first). At level 19+ WoS
+  // masks the guessed word, so we reconstruct it by matching the correct-guess
+  // event against these messages. Keeping a short history (instead of only the
+  // latest message) is what lets near-simultaneous / rapid guesses each resolve
+  // to the right word — see resolveGuessedWord and issue #96.
+  twitchChatLog: Map<string, ChatMessage[]>;
   soundEventTypes: Map<EventTypes, string> = new Map([
     ['level_end', '/assets/loser.wav'],
     ['level_clear', '/assets/clear.mp3'],
@@ -142,8 +152,7 @@ export class GameSpectator {
     twitchWorker.onmessage = (e) => {
       if (e.data.type === 'twitch_message') {
         const { username, message, timestamp } = e.data;
-        this.lastTwitchMessage = { username, message, timestamp };
-        this.twitchChatLog.set(username, { message, timestamp });
+        this.recordChatMessage(username, message, timestamp);
         this.log(`[Twitch Chat] ${username}: ${message}`, this.twitchChatLogId);
       }
     };
@@ -258,6 +267,47 @@ export class GameSpectator {
     this.updateGameState(username, letters, index, hitMax);
   }
 
+  // Append a chat message to the sending user's bounded history (oldest first).
+  private recordChatMessage(username: string, message: string, timestamp: number) {
+    const lowerUsername = username.toLowerCase();
+    const history = this.twitchChatLog.get(lowerUsername) ?? [];
+    history.push({ message, timestamp, consumed: false });
+    // Drop the oldest entries once we exceed the cap so memory stays bounded.
+    if (history.length > this.maxChatHistoryPerUser) {
+      history.splice(0, history.length - this.maxChatHistoryPerUser);
+    }
+    this.twitchChatLog.set(lowerUsername, history);
+  }
+
+  // Reconstruct the word behind a hidden (`?`-masked) correct-guess event by
+  // matching it to one of the player's recent chat messages.
+  //
+  // WoS only masks the word at level 19+, and the masked event tells us just
+  // the length (one `?` per letter) and which player guessed. We therefore pick
+  // among that player's messages of the same length, preferring real dictionary
+  // words (chat may also contain invalid guesses of the same length), and break
+  // ties oldest-first because WoS validates a player's guesses in the order they
+  // were typed. The chosen message is marked `consumed` so a second correct
+  // guess from the same player can't resolve to the same message. This is what
+  // keeps near-simultaneous and rapid-fire guesses from colliding (issue #96).
+  private resolveGuessedWord(username: string, length: number): string | null {
+    const history = this.twitchChatLog.get(username.toLowerCase());
+    if (!history || history.length === 0) return null;
+
+    const candidates = history.filter(m => !m.consumed && m.message.length === length);
+    if (candidates.length === 0) return null;
+
+    // Prefer dictionary-valid words; fall back to all same-length candidates if
+    // none are recognized (e.g. the dictionary hasn't loaded, or the player used
+    // a word we don't have on file yet).
+    const valid = candidates.filter(m => isWosWord(m.message));
+    const pool = valid.length > 0 ? valid : candidates;
+
+    const chosen = pool.reduce((oldest, m) => (m.timestamp < oldest.timestamp ? m : oldest));
+    chosen.consumed = true;
+    return chosen.message;
+  }
+
   private handleGameInitialization(level: any, wosEventType: any, letters: any, slots: any) {
     if (wosEventType === 1) {
       this.clearBoard();
@@ -322,7 +372,6 @@ export class GameSpectator {
     console.log('[WOS Helper] Clearing the correct words and big word');
     this.currentLevelCorrectWords = [];
     this.currentLevelBigWord = '';
-    this.lastTwitchMessage = null;
     this.currentLevelSlots = [];
     this.currentLevelLetters = [];
     this.currentLevelHiddenLetters = [];
@@ -341,50 +390,32 @@ export class GameSpectator {
     const lowerUsername = username.toLowerCase();
 
     // Only fall back to Twitch chat to recover the word when the WoS event
-    // masks it with '?' placeholders (this happens at level 20+). For every
-    // other correct guess the WoS event already carries the full word in
-    // `letters`, so we trust it directly.
+    // masks it with '?' placeholders (this happens from level 19 onward). For
+    // every other correct guess the WoS event already carries the full word in
+    // `letters`, so we trust it directly — making capture completely
+    // independent of chat timing.
     //
-    // This guard is what prevents simultaneous guesses from being lost
-    // (issue #96). Word resolution used to run for *every* guess and depended
-    // on transient shared state: the single `lastTwitchMessage` field and the
-    // per-user "latest message" stored in `twitchChatLog`. Because correct
-    // guesses are processed after a delay (`msgProcessDelay`), when two or more
-    // players guess within milliseconds of each other — or one player types
-    // several words in quick succession — that state can be overwritten before
-    // this handler runs:
-    //   - `lastTwitchMessage` ends up holding another player's message, so the
-    //     username check fails, and
-    //   - the per-user `twitchChatLog` entry can be replaced by a newer word of
-    //     a different length, so the length check fails too.
-    // The method then hit the early `return` below and dropped the guess,
-    // leaving the slot unfilled so a correctly-guessed word was reported as
-    // "missed" at the end of the level. Using `letters` directly for
-    // non-hidden words makes capture independent of chat timing.
+    // This guard is what prevents simultaneous guesses from being lost on the
+    // (majority) non-hidden levels (issue #96). Resolution used to run for
+    // *every* guess and depended on transient state — a single shared
+    // "last message" plus the per-user "latest message" — which a near-
+    // simultaneous or rapid follow-up guess could overwrite before this
+    // (delayed) handler ran, causing the guess to be dropped and the word to be
+    // reported as "missed". For hidden levels we still need chat, so we match
+    // against the player's recent message history with consumption tracking
+    // (resolveGuessedWord) rather than a single latest message.
     if (word.includes('?')) {
-      // WoS hides the correct word, so recover it from the player's chat message.
-      console.log(`[WOS Helper] Looking for ${lowerUsername}'s message in chat log`);
-      console.log(`[WOS Helper] Last twitch message: ${JSON.stringify(this.lastTwitchMessage)}`);
-      console.log(`[WOS Helper] Chat log entry for ${lowerUsername}: ${JSON.stringify(this.twitchChatLog.get(lowerUsername))}`);
-      if (
-        this.lastTwitchMessage &&
-        this.lastTwitchMessage.username.toLowerCase() === lowerUsername &&
-        this.lastTwitchMessage.message.length === letters.length
-      ) {
-        word = this.lastTwitchMessage.message;
+      console.log(`[WOS Helper] Resolving hidden ${letters.length}-letter word for ${lowerUsername}`);
+      console.log(`[WOS Helper] Chat history for ${lowerUsername}: ${JSON.stringify(this.twitchChatLog.get(lowerUsername))}`);
+      const resolved = this.resolveGuessedWord(lowerUsername, letters.length);
+      if (resolved) {
+        word = resolved;
       } else {
-        // Fall back to chat log
-        const latestMessage = this.twitchChatLog.get(lowerUsername);
-        if (latestMessage && latestMessage.message.length === letters.length) {
-          word = latestMessage.message;
-        } else {
-          console.warn(
-            `[WOS Helper] Could not find matching message for ${lowerUsername}`,
-            `[WOS Helper] Last message: ${JSON.stringify(this.lastTwitchMessage)}`,
-            `[WOS Helper] Chat log entry: ${JSON.stringify(latestMessage)}`
-          );
-          return; // Skip updating UI if we can't find the word
-        }
+        console.warn(
+          `[WOS Helper] Could not find matching message for ${lowerUsername}`,
+          `[WOS Helper] Chat history: ${JSON.stringify(this.twitchChatLog.get(lowerUsername))}`
+        );
+        return; // Skip updating UI if we can't find the word
       }
     }
 
