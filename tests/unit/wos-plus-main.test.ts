@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import tmi from '@tmi.js/chat';
 import { GameSpectator } from '@scripts/wos-plus-main';
 import * as wosWords from '@scripts/wos-words';
 import { fetchChannelStats } from '@scripts/db-service';
@@ -659,6 +660,76 @@ describe('GameSpectator class', () => {
       await vi.waitFor(() => {
         expect(spectator.personalBest).toBe(10);
       });
+    });
+
+    it('registers an error handler so library errors are not left unhandled', () => {
+      // A missing 'error' listener is what let the transient "Failed to join
+      // channel" timeout leak out as an unhandled error (and flood Sentry).
+      spectator.connectToTwitch('testchannel');
+
+      const onMock = (spectator.twitchClient as any).on as ReturnType<typeof vi.fn>;
+      const events = onMock.mock.calls.map((call: any[]) => call[0]);
+      expect(events).toContain('error');
+      expect(events).toContain('connect');
+    });
+
+    it('does not auto-join via the constructor (joins are managed manually)', () => {
+      // Passing `channels` would re-enable the library's auto-join, whose
+      // failure path emits the unhandled error we are working around.
+      spectator.connectToTwitch('testchannel');
+
+      expect(tmi.Client).toHaveBeenCalledWith({});
+    });
+  });
+
+  describe('joinTwitchChannel (join retry)', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('retries the join after a transient failure and stops once it succeeds', async () => {
+      vi.useFakeTimers();
+      const join = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('Did not receive command in time'))
+        .mockResolvedValueOnce(undefined);
+      spectator.twitchClient = { join, close: vi.fn() } as any;
+      const token = (spectator as any).twitchJoinToken;
+
+      const pending = (spectator as any).joinTwitchChannel('#testchannel', token);
+      await vi.runAllTimersAsync();
+      await pending;
+
+      expect(join).toHaveBeenCalledTimes(2);
+    });
+
+    it('gives up after the maximum number of attempts', async () => {
+      vi.useFakeTimers();
+      const join = vi.fn().mockRejectedValue(new Error('Failed to join channel'));
+      spectator.twitchClient = { join, close: vi.fn() } as any;
+      const token = (spectator as any).twitchJoinToken;
+
+      const pending = (spectator as any).joinTwitchChannel('#testchannel', token);
+      await vi.runAllTimersAsync();
+      await pending;
+
+      expect(join).toHaveBeenCalledTimes(5);
+    });
+
+    it('stops retrying when superseded by a newer connect/disconnect', async () => {
+      const join = vi.fn().mockRejectedValue(new Error('Failed to join channel'));
+      spectator.twitchClient = { join, close: vi.fn() } as any;
+      const token = (spectator as any).twitchJoinToken;
+      // Simulate a channel switch / disconnect bumping the token.
+      (spectator as any).twitchJoinToken = token + 1;
+
+      await (spectator as any).joinTwitchChannel('#testchannel', token);
+
+      expect(join).not.toHaveBeenCalled();
     });
   });
 

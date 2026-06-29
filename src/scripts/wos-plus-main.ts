@@ -71,6 +71,10 @@ export class GameSpectator {
   currentLevelSlots: Slots[] = [];
   currentLevelEmptySlotsCount: { [key: number]: number; } = {};
   isSoundsEnabled: boolean = true;
+  // Identifies the active Twitch join attempt. Each (re)connect bumps this so a
+  // channel switch or disconnect can cancel an in-flight join-retry loop (see
+  // joinTwitchChannel).
+  private twitchJoinToken: number = 0;
 
   constructor() {
     this.twitchChatLog = new Map();
@@ -829,9 +833,20 @@ export class GameSpectator {
       this.disconnectTwitch();
     }
 
-    this.twitchClient = new tmi.Client({
-      channels: [channel]
-    });
+    // Claim a token for this connection, which also invalidates any join-retry
+    // loop left over from a previous client/channel. Reconnects reuse this same
+    // token (it only changes on a new connect or a disconnect), so the 'connect'
+    // handler below stays valid across automatic reconnects but a channel switch
+    // supersedes it.
+    const joinToken = ++this.twitchJoinToken;
+
+    // We deliberately do NOT pass `channels` here. The library's built-in
+    // auto-join emits an unhandled 'error' ("Failed to join channel") whenever
+    // the JOIN confirmation doesn't arrive within ~1s — which happens often in
+    // OBS browser sources whose timers/network get throttled while live. By
+    // joining ourselves (see joinTwitchChannel) the failure stays catchable and
+    // we can retry it instead of leaking it to Sentry.
+    this.twitchClient = new tmi.Client({});
 
     this.twitchClient.on('message', (e) => {
       twitchWorker.postMessage({
@@ -843,6 +858,18 @@ export class GameSpectator {
 
     this.twitchClient.on('connect', () => {
       this.log(`Connected to Twitch chat for channel: ${channel}`, this.twitchChatLogId);
+      // 'connect' fires on every (re)connect, so this also re-joins the channel
+      // after an automatic reconnect.
+      this.joinTwitchChannel(channel, joinToken);
+    });
+
+    // Without an 'error' listener the library's emitted errors (notably the
+    // transient join-confirmation timeout) surface as unhandled errors and
+    // flood Sentry. Log and swallow them here; joinTwitchChannel owns recovery
+    // for join failures.
+    this.twitchClient.on('error', (error: Error) => {
+      this.log(`Twitch chat error: ${error?.message ?? error}`, this.twitchChatLogId);
+      console.warn('Twitch chat error:', error);
     });
 
     this.twitchClient.on('close', (reason: any) => {
@@ -856,6 +883,41 @@ export class GameSpectator {
     }
   }
 
+  // Join a Twitch channel, retrying on the transient JOIN-confirmation timeouts
+  // that OBS browser sources frequently hit while a stream is live. In practice
+  // the channel has often actually joined and only the confirmation was late
+  // (so chat messages may already be flowing), but retrying costs little and
+  // recovers the cases where the join genuinely failed.
+  //
+  // `joinToken` guards against stale loops: switching channels or disconnecting
+  // bumps this.twitchJoinToken, after which this loop bails out on its next tick.
+  private async joinTwitchChannel(channel: string, joinToken: number) {
+    const maxAttempts = 5;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      // Bail if a newer connect/disconnect superseded this attempt.
+      if (joinToken !== this.twitchJoinToken || !this.twitchClient) {
+        return;
+      }
+      try {
+        await this.twitchClient.join(channel);
+        this.log(`Joined Twitch channel: ${channel}`, this.twitchChatLogId);
+        return;
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        this.log(
+          `Failed to join ${channel} (attempt ${attempt}/${maxAttempts}): ${reason}`,
+          this.twitchChatLogId
+        );
+        if (attempt === maxAttempts) {
+          return;
+        }
+        // Exponential backoff: 1s, 2s, 4s, 8s (capped at 16s).
+        const waitMs = Math.min(1000 * 2 ** (attempt - 1), 16000);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+      }
+    }
+  }
+
   disconnect() {
     if (this.wosSocket) {
       this.wosSocket.disconnect();
@@ -865,6 +927,8 @@ export class GameSpectator {
 
   disconnectTwitch() {
     if (this.twitchClient) {
+      // Cancel any in-flight join-retry loop before tearing down the client.
+      this.twitchJoinToken++;
       this.twitchClient.close();
       this.twitchClient = undefined;
     }
