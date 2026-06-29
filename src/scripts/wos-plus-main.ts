@@ -197,6 +197,14 @@ export class GameSpectator {
       return;
     }
 
+    // Skip playback while the tab is in the background. Browsers throttle the
+    // setTimeout-based delays in the level-end pipeline for hidden tabs, so
+    // several rounds' worth of sounds would otherwise queue up and fire all at
+    // once when the tab is brought back to the foreground (issue #86).
+    if (typeof document !== 'undefined' && document.hidden) {
+      return;
+    }
+
     const soundFile = this.soundEventTypes.get(eventType);
     const audio = new Audio(soundFile || '/assets/nothing.mp3');
     audio.play().catch((error) => {

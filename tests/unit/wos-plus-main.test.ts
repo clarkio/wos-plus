@@ -927,6 +927,21 @@ describe('GameSpectator class', () => {
       const audioInstance = audioMock.mock.instances[audioMock.mock.instances.length - 1];
       expect(audioInstance.play).toHaveBeenCalled();
     });
+
+    it('should not create Audio when the tab is hidden (issue #86)', () => {
+      spectator.isSoundsEnabled = true;
+      const hiddenSpy = vi
+        .spyOn(document, 'hidden', 'get')
+        .mockReturnValue(true);
+
+      try {
+        (spectator as any).playSound('level_clear');
+
+        expect((global as any).Audio).not.toHaveBeenCalled();
+      } finally {
+        hiddenSpy.mockRestore();
+      }
+    });
   });
 
   describe('handleLevelResults sound effects', () => {
