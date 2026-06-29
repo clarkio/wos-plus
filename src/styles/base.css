@@ -30,9 +30,36 @@
   --font-main: 'Inter', sans-serif;
   --font-mono: 'Share Tech Mono', monospace;
   --font-code: 'Fira Code', monospace;
-  
+  --font-display: 'Fredoka', 'Space Grotesk', sans-serif;
+  --font-ui: 'Space Grotesk', system-ui, sans-serif;
+
   /* Spacing */
   --border-radius: 8px;
+
+  /* ==========================================================================
+     "Sticker Pop" palette — bold, game-native theme shared by the landing and
+     player redesigns. Additive: existing variables above are untouched so the
+     streamer/bot views keep their original look.
+     ========================================================================== */
+  --sp-bg: #1a0633;
+  --sp-bg-deep: #160227;
+  --sp-bg-darkest: #0c0118;
+  --sp-purple: #7c3aed;
+  --sp-purple-deep: #3b0a63;
+  --sp-cyan: #25e6d4;
+  --sp-cyan-shadow: #0c8a7d;
+  --sp-cyan-ink: #0c1b1a;
+  --sp-pink: #ff5c93;
+  --sp-pink-shadow: #b3275e;
+  --sp-pink-soft: #ff9ebb;
+  --sp-yellow: #ffce3a;
+  --sp-yellow-shadow: #ffb300;
+  --sp-tile: #ffffff;
+  --sp-tile-text: #3b0a63;
+  --sp-ink: #f3e9ff;
+  --sp-ink-muted: #d9c5f5;
+  --sp-ink-dim: #9a82c4;
+  --sp-chip: #2a1147;
 }
 
 /* Base HTML Elements */
