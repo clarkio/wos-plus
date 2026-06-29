@@ -486,6 +486,9 @@ import MadeBy from "../components/MadeBy.astro";
 
       const channelChanged = newChannel !== twitchChannel;
       twitchChannel = newChannel;
+
+      // Only swap the chat embed when the channel actually changed to avoid an
+      // unnecessary reload of the iframe.
       if (channelChanged) {
         const twitchChatWidget = document.getElementById(
           "player-twitch-chat-widget",
@@ -493,14 +496,22 @@ import MadeBy from "../components/MadeBy.astro";
         if (twitchChatWidget) {
           twitchChatWidget.src = `https://www.twitch.tv/embed/${twitchChannel}/chat?darkpopout&parent=${location.hostname}`;
         }
-        spectator.connectToTwitch(twitchChannel);
       }
 
+      // Only re-point the board iframe when the mirror URL actually changed.
       if (mirrorUrlChanged) {
         loadBoardIframeIfVisible();
-        if (currentMirrorUrl) {
-          spectator.connectToWosGame(currentMirrorUrl);
-        }
+      }
+
+      // Always tear down and re-establish the live connections on save. The
+      // dialog now applies settings in place instead of reloading the page, so
+      // these reconnects are the only thing that picks up the new settings.
+      // connectToTwitch/connectToWosGame each close any previous connection
+      // before opening a new one, so saving reliably reconnects even when the
+      // value itself is unchanged (issue #88).
+      spectator.connectToTwitch(twitchChannel);
+      if (currentMirrorUrl) {
+        spectator.connectToWosGame(currentMirrorUrl);
       }
     });
   };
