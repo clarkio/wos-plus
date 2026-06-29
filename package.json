@@ -2,7 +2,7 @@
   "name": "wos-plus",
   "type": "module",
   "version": "0.1.1",
-  "packageManager": "pnpm@11.0.9",
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -16,8 +16,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "13.5.1",
-    "@sentry/astro": "10.52.0",
+    "@astrojs/cloudflare": "13.7.0",
+    "@sentry/astro": "10.54.0",
     "@sentry/cloudflare": "10.52.0",
     "@supabase/supabase-js": "2.105.4",
     "@tmi.js/chat": "0.4.1",
@@ -28,10 +28,10 @@
   "devDependencies": {
     "@types/socket.io-client": "1.4.36",
     "@types/tmi.js": "1.8.6",
-    "@vitest/coverage-v8": "4.1.5",
-    "@vitest/ui": "4.1.5",
+    "@vitest/coverage-v8": "4.1.9",
+    "@vitest/ui": "4.1.9",
     "happy-dom": "^20.9.0",
-    "vitest": "4.1.5",
-    "wrangler": "4.92.0"
+    "vitest": "4.1.9",
+    "wrangler": "4.105.0"
   }
 }
