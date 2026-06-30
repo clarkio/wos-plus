@@ -84,8 +84,13 @@
   grid-row-start: 4;
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 5px;
-  overflow: hidden;
+  /* Gap must be >= the 6px offset shadow so the word-log's shadow lands in the
+     gutter instead of bleeding onto the letters panel. */
+  gap: 14px;
+  /* Keep overflow visible so the panels' hard offset shadows can render into
+     the surrounding grid gutter/padding instead of being clipped at the
+     right/bottom edges. */
+  overflow: visible;
 }
 
 #player-correct-words-log-container {
@@ -811,10 +816,12 @@
 .level-data-container .hidden-letter-label,
 .level-data-container .fake-letter-label {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: var(--sp-ink-dim);
+  /* Brighter than --sp-ink-dim so the labels (e.g. "Big Word") stay legible
+     against the dark sticker panel. */
+  color: var(--sp-ink-muted);
 }
 
 .level-data-container .letters {

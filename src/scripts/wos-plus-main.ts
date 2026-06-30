@@ -625,6 +625,12 @@ export class GameSpectator {
 
     (logEl as HTMLElement).innerHTML = '';
 
+    // All word groups live inside a single track element. The track is what the
+    // auto-scroll animation translates, so the log box (background, border and
+    // offset shadow) can stay put while overflowing words scroll into view.
+    const track = document.createElement('div');
+    track.className = 'correct-words-track';
+
     const fragment = document.createDocumentFragment();
 
     Array.from(groupedWords.entries())
@@ -653,7 +659,8 @@ export class GameSpectator {
         fragment.appendChild(groupEl);
       });
 
-    logEl.appendChild(fragment);
+    track.appendChild(fragment);
+    logEl.appendChild(track);
 
     const logContainer = logEl as HTMLElement;
     const hasOverflow = logContainer.scrollHeight > logContainer.clientHeight;
@@ -661,6 +668,10 @@ export class GameSpectator {
     if (hasOverflow) {
       const overflowDistance = logContainer.scrollHeight - logContainer.clientHeight;
       logContainer.style.setProperty('--scroll-amount', `${-overflowDistance}px`);
+      // Scale the cycle length with how much is hidden so the scroll speed stays
+      // readable whether one row or many overflow.
+      const scrollDuration = Math.min(40, Math.max(12, overflowDistance / 18 + 8));
+      logContainer.style.setProperty('--scroll-duration', `${scrollDuration}s`);
 
       // Restart the animation so new content begins from the top each update
       logContainer.classList.remove('auto-scroll');
