@@ -1030,6 +1030,42 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelLetters).not.toContain('x');
       expect(spectator.currentLevelLetters).not.toContain('?');
     });
+
+    it('should not fabricate a duplicate when a revealed letter has no ? slot (issue #85)', () => {
+      // CAUTION / REALITY regression: the revealed hidden letter is already
+      // present as a visible letter and there is no '?' placeholder for it, so
+      // it must NOT be appended a second time.
+      spectator.currentLevelBigWord = '';
+      spectator.currentLevelLetters = ['c', 'a', 'u', 't', 'i', 'o', 'n'];
+
+      (spectator as any).handleLetterReveal(['c'], []);
+
+      expect(spectator.currentLevelLetters).toEqual(['c', 'a', 'u', 't', 'i', 'o', 'n']);
+    });
+
+    it('should be idempotent across repeated/cumulative reveal events (issue #85)', () => {
+      // The first reveal fills the '?' slot; a second reveal carrying the same
+      // (now slot-less) hidden letter must not add a duplicate.
+      spectator.currentLevelBigWord = '';
+      spectator.currentLevelLetters = ['c', 'a', 'u', 't', 'i', 'o', '?'];
+
+      (spectator as any).handleLetterReveal(['n'], []);
+      expect(spectator.currentLevelLetters).toEqual(['c', 'a', 'u', 't', 'i', 'o', 'n']);
+
+      (spectator as any).handleLetterReveal(['n'], []);
+      expect(spectator.currentLevelLetters).toEqual(['c', 'a', 'u', 't', 'i', 'o', 'n']);
+    });
+
+    it('should preserve a genuine duplicate hidden letter that has its own ? slot', () => {
+      // Boards may legitimately have duplicate valid letters; when the duplicate
+      // is hidden it gets its own '?' slot, so the merge must keep both copies.
+      spectator.currentLevelBigWord = '';
+      spectator.currentLevelLetters = ['t', 'e', 's', '?'];
+
+      (spectator as any).handleLetterReveal(['t'], []);
+
+      expect(spectator.currentLevelLetters).toEqual(['t', 'e', 's', 't']);
+    });
   });
 
   describe('handleCorrectGuess', () => {

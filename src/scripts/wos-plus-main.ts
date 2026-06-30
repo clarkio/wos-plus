@@ -175,9 +175,28 @@ export class GameSpectator {
 
     console.log('Current Level Big Word:', this.currentLevelBigWord);
     if (this.currentLevelBigWord === '') {
-      // Then update currentLevelLetters with the hidden letters and remove the fake letters
+      // Remove the fake/decoy letters that were never part of this board.
       this.currentLevelLetters = this.currentLevelLetters.filter(letter => !falseLetters.includes(letter));
-      this.currentLevelLetters.push(...hiddenLetters);
+
+      // Each hidden tile is represented by a '?' placeholder in the board's
+      // letters, so fill those placeholders one-for-one with the revealed
+      // hidden letters rather than blindly appending them.
+      //
+      // Appending caused issue #85: when a reveal carried a letter with no '?'
+      // slot to fill — a repeated/cumulative reveal event, or a hidden letter
+      // whose value was already visible on the board — the extra push
+      // fabricated a duplicate valid letter (the spurious CAUTION 'C' / REALITY
+      // 'L' seen on stream), which in turn polluted the end-of-level missed-word
+      // calculations. Capping the merge to the available '?' slots keeps the
+      // valid-letter multiset in sync with the actual number of tiles and makes
+      // the merge idempotent. Genuine duplicates are still preserved because
+      // each real hidden duplicate has its own '?' slot to fill.
+      const revealed = [...hiddenLetters];
+      this.currentLevelLetters = this.currentLevelLetters.map(letter =>
+        letter === '?' && revealed.length > 0 ? revealed.shift()! : letter
+      );
+
+      // Drop any leftover '?' slots that had no matching revealed letter.
       this.currentLevelLetters = this.currentLevelLetters.filter(letter => letter !== '?');
       console.log('Updated currentLevelLetters:', this.currentLevelLetters);
       document.getElementById('letters')!.innerText = this.currentLevelLetters.join(' ').toUpperCase();
