@@ -161,7 +161,10 @@
   color: var(--text-muted);
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  /* Must stay visible so the letters panel's offset shadow can render into the
+     grid gutter/padding. The inner .level-data-container handles its own
+     content overflow, so nothing leaks here. */
+  overflow: visible;
 }
 
 .level-data-container {
