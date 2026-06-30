@@ -787,10 +787,11 @@
   color: var(--sp-bg-deep);
 }
 
-/* Daily best — pink */
+/* Daily best — pink. Dark ink (not white) so the value clears WCAG contrast on
+   the vivid pink, matching how the yellow/cyan badges use dark ink. */
 .player-channel-data-container .level-record:nth-child(2) {
   background: var(--sp-pink);
-  color: #fff;
+  color: var(--sp-bg-deep);
 }
 
 /* Daily clears — cyan */
@@ -848,11 +849,12 @@
   padding: 0.2rem 0.6rem;
 }
 
-/* Missed word — pink chip */
+/* Missed word — pink chip. Dark ink (not white) to clear WCAG contrast on the
+   vivid pink background. */
 .player-bottom-container .correct-word.missing-word {
   background: var(--sp-pink);
   border-color: transparent;
-  color: #fff;
+  color: var(--sp-bg-deep);
 }
 
 /* --- Letters panel: dark block with cyan offset shadow ------------------- */
