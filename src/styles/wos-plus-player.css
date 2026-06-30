@@ -34,19 +34,20 @@
   position: relative;
 }
 
-/* HUD layout: lay the three record badges (all-time best, daily best, clears)
-   out in a horizontal row and stack the current-level block beneath them. This
-   keeps the top-right component short so the stream chat gets more of the
-   right column's vertical space. */
+/* HUD layout: keep the current-level block and the three record badges
+   (all-time best, daily best, clears) all on a single horizontal row. This
+   makes the top-right component just one row tall so the stream chat gets more
+   of the right column's vertical space. On narrow widths the badges wrap below
+   the level block rather than overflowing. */
 .player-channel-data-container .overlay {
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: clamp(0.3rem, 1.2vh, 0.6rem);
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(0.3rem, 1vw, 0.6rem);
 }
 
 .player-channel-data-container .level-record-container {
-  /* Records sit above the level block even though they come second in markup. */
-  order: -1;
   flex-direction: row;
   justify-content: center;
   flex-wrap: wrap;
@@ -54,8 +55,10 @@
 }
 
 .player-channel-data-container .level-current {
-  /* Trim the vertical padding so the stacked block stays compact. */
-  padding: 0.3rem 1rem;
+  /* Trim the padding and drop the wide min-width so the level block only takes
+     the space it needs, keeping the whole HUD on one row at smaller widths. */
+  padding: 0.3rem 0.6rem;
+  min-width: 0;
 }
 
 .settings-button {
@@ -476,6 +479,27 @@
   .level-record .icon {
     width: 1.5rem;
     height: 1.5rem;
+  }
+}
+
+/* On shorter screens (e.g. 1280x720) the right column is narrow, so tighten the
+   level block + record badges enough that they stay on a single HUD row instead
+   of wrapping. Bounded above 600px tall so the dedicated 896x510 handheld rules
+   below keep full control of that case. */
+@media (max-height: 768px) and (min-height: 601px) {
+  .player-channel-data-container .overlay,
+  .player-channel-data-container .level-record-container {
+    gap: 0.3rem;
+  }
+
+  .player-channel-data-container .level-record {
+    padding: 0.15rem 0.4rem 0.15rem 0.25rem;
+    gap: 0.25rem;
+  }
+
+  .player-channel-data-container .level-record .icon {
+    width: 1.3rem;
+    height: 1.3rem;
   }
 }
 
