@@ -79,6 +79,9 @@ export class GameSpectator {
   // filling the available space at any resolution.
   private wordLogResizeObserver?: ResizeObserver;
   private wordLogResizeRaf: number = 0;
+  // Re-fits the level/records HUD so long (4+ digit) values stay on one row.
+  private hudResizeObserver?: ResizeObserver;
+  private hudResizeRaf: number = 0;
 
   constructor() {
     this.twitchChatLog = new Map();
@@ -119,6 +122,45 @@ export class GameSpectator {
     if (clearElement) {
       clearElement.innerText = `${this.dailyClears}`;
     }
+    this.fitHud();
+  }
+
+  /**
+   * Scales the level/records HUD so the level block and the three record badges
+   * always stay on a single row, even when the values grow to 4+ digits. Uses
+   * CSS `zoom` on the overlay (which reflows/rescales the whole row) and only
+   * ever scales down, so short values render at full size.
+   */
+  private fitHud() {
+    const hud = document.querySelector('.player-channel-data-container') as HTMLElement | null;
+    const overlay = hud?.querySelector('.overlay') as HTMLElement | null;
+    if (!hud || !overlay) return;
+
+    this.ensureHudResizeObserver(hud);
+
+    // Measure the natural (unscaled) row width against the space available.
+    overlay.style.setProperty('zoom', '1');
+    const avail = hud.clientWidth;
+    const natural = overlay.getBoundingClientRect().width;
+    if (avail <= 0 || natural <= 0) return;
+
+    // Leave a hair of breathing room so the badges' offset shadows don't kiss
+    // the edge. Never upscale past 1; clamp the shrink so text stays legible.
+    const scale = Math.max(0.5, Math.min(1, (avail * 0.97) / natural));
+    if (scale < 0.999) {
+      overlay.style.setProperty('zoom', `${scale}`);
+    }
+  }
+
+  private ensureHudResizeObserver(hud: HTMLElement) {
+    if (this.hudResizeObserver) return;
+    if (typeof ResizeObserver === 'undefined') return;
+
+    this.hudResizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(this.hudResizeRaf);
+      this.hudResizeRaf = requestAnimationFrame(() => this.fitHud());
+    });
+    this.hudResizeObserver.observe(hud);
   }
 
   private async startEventProcessors() {
@@ -226,6 +268,7 @@ export class GameSpectator {
     levelTitleEl.innerText = 'NEXT LEVEL';
     levelTitleEl.classList.add('long');
     document.getElementById('level-value')!.innerText = `${this.currentLevel}`;
+    this.fitHud();
 
     if (stars === 5 || this.currentLevelSlots.every(slot => slot.user)) {
       // Level completed successfully with all words found on the board (CLEAR)
@@ -336,6 +379,7 @@ export class GameSpectator {
     levelTitleEl.innerText = 'LEVEL';
     levelTitleEl.classList.remove('long');
     document.getElementById('level-value')!.innerText = `${level}`;
+    this.fitHud();
     document.getElementById('letters-label')!.innerText = 'Letters:';
     if (letters.length > 0) {
       this.currentLevelLetters = letters;

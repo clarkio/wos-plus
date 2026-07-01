@@ -37,21 +37,28 @@
 /* HUD layout: keep the current-level block and the three record badges
    (all-time best, daily best, clears) all on a single horizontal row. This
    makes the top-right component just one row tall so the stream chat gets more
-   of the right column's vertical space. On narrow widths the badges wrap below
-   the level block rather than overflowing. */
+   of the right column's vertical space. The row is kept on one line (nowrap)
+   and scaled down to fit by fitHud() in the spectator script, so long values
+   (4+ digits) stay tidy and legible instead of wrapping. */
 .player-channel-data-container .overlay {
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: clamp(0.3rem, 1vw, 0.6rem);
 }
 
 .player-channel-data-container .level-record-container {
   flex-direction: row;
   justify-content: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: clamp(0.3rem, 1vw, 0.6rem);
+}
+
+/* Stable digit widths so the badges don't jitter as values change. */
+.player-channel-data-container .level-value,
+.player-channel-data-container .level-record-value {
+  font-variant-numeric: tabular-nums;
 }
 
 .player-channel-data-container .level-current {
