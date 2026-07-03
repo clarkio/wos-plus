@@ -1,7 +1,7 @@
 import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
-import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosWord } from './wos-words';
+import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosWord, canFormWord } from './wos-words';
 import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
 import { getMirrorGameId } from './mirror-url';
 
@@ -363,11 +363,13 @@ export class GameSpectator {
   // WoS only masks the word at level 19+, and the masked event tells us just
   // the length (one `?` per letter) and which player guessed. We therefore pick
   // among that player's messages of the same length, preferring real dictionary
-  // words (chat may also contain invalid guesses of the same length), and break
-  // ties oldest-first because WoS validates a player's guesses in the order they
-  // were typed. The chosen message is marked `consumed` so a second correct
-  // guess from the same player can't resolve to the same message. This is what
-  // keeps near-simultaneous and rapid-fire guesses from colliding (issue #96).
+  // words whose letters actually fit within the level's tiles (chat may also
+  // contain invalid guesses of the same length), and break ties newest-first
+  // because the most recent same-length message is the likeliest to be the word
+  // WoS just accepted. The chosen message is marked `consumed` so a second
+  // correct guess from the same player can't resolve to the same message. This
+  // is what keeps near-simultaneous and rapid-fire guesses from colliding
+  // (issue #96).
   private resolveGuessedWord(username: string, length: number): string | null {
     const history = this.twitchChatLog.get(username.toLowerCase());
     if (!history || history.length === 0) return null;
@@ -375,13 +377,16 @@ export class GameSpectator {
     const candidates = history.filter(m => !m.consumed && m.message.length === length);
     if (candidates.length === 0) return null;
 
-    // Prefer dictionary-valid words; fall back to all same-length candidates if
-    // none are recognized (e.g. the dictionary hasn't loaded, or the player used
-    // a word we don't have on file yet).
-    const valid = candidates.filter(m => isWosWord(m.message));
+    // Prefer real dictionary words whose letters also fit within the level's
+    // valid letters (with '?' matching any still-hidden letter). Fall back to
+    // all same-length candidates if none qualify (e.g. the dictionary hasn't
+    // loaded, or the player used a word we don't have on file yet).
+    const valid = candidates.filter(
+      m => isWosWord(m.message) && canFormWord(m.message, this.currentLevelLetters)
+    );
     const pool = valid.length > 0 ? valid : candidates;
 
-    const chosen = pool.reduce((oldest, m) => (m.timestamp < oldest.timestamp ? m : oldest));
+    const chosen = pool.reduce((newest, m) => (m.timestamp > newest.timestamp ? m : newest));
     chosen.consumed = true;
     return chosen.message;
   }

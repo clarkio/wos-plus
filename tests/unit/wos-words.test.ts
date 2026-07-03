@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { findMissingWordsFromBoard } from '@scripts/wos-words';
+import { findMissingWordsFromBoard, canFormWord } from '@scripts/wos-words';
 import type { Slot } from '@scripts/wos-words';
 
 /**
@@ -91,6 +91,49 @@ describe('wos-words module', () => {
       const result = findMissingWordsFromBoard(currentSlots, boardSlots);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('canFormWord', () => {
+    it('should return true when the word fits within the available letters', () => {
+      expect(canFormWord('beard', ['b', 'e', 'a', 'r', 'd'])).toBe(true);
+    });
+
+    it('should ignore extra available letters', () => {
+      expect(canFormWord('beard', ['b', 'e', 'a', 'r', 'd', 'x', 'y', 'z'])).toBe(true);
+    });
+
+    it('should return false when a required letter is missing', () => {
+      expect(canFormWord('ghost', ['b', 'e', 'a', 'r', 'd'])).toBe(false);
+    });
+
+    it('should respect letter frequency (duplicate letters need duplicate tiles)', () => {
+      // "letter" needs two t's and two e's.
+      expect(canFormWord('letter', ['l', 'e', 't', 'r'])).toBe(false);
+      expect(canFormWord('letter', ['l', 'e', 'e', 't', 't', 'r'])).toBe(true);
+    });
+
+    it('should treat ? as a wildcard for any single letter', () => {
+      expect(canFormWord('trilby', ['t', 'l', 'r', 'i', 'b', '?'])).toBe(true);
+    });
+
+    it('should consume one wildcard per unmatched letter', () => {
+      // Two missing letters (s, and a second t) need two wildcards.
+      expect(canFormWord('toast', ['o', 'a', '?'])).toBe(false);
+      expect(canFormWord('toast', ['o', 'a', '?', '?', '?'])).toBe(true);
+    });
+
+    it('should be case-insensitive', () => {
+      expect(canFormWord('BEARD', ['B', 'E', 'A', 'R', 'D'])).toBe(true);
+      expect(canFormWord('Beard', ['b', 'e', 'a', 'r', 'd'])).toBe(true);
+    });
+
+    it('should return false for an empty word', () => {
+      expect(canFormWord('', ['a', 'b', 'c'])).toBe(false);
+    });
+
+    it('should return false when there are no available letters', () => {
+      expect(canFormWord('beard', [])).toBe(false);
     });
   });
 

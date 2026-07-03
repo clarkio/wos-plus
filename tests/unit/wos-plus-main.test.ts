@@ -14,15 +14,22 @@ vi.mock('@scripts/twitch-chat-worker', () => ({
 }));
 
 // Mock the wos-words module
-vi.mock('@scripts/wos-words', () => ({
-  findAllMissingWords: vi.fn(() => []),
-  findMissingWordsFromBoard: vi.fn(() => []),
-  loadWordsFromDb: vi.fn(),
-  // Default to "unknown word" so hidden-word resolution falls back to its
-  // length/FIFO heuristic. Individual tests override this to exercise the
-  // dictionary-preference path.
-  isWosWord: vi.fn(() => false),
-}));
+vi.mock('@scripts/wos-words', async (importActual) => {
+  const actual = await importActual<typeof import('@scripts/wos-words')>();
+  return {
+    findAllMissingWords: vi.fn(() => []),
+    findMissingWordsFromBoard: vi.fn(() => []),
+    loadWordsFromDb: vi.fn(),
+    // Default to "unknown word" so hidden-word resolution falls back to its
+    // length/recency heuristic. Individual tests override this to exercise the
+    // dictionary-preference path.
+    isWosWord: vi.fn(() => false),
+    // Keep the real letter-fit check: it's a pure function with no dictionary
+    // dependency, so hidden-word resolution genuinely validates that a candidate
+    // fits within the level's letters.
+    canFormWord: actual.canFormWord,
+  };
+});
 
 // Mock the db-service module
 vi.mock('@scripts/db-service', () => ({
@@ -1512,9 +1519,9 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelSlots[1].user).toBe('bob');
     });
 
-    it('should resolve two same-length hidden guesses from one player in FIFO order with consumption (issue #96)', () => {
+    it('should resolve two same-length hidden guesses from one player newest-first with consumption (issue #96)', () => {
       // A single player lands two same-length words in quick succession. Each
-      // correct-guess event must consume a distinct chat message (oldest first)
+      // correct-guess event must consume a distinct chat message (newest first)
       // so the second event does not re-resolve to the first word.
       spectator.currentLevelSlots = [
         { letters: [], word: '', hitMax: false, index: 0, length: 5 },
@@ -1526,8 +1533,9 @@ describe('GameSpectator class', () => {
       (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?'], 0, false);
       (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?'], 1, false);
 
-      expect(spectator.currentLevelSlots[0].word).toBe('beard');
-      expect(spectator.currentLevelSlots[1].word).toBe('bread');
+      // The newest same-length message ('bread', timestamp 2) resolves first.
+      expect(spectator.currentLevelSlots[0].word).toBe('bread');
+      expect(spectator.currentLevelSlots[1].word).toBe('beard');
     });
 
     it('should prefer a valid dictionary word when disambiguating a hidden guess (issue #96)', () => {
@@ -1536,6 +1544,7 @@ describe('GameSpectator class', () => {
       // the invalid one was typed first.
       vi.mocked(wosWords.isWosWord).mockImplementation((w: string) => w === 'beard');
 
+      spectator.currentLevelLetters = ['b', 'e', 'a', 'r', 'd'];
       spectator.currentLevelSlots = [
         { letters: [], word: '', hitMax: false, index: 0, length: 5 },
       ];
@@ -1545,6 +1554,43 @@ describe('GameSpectator class', () => {
       (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?'], 0, false);
 
       expect(spectator.currentLevelSlots[0].word).toBe('beard');
+    });
+
+    it('should reject a dictionary word whose letters do not fit the level (newest-first, letter-fit)', () => {
+      // The player's chat history contains two real, same-length words but only
+      // one can actually be spelled from the level's tiles. The other (even
+      // though it is the newest message) must be rejected because its letters
+      // don't fit within the level's valid letters.
+      vi.mocked(wosWords.isWosWord).mockImplementation(
+        (w: string) => w === 'beard' || w === 'ghost'
+      );
+
+      spectator.currentLevelLetters = ['b', 'e', 'a', 'r', 'd', '?'];
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 5 },
+      ];
+      seedChat(spectator, 'alice', 'beard', 1); // fits the level letters
+      seedChat(spectator, 'alice', 'ghost', 2); // real word, but doesn't fit
+
+      (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?'], 0, false);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('beard');
+    });
+
+    it('should treat a level ? as a wildcard when checking letter-fit', () => {
+      // The guessed word uses a still-hidden letter (shown as ? on level 19+).
+      // The single ? must satisfy the one missing 'y' so the word still fits.
+      vi.mocked(wosWords.isWosWord).mockImplementation((w: string) => w === 'trilby');
+
+      spectator.currentLevelLetters = ['t', 'l', 'r', 'i', 's', 'm', '?', 'b'];
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 6 },
+      ];
+      seedChat(spectator, 'alice', 'trilby', 1);
+
+      (spectator as any).updateGameState('alice', ['?', '?', '?', '?', '?', '?'], 0, false);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('trilby');
     });
 
     it('should set big word when hitMax is true', () => {
