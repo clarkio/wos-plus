@@ -75,6 +75,13 @@ export class GameSpectator {
   // channel switch or disconnect can cancel an in-flight join-retry loop (see
   // joinTwitchChannel).
   private twitchJoinToken: number = 0;
+  // Re-fits the correct-words log whenever its box is resized so the words keep
+  // filling the available space at any resolution.
+  private wordLogResizeObserver?: ResizeObserver;
+  private wordLogResizeRaf: number = 0;
+  // Re-fits the level/records HUD so long (4+ digit) values stay on one row.
+  private hudResizeObserver?: ResizeObserver;
+  private hudResizeRaf: number = 0;
 
   constructor() {
     this.twitchChatLog = new Map();
@@ -115,6 +122,45 @@ export class GameSpectator {
     if (clearElement) {
       clearElement.innerText = `${this.dailyClears}`;
     }
+    this.fitHud();
+  }
+
+  /**
+   * Scales the level/records HUD so the level block and the three record badges
+   * always stay on a single row, even when the values grow to 4+ digits. Uses
+   * CSS `zoom` on the overlay (which reflows/rescales the whole row) and only
+   * ever scales down, so short values render at full size.
+   */
+  private fitHud() {
+    const hud = document.querySelector('.player-channel-data-container') as HTMLElement | null;
+    const overlay = hud?.querySelector('.overlay') as HTMLElement | null;
+    if (!hud || !overlay) return;
+
+    this.ensureHudResizeObserver(hud);
+
+    // Measure the natural (unscaled) row width against the space available.
+    overlay.style.setProperty('zoom', '1');
+    const avail = hud.clientWidth;
+    const natural = overlay.getBoundingClientRect().width;
+    if (avail <= 0 || natural <= 0) return;
+
+    // Leave a hair of breathing room so the badges' offset shadows don't kiss
+    // the edge. Never upscale past 1; clamp the shrink so text stays legible.
+    const scale = Math.max(0.5, Math.min(1, (avail * 0.97) / natural));
+    if (scale < 0.999) {
+      overlay.style.setProperty('zoom', `${scale}`);
+    }
+  }
+
+  private ensureHudResizeObserver(hud: HTMLElement) {
+    if (this.hudResizeObserver) return;
+    if (typeof ResizeObserver === 'undefined') return;
+
+    this.hudResizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(this.hudResizeRaf);
+      this.hudResizeRaf = requestAnimationFrame(() => this.fitHud());
+    });
+    this.hudResizeObserver.observe(hud);
   }
 
   private async startEventProcessors() {
@@ -222,6 +268,7 @@ export class GameSpectator {
     levelTitleEl.innerText = 'NEXT LEVEL';
     levelTitleEl.classList.add('long');
     document.getElementById('level-value')!.innerText = `${this.currentLevel}`;
+    this.fitHud();
 
     if (stars === 5 || this.currentLevelSlots.every(slot => slot.user)) {
       // Level completed successfully with all words found on the board (CLEAR)
@@ -332,6 +379,7 @@ export class GameSpectator {
     levelTitleEl.innerText = 'LEVEL';
     levelTitleEl.classList.remove('long');
     document.getElementById('level-value')!.innerText = `${level}`;
+    this.fitHud();
     document.getElementById('letters-label')!.innerText = 'Letters:';
     if (letters.length > 0) {
       this.currentLevelLetters = letters;
@@ -625,6 +673,12 @@ export class GameSpectator {
 
     (logEl as HTMLElement).innerHTML = '';
 
+    // All word groups live inside a single track element. The track is what the
+    // auto-scroll animation translates, so the log box (background, border and
+    // offset shadow) can stay put while overflowing words scroll into view.
+    const track = document.createElement('div');
+    track.className = 'correct-words-track';
+
     const fragment = document.createDocumentFragment();
 
     Array.from(groupedWords.entries())
@@ -653,23 +707,94 @@ export class GameSpectator {
         fragment.appendChild(groupEl);
       });
 
-    logEl.appendChild(fragment);
+    track.appendChild(fragment);
+    logEl.appendChild(track);
 
-    const logContainer = logEl as HTMLElement;
-    const hasOverflow = logContainer.scrollHeight > logContainer.clientHeight;
+    // Size the words to fill the box, and keep them re-fitting on resize.
+    this.fitWordLog();
+    this.ensureWordLogResizeObserver();
+  }
 
-    if (hasOverflow) {
-      const overflowDistance = logContainer.scrollHeight - logContainer.clientHeight;
-      logContainer.style.setProperty('--scroll-amount', `${-overflowDistance}px`);
+  /**
+   * Scales the rendered words so they fill the correct-words log instead of
+   * overflowing and getting cut off. Uses CSS `zoom` on the track (which
+   * reflows the chips, unlike `transform: scale`) and only falls back to the
+   * marquee auto-scroll when the content still cannot fit at the smallest
+   * allowed scale.
+   */
+  private fitWordLog() {
+    const logEl = document.getElementById('correct-words-log') as HTMLElement | null;
+    if (!logEl) return;
+    const track = logEl.querySelector('.correct-words-track') as HTMLElement | null;
+    if (!track) return;
 
-      // Restart the animation so new content begins from the top each update
-      logContainer.classList.remove('auto-scroll');
-      void logContainer.offsetHeight;
-      logContainer.classList.add('auto-scroll');
-    } else {
-      logContainer.style.setProperty('--scroll-amount', '0px');
-      logContainer.classList.remove('auto-scroll');
+    // Nothing rendered yet — reset and bail so an empty log doesn't scale up.
+    if (track.childElementCount === 0) {
+      track.style.setProperty('zoom', '1');
+      logEl.style.setProperty('--scroll-amount', '0px');
+      logEl.classList.remove('auto-scroll');
+      return;
     }
+
+    const MIN_SCALE = 0.4;
+    const MAX_SCALE = 1.4;
+    let scale = 1;
+    track.style.setProperty('zoom', '1');
+
+    // Available content area = the log's inner height minus its vertical padding.
+    const logStyle = getComputedStyle(logEl);
+    const padV =
+      (parseFloat(logStyle.paddingTop) || 0) + (parseFloat(logStyle.paddingBottom) || 0);
+
+    // Converge on the scale where the words fill the available height — shrinking
+    // when they overflow and growing into spare space. We measure the track's
+    // rendered height via getBoundingClientRect (which, unlike scrollHeight,
+    // reflects the applied `zoom`) and re-measure each step to handle chips
+    // re-wrapping as the scale changes.
+    for (let i = 0; i < 8; i++) {
+      const content = track.getBoundingClientRect().height;
+      const avail = logEl.clientHeight - padV;
+      if (content <= 0 || avail <= 0) break;
+      let next = scale * (avail / content);
+      next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
+      if (Math.abs(next - scale) < 0.01) {
+        scale = next;
+        break;
+      }
+      scale = next;
+      track.style.setProperty('zoom', `${scale}`);
+    }
+
+    const overflowDistance = logEl.scrollHeight - logEl.clientHeight;
+    if (overflowDistance > 1) {
+      // Still too much to fit even at the minimum scale — scroll the remainder.
+      // The translate is in the track's own (zoomed) coordinates, so divide the
+      // rendered overflow by the scale to move the right visual distance.
+      logEl.style.setProperty('--scroll-amount', `${-(overflowDistance / scale)}px`);
+      const scrollDuration = Math.min(40, Math.max(12, overflowDistance / 18 + 8));
+      logEl.style.setProperty('--scroll-duration', `${scrollDuration}s`);
+
+      // Restart the animation so new content begins from the top each update.
+      logEl.classList.remove('auto-scroll');
+      void logEl.offsetHeight;
+      logEl.classList.add('auto-scroll');
+    } else {
+      logEl.style.setProperty('--scroll-amount', '0px');
+      logEl.classList.remove('auto-scroll');
+    }
+  }
+
+  private ensureWordLogResizeObserver() {
+    if (this.wordLogResizeObserver) return;
+    if (typeof ResizeObserver === 'undefined') return;
+    const logEl = document.getElementById('correct-words-log');
+    if (!logEl) return;
+
+    this.wordLogResizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(this.wordLogResizeRaf);
+      this.wordLogResizeRaf = requestAnimationFrame(() => this.fitWordLog());
+    });
+    this.wordLogResizeObserver.observe(logEl);
   }
 
   calculateHiddenLetters(bigWord: string) {
