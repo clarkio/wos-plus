@@ -15,6 +15,43 @@ export function isWosWord(word: string): boolean {
   return wosDictionarySet.has(word.toLowerCase());
 }
 
+/**
+ * Returns true when `word` can be spelled using `availableLetters`, respecting
+ * letter frequency (each tile can only be used once). A '?' in availableLetters
+ * is treated as a wildcard that matches any single letter, which is how a
+ * level's still-hidden letters (level 19+) appear before they're revealed.
+ *
+ * Used when reconstructing a masked correct-guess from a player's Twitch chat:
+ * a candidate message must not only be a real word but also actually be
+ * spellable from the level's tiles, otherwise it can't be the word WoS accepted.
+ */
+export function canFormWord(word: string, availableLetters: string[]): boolean {
+  if (!word) return false;
+
+  const available: { [key: string]: number } = {};
+  let wildcards = 0;
+  for (const rawLetter of availableLetters) {
+    const letter = rawLetter.toLowerCase();
+    if (letter === '?') {
+      wildcards++;
+    } else {
+      available[letter] = (available[letter] || 0) + 1;
+    }
+  }
+
+  for (const char of word.toLowerCase()) {
+    if (available[char]) {
+      available[char]--;
+    } else if (wildcards > 0) {
+      wildcards--;
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export interface Slot {
   letters: string[];
   user?: string | null;
