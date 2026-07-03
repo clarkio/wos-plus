@@ -6,11 +6,14 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 0.5fr 0.5fr;
   grid-template-rows: 0.25fr 1fr 1fr 1fr;
-  gap: 5px;
+  gap: 14px;
+  padding: 14px;
   width: 100vw;
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
+  background: var(--sp-bg);
+  font-family: var(--font-ui);
 }
 
 .player-wos-board-container {
@@ -29,6 +32,40 @@
   justify-content: center;
   align-items: center;
   position: relative;
+}
+
+/* HUD layout: keep the current-level block and the three record badges
+   (all-time best, daily best, clears) all on a single horizontal row. This
+   makes the top-right component just one row tall so the stream chat gets more
+   of the right column's vertical space. The row is kept on one line (nowrap)
+   and scaled down to fit by fitHud() in the spectator script, so long values
+   (4+ digits) stay tidy and legible instead of wrapping. */
+.player-channel-data-container .overlay {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: clamp(0.3rem, 1vw, 0.6rem);
+}
+
+.player-channel-data-container .level-record-container {
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: clamp(0.3rem, 1vw, 0.6rem);
+}
+
+/* Stable digit widths so the badges don't jitter as values change. */
+.player-channel-data-container .level-value,
+.player-channel-data-container .level-record-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.player-channel-data-container .level-current {
+  /* Trim the padding and drop the wide min-width so the level block only takes
+     the space it needs, keeping the whole HUD on one row at smaller widths. */
+  padding: 0.3rem 0.6rem;
+  min-width: 0;
 }
 
 .settings-button {
@@ -81,8 +118,13 @@
   grid-row-start: 4;
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 5px;
-  overflow: hidden;
+  /* Gap must be >= the 6px offset shadow so the word-log's shadow lands in the
+     gutter instead of bleeding onto the letters panel. */
+  gap: 14px;
+  /* Keep overflow visible so the panels' hard offset shadows can render into
+     the surrounding grid gutter/padding instead of being clipped at the
+     right/bottom edges. */
+  overflow: visible;
 }
 
 #player-correct-words-log-container {
@@ -153,7 +195,10 @@
   color: var(--text-muted);
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  /* Must stay visible so the letters panel's offset shadow can render into the
+     grid gutter/padding. The inner .level-data-container handles its own
+     content overflow, so nothing leaks here. */
+  overflow: visible;
 }
 
 .level-data-container {
@@ -444,6 +489,27 @@
   }
 }
 
+/* On shorter screens (e.g. 1280x720) the right column is narrow, so tighten the
+   level block + record badges enough that they stay on a single HUD row instead
+   of wrapping. Bounded above 600px tall so the dedicated 896x510 handheld rules
+   below keep full control of that case. */
+@media (max-height: 768px) and (min-height: 601px) {
+  .player-channel-data-container .overlay,
+  .player-channel-data-container .level-record-container {
+    gap: 0.3rem;
+  }
+
+  .player-channel-data-container .level-record {
+    padding: 0.15rem 0.4rem 0.15rem 0.25rem;
+    gap: 0.25rem;
+  }
+
+  .player-channel-data-container .level-record .icon {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+}
+
 /* Specific fix for 896x510 (Steam Deck / Handhelds) */
 @media (max-width: 900px) and (max-height: 600px) {
   .player-wos-main-grid {
@@ -647,4 +713,194 @@
     top: 4px;
     left: 4px;
   }
+}
+
+/* ==========================================================================
+   "Sticker Pop" skin
+   --------------------------------------------------------------------------
+   Re-skins the player view to match the committed landing direction: flat
+   color blocks, hard offset shadows, chunky Fredoka type, sticker HUD badges
+   and chip-style word chips. Only visual properties are touched here — the
+   grid layout, sizing logic and every id/class the spectator script drives
+   (#level-value, #correct-words-log, .word-group, .correct-word, …) are left
+   intact. Scoped to player selectors so the streamer/bot views are unaffected.
+   ========================================================================== */
+
+/* --- Board: purple block with cyan offset shadow ------------------------- */
+.player-wos-board-container {
+  background: var(--sp-purple);
+  border-radius: 20px;
+  box-shadow: 6px 6px 0 var(--sp-cyan);
+}
+
+/* --- Chat: dark block with pink offset shadow ---------------------------- */
+.player-twitch-chat-frame {
+  background: var(--sp-bg-deep);
+  border: none;
+  border-radius: 20px;
+  box-shadow: 6px 6px 0 var(--sp-pink);
+}
+
+/* --- Settings button: white sticker -------------------------------------- */
+.settings-button {
+  background: #fff;
+  border: none;
+  border-radius: 12px;
+  color: var(--sp-purple);
+  box-shadow: 3px 3px 0 var(--sp-bg-deep);
+}
+
+.settings-button:hover {
+  background: #fff;
+  border: none;
+  color: var(--sp-purple);
+  transform: translate(-1px, -1px);
+}
+
+/* --- HUD: LEVEL block + record badges as stickers ------------------------ */
+.player-channel-data-container .level-current {
+  background: var(--sp-bg-deep);
+  border: none;
+  border-radius: 15px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+  font-family: var(--font-display);
+}
+
+.player-channel-data-container .level-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: #c9a6ff;
+}
+
+.player-channel-data-container .level-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+}
+
+.player-channel-data-container .level-record {
+  border: none;
+  border-radius: 13px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 0.2rem 0.6rem 0.2rem 0.3rem;
+  gap: 0.4rem;
+}
+
+/* Trophy / personal best — yellow */
+.player-channel-data-container .level-record:nth-child(1) {
+  background: var(--sp-yellow);
+  color: var(--sp-bg-deep);
+}
+
+/* Daily best — pink. Dark ink (not white) so the value clears WCAG contrast on
+   the vivid pink, matching how the yellow/cyan badges use dark ink. */
+.player-channel-data-container .level-record:nth-child(2) {
+  background: var(--sp-pink);
+  color: var(--sp-bg-deep);
+}
+
+/* Daily clears — cyan */
+.player-channel-data-container .level-record:nth-child(3) {
+  background: var(--sp-cyan);
+  color: var(--sp-cyan-ink);
+}
+
+.player-channel-data-container .level-record .icon,
+.player-channel-data-container .level-record-value {
+  color: inherit;
+}
+
+/* --- Word log: dark block with yellow offset shadow ---------------------- */
+.player-correct-words-log {
+  background: var(--sp-bg-deep);
+  border: none;
+  border-radius: 20px;
+  box-shadow: 6px 6px 0 var(--sp-yellow);
+}
+
+.correct-words-header {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+}
+
+.correct-words-header :global(.made-by),
+.correct-words-header .made-by {
+  color: var(--sp-cyan);
+}
+
+/* Length badge — small yellow sticker square */
+.player-bottom-container .word-group {
+  border-bottom: none;
+}
+
+.player-bottom-container .word-group__title {
+  background: var(--sp-yellow);
+  color: var(--sp-bg-deep);
+  border-radius: 9px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 0.15em 0.35em;
+}
+
+/* Found word — purple chip */
+.player-bottom-container .correct-word {
+  background: var(--sp-chip);
+  color: #e9dcff;
+  border-radius: 9px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+  padding: 0.2rem 0.6rem;
+}
+
+/* Missed word — pink chip. Dark ink (not white) to clear WCAG contrast on the
+   vivid pink background. */
+.player-bottom-container .correct-word.missing-word {
+  background: var(--sp-pink);
+  border-color: transparent;
+  color: var(--sp-bg-deep);
+}
+
+/* --- Letters panel: dark block with cyan offset shadow ------------------- */
+.level-data-container {
+  background: var(--sp-bg-deep);
+  border: none;
+  border-radius: 20px;
+  box-shadow: 6px 6px 0 var(--sp-cyan);
+}
+
+.level-data-container .letters-label,
+.level-data-container .hidden-letter-label,
+.level-data-container .fake-letter-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  /* Brighter than --sp-ink-dim so the labels (e.g. "Big Word") stay legible
+     against the dark sticker panel. */
+  color: var(--sp-ink-muted);
+}
+
+.level-data-container .letters {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 2px;
+}
+
+.level-data-container .hidden-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--sp-yellow);
+  letter-spacing: 2px;
+}
+
+.level-data-container .fake-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--sp-pink);
+  letter-spacing: 2px;
 }

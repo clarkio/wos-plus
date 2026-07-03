@@ -99,14 +99,44 @@ body {
   overflow-y: hidden;
 }
 
+/* Track holds every word group. Keeping the groups in one wrapper lets the
+   auto-scroll animation translate the content while the log box itself (and its
+   offset shadow) stays anchored in place. */
+.correct-words-track {
+  display: flex;
+  flex-direction: column;
+  gap: inherit;
+}
+
+/* When the words overflow, the render code adds `auto-scroll` to the log and
+   sets --scroll-amount/--scroll-duration. The track then gently scrolls the
+   hidden rows into view and back so nothing is ever permanently cut off. */
+.auto-scroll .correct-words-track {
+  animation: autoScroll var(--scroll-duration, 16s) ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Don't auto-scroll for motion-sensitive viewers, but keep the overflow
+     reachable so words still aren't permanently cut off. */
+  .auto-scroll .correct-words-track {
+    animation: none;
+  }
+
+  .correct-words-log.auto-scroll,
+  .player-correct-words-log.auto-scroll {
+    overflow-y: auto;
+  }
+}
+
 @keyframes autoScroll {
   0%,
-  25% {
+  20% {
     transform: translateY(0);
   }
 
   50%,
-  75% {
+  70% {
     transform: translateY(var(--scroll-amount));
   }
 
