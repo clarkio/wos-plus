@@ -5,12 +5,14 @@ import Twitch from "../components/Icons/Twitch.astro";
 import Settings from "../components/Icons/Settings.astro";
 import SettingsDialog from "../components/SettingsDialog.astro";
 import MadeBy from "../components/MadeBy.astro";
+import ThemeControl from "../components/ThemeControl.astro";
 ---
 
 <WosBaseLayout
   title="WoS+ | Words on Stream Plus - Player"
   description="WoS+ | Words on Stream Plus - Player - An enhanced spectator interface for Words on Stream with Twitch chat integration and customizable settings."
   keywords="clarkio, words on stream, wos, twitch, streaming, helper, wordsonstream, tool, wos plus, player"
+  defaultTheme="sticker-pop"
 >
   <SettingsDialog id="player-settings" title="Player Settings">
     <form id="player-settings-form" class="settings-form">
@@ -91,6 +93,7 @@ import MadeBy from "../components/MadeBy.astro";
           >Play custom clarkio sounds for in game events such as "CLEAR!" when all words on the board are found</small
         >
       </div>
+      <ThemeControl defaultTheme="sticker-pop" />
     </form>
   </SettingsDialog>
 

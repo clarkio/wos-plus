@@ -320,6 +320,41 @@ body {
   min-height: 0;
 }
 
+/* Settings Button (shared across player/streamer pages) */
+.settings-button {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  /* Match the dark background used by the level/current data */
+  background: #000;
+  border: 0.1875rem solid #fff;
+  border-radius: 8px;
+  color: var(--text-primary, #dacfe6);
+  padding: 0.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.settings-button:hover {
+  background: #0f0f0f;
+  border-color: var(--accent-violet, #c79cff);
+  color: var(--text-lightest, #f5efff);
+  transform: scale(1.05);
+}
+
+.settings-button:active {
+  transform: scale(0.95);
+}
+
+.settings-button svg {
+  width: 24px;
+  height: 24px;
+}
+
 /* Overlay Components */
 .overlay {
   display: flex;

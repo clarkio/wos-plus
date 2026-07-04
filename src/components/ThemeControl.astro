@@ -1,0 +1,107 @@
+---
+/**
+ * ThemeControl
+ * A theme picker that lets the user switch the UI between the "default" look
+ * (the original dark-purple styling) and the bold "Sticker Pop" look. Drop it
+ * inside a settings form. The choice is applied by toggling `data-theme` on the
+ * document root and persisted to localStorage so it carries across both the
+ * player and streamer views.
+ *
+ * `defaultTheme` is the theme used when the visitor has not chosen one yet. It
+ * should match the view's original appearance ("sticker-pop" for the player,
+ * "default" for the streamer) so nothing changes for existing users until they
+ * opt in.
+ */
+export interface Props {
+  defaultTheme?: 'default' | 'sticker-pop';
+}
+
+const { defaultTheme = 'default' } = Astro.props;
+---
+
+<div class="form-group">
+  <label for="theme-select">Theme</label>
+  <select id="theme-select" name="theme" class="theme-select">
+    <option value="default">Default</option>
+    <option value="sticker-pop">Sticker Pop</option>
+  </select>
+  <small class="form-help"
+    >Switch between the default look and the bold "Sticker Pop" look. Applies to
+    both the player and streamer views.</small
+  >
+</div>
+
+<script is:inline define:vars={{ defaultTheme }}>
+  (function () {
+    const STORAGE_KEY = "wosPlusTheme";
+    const VALID = ["default", "sticker-pop"];
+
+    const fallbackTheme = VALID.includes(defaultTheme) ? defaultTheme : "default";
+
+    const resolveTheme = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored && VALID.includes(stored)) return stored;
+      } catch (e) {
+        /* localStorage may be unavailable (private mode, etc.) */
+      }
+      return fallbackTheme;
+    };
+
+    const applyTheme = (theme) => {
+      document.documentElement.dataset.theme = theme;
+    };
+
+    const init = () => {
+      const current = resolveTheme();
+      applyTheme(current);
+
+      const select = document.getElementById("theme-select");
+      if (!(select instanceof HTMLSelectElement)) return;
+
+      select.value = current;
+
+      if (select.dataset.bound === "true") return;
+      select.dataset.bound = "true";
+
+      // Apply and persist immediately so the change previews live.
+      select.addEventListener("change", () => {
+        const value = VALID.includes(select.value) ? select.value : fallbackTheme;
+        applyTheme(value);
+        try {
+          localStorage.setItem(STORAGE_KEY, value);
+        } catch (e) {
+          /* ignore persistence failures */
+        }
+      });
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+    // Re-sync after Astro client-side navigations.
+    document.addEventListener("astro:page-load", init);
+  })();
+</script>
+
+<style>
+  .theme-select {
+    padding: 0.75rem;
+    border: 1px solid var(--border-primary, rgba(199, 156, 255, 0.4));
+    border-radius: 6px;
+    background: var(--bg-tertiary, #4b1a81);
+    color: var(--text-primary, #dacfe6);
+    font-size: 1rem;
+    font-family: var(--font-main, "Inter", sans-serif);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .theme-select:focus {
+    outline: none;
+    border-color: var(--accent-violet, #c79cff);
+    background: var(--bg-dark, #161625);
+  }
+</style>
