@@ -45,6 +45,9 @@ import MadeBy from "../components/MadeBy.astro";
           >The Twitch channel to connect to. You can paste the full channel URL
           or just the username.</small
         >
+        <small class="form-error" id="twitch-channel-error" hidden
+          >Enter a valid, existing Twitch channel name.</small
+        >
       </div>
       <div class="form-group">
         <label class="toggle-label">
@@ -281,6 +284,10 @@ import MadeBy from "../components/MadeBy.astro";
 <script>
   import { GameSpectator } from "../scripts/wos-plus-main";
   import { normalizeMirrorUrl } from "../scripts/mirror-url";
+  import {
+    isValidTwitchLoginFormat,
+    twitchChannelExists,
+  } from "../scripts/twitch-channel";
 
   const boardContainer = document.getElementById(
     "wos-board",
@@ -304,6 +311,25 @@ import MadeBy from "../components/MadeBy.astro";
   const clearMirrorUrlError = () => {
     mirrorUrlErrorEl()?.setAttribute("hidden", "");
     mirrorUrlInputEl()?.classList.remove("input-invalid");
+  };
+
+  const twitchChannelErrorEl = () =>
+    document.getElementById("twitch-channel-error") as HTMLElement | null;
+  const twitchChannelInputEl = () =>
+    document.getElementById("twitch-channel-input") as HTMLInputElement | null;
+
+  const showTwitchChannelError = (message?: string) => {
+    const errorEl = twitchChannelErrorEl();
+    if (errorEl && message) {
+      errorEl.textContent = message;
+    }
+    errorEl?.removeAttribute("hidden");
+    twitchChannelInputEl()?.classList.add("input-invalid");
+  };
+
+  const clearTwitchChannelError = () => {
+    twitchChannelErrorEl()?.setAttribute("hidden", "");
+    twitchChannelInputEl()?.classList.remove("input-invalid");
   };
 
   const extractTwitchChannel = (input: string): string => {
@@ -433,7 +459,7 @@ import MadeBy from "../components/MadeBy.astro";
     if (!settingsDialog) return;
 
     // Set up save callback
-    settingsDialog.onSave((data: Record<string, any>) => {
+    settingsDialog.onSave(async (data: Record<string, any>) => {
       // Validate the mirror URL before applying anything. Only official WoS
       // mirror links (https://wos.gg/r/<gameId>) are allowed — anything else
       // (other sites, other paths) is rejected so the board iframe can't be
@@ -449,20 +475,40 @@ import MadeBy from "../components/MadeBy.astro";
       }
       clearMirrorUrlError();
 
+      // Validate the Twitch channel. A malformed or nonexistent channel name
+      // otherwise leaves the chat embed stuck on "Connecting to chat" with no
+      // indication of why (issue #103), so reject it here instead.
+      let newChannel = twitchChannel;
+      if (data.twitchChannel) {
+        const channel = extractTwitchChannel(data.twitchChannel);
+        if (!channel || !isValidTwitchLoginFormat(channel)) {
+          showTwitchChannelError("Enter a valid Twitch channel name.");
+          return false;
+        }
+
+        const exists = await twitchChannelExists(channel);
+        if (exists === false) {
+          showTwitchChannelError(
+            `No Twitch channel found named "${channel}".`,
+          );
+          return false;
+        }
+        // `exists === null` means the check couldn't be completed (e.g. the
+        // lookup service is unreachable) — don't block saving on that.
+
+        clearTwitchChannelError();
+        newChannel = channel;
+      } else {
+        clearTwitchChannelError();
+      }
+
       const params = new URLSearchParams(window.location.search);
 
       // Update the settings parameters with the canonical mirror URL
       if (data.mirrorUrl) {
         params.set("mirrorUrl", normalizedMirrorUrl);
       }
-      let newChannel = twitchChannel;
-      if (data.twitchChannel) {
-        const channel = extractTwitchChannel(data.twitchChannel);
-        if (channel) {
-          params.set("twitchChannel", channel);
-          newChannel = channel;
-        }
-      }
+      params.set("twitchChannel", newChannel);
       // Handle chat enabled toggle
       params.set("chat", data.chatEnabled ? "true" : "false");
       // Handle WoS board visibility toggle
