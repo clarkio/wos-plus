@@ -1,0 +1,278 @@
+/* ==========================================================================
+   "Sticker Pop" theme
+   --------------------------------------------------------------------------
+   Bold, game-native skin: flat color blocks, hard offset shadows, chunky
+   Fredoka type, sticker HUD badges and chip-style word chips.
+
+   Applied when the document root carries `data-theme="sticker-pop"`. Shared by
+   both the player and streamer views so either can render in this look. Only
+   visual properties are touched here — the grid layout, sizing logic and every
+   id/class the spectator script drives (#level-value, #correct-words-log,
+   .word-group, .correct-word, …) are left intact. When the root theme is
+   anything else (the "default" theme) none of these rules apply and the views
+   fall back to their base dark-purple styling.
+   ========================================================================== */
+
+/* --- Grid backdrop + UI font --------------------------------------------- */
+[data-theme="sticker-pop"] .player-wos-main-grid,
+[data-theme="sticker-pop"] .streamer-wos-main-grid {
+  background: var(--sp-bg);
+  font-family: var(--font-ui);
+}
+
+/* Streamer spacing parity: the Sticker Pop skin uses hard 6px offset shadows,
+   which need room to land in the grid gutter instead of being clipped or
+   bleeding onto neighbors. The player grid already reserves that room (14px
+   gap + padding, visible overflow on the bottom panels); give the streamer the
+   same, scoped to Sticker Pop so its default theme keeps the original tight
+   spacing. */
+[data-theme="sticker-pop"] .streamer-wos-main-grid {
+  gap: 14px;
+  padding: 14px;
+}
+
+[data-theme="sticker-pop"] .streamer-bottom-container {
+  gap: 14px;
+  /* Keep visible so the panels' hard offset shadows render into the gutter
+     instead of being clipped at the right/bottom edges. */
+  overflow: visible;
+}
+
+[data-theme="sticker-pop"] .streamer-level-data-grid-container {
+  overflow: visible;
+}
+
+/* The word-log wrapper clips its child's offset shadow by default; let it show
+   so the log's yellow offset shadow reaches the gutter like the player's. The
+   log itself still scrolls its own content. */
+[data-theme="sticker-pop"] #streamer-correct-words-log-container {
+  overflow: visible;
+}
+
+/* --- Board: purple block with cyan offset shadow ------------------------- */
+[data-theme="sticker-pop"] .player-wos-board-container,
+[data-theme="sticker-pop"] .streamer-wos-board-container {
+  background: var(--sp-purple);
+  border-radius: 20px;
+  box-shadow: 6px 6px 0 var(--sp-cyan);
+}
+
+/* --- Chat: dark block with pink offset shadow ---------------------------- */
+[data-theme="sticker-pop"] .player-twitch-chat-frame,
+[data-theme="sticker-pop"] .streamer-twitch-chat-frame {
+  background: var(--sp-bg-deep);
+  border: none;
+  border-radius: 20px;
+  box-shadow: 6px 6px 0 var(--sp-pink);
+}
+
+/* --- Settings button: white sticker -------------------------------------- */
+[data-theme="sticker-pop"] .settings-button {
+  background: #fff;
+  border: none;
+  border-radius: 12px;
+  color: var(--sp-purple);
+  box-shadow: 3px 3px 0 var(--sp-bg-deep);
+}
+
+[data-theme="sticker-pop"] .settings-button:hover {
+  background: #fff;
+  border: none;
+  color: var(--sp-purple);
+  transform: translate(-1px, -1px);
+}
+
+/* --- HUD: LEVEL block + record badges as stickers ------------------------ */
+[data-theme="sticker-pop"] .player-channel-data-container .level-current,
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-current {
+  background: var(--sp-bg-deep);
+  border: none;
+  border-radius: 15px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.35);
+  font-family: var(--font-display);
+}
+
+[data-theme="sticker-pop"] .player-channel-data-container .level-title,
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: #c9a6ff;
+}
+
+[data-theme="sticker-pop"] .player-channel-data-container .level-value,
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+}
+
+[data-theme="sticker-pop"] .player-channel-data-container .level-record,
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record {
+  border: none;
+  border-radius: 13px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 0.2rem 0.6rem 0.2rem 0.3rem;
+  gap: 0.4rem;
+}
+
+/* Trophy / personal best — yellow */
+[data-theme="sticker-pop"] .player-channel-data-container .level-record:nth-child(1),
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record:nth-child(1) {
+  background: var(--sp-yellow);
+  color: var(--sp-bg-deep);
+}
+
+/* Daily best — pink. Dark ink (not white) so the value clears WCAG contrast on
+   the vivid pink, matching how the yellow/cyan badges use dark ink. */
+[data-theme="sticker-pop"] .player-channel-data-container .level-record:nth-child(2),
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record:nth-child(2) {
+  background: var(--sp-pink);
+  color: var(--sp-bg-deep);
+}
+
+/* Daily clears — cyan */
+[data-theme="sticker-pop"] .player-channel-data-container .level-record:nth-child(3),
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record:nth-child(3) {
+  background: var(--sp-cyan);
+  color: var(--sp-cyan-ink);
+}
+
+[data-theme="sticker-pop"] .player-channel-data-container .level-record .icon,
+[data-theme="sticker-pop"] .player-channel-data-container .level-record-value,
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record .icon,
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record-value {
+  color: inherit;
+}
+
+/* Streamer HUD parity: the player view lays the LEVEL block and the three
+   record badges out on a single horizontal row (a Sticker Pop design cue). The
+   streamer view keeps its stacked layout in the default theme, so mirror the
+   player's one-row treatment here, scoped to the streamer + Sticker Pop only.
+   fitHud() in the spectator script scales this row down to fit, just like the
+   player. */
+[data-theme="sticker-pop"] .streamer-channel-data-container .overlay {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: clamp(0.3rem, 1vw, 0.6rem);
+}
+
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record-container {
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: clamp(0.3rem, 1vw, 0.6rem);
+}
+
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-current {
+  /* Trim the padding and drop the wide min-width so the level block only takes
+     the space it needs, keeping the whole HUD on one row. */
+  padding: 0.3rem 0.6rem;
+  min-width: 0;
+}
+
+/* Stable digit widths so the badges don't jitter as values change. */
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-value,
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Word log: dark block with yellow offset shadow ---------------------- */
+[data-theme="sticker-pop"] .player-correct-words-log,
+[data-theme="sticker-pop"] .correct-words-log {
+  background: var(--sp-bg-deep);
+  border: none;
+  border-radius: 20px;
+  box-shadow: 6px 6px 0 var(--sp-yellow);
+}
+
+[data-theme="sticker-pop"] .correct-words-header {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+}
+
+[data-theme="sticker-pop"] .correct-words-header .made-by {
+  color: var(--sp-cyan);
+}
+
+/* Length badge — small yellow sticker square */
+[data-theme="sticker-pop"] .player-bottom-container .word-group,
+[data-theme="sticker-pop"] .streamer-bottom-container .word-group {
+  border-bottom: none;
+}
+
+[data-theme="sticker-pop"] .player-bottom-container .word-group__title,
+[data-theme="sticker-pop"] .streamer-bottom-container .word-group__title {
+  background: var(--sp-yellow);
+  color: var(--sp-bg-deep);
+  border-radius: 9px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 0.15em 0.35em;
+}
+
+/* Found word — purple chip */
+[data-theme="sticker-pop"] .player-bottom-container .correct-word,
+[data-theme="sticker-pop"] .streamer-bottom-container .correct-word {
+  background: var(--sp-chip);
+  color: #e9dcff;
+  border-radius: 9px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+  padding: 0.2rem 0.6rem;
+}
+
+/* Missed word — pink chip. Dark ink (not white) to clear WCAG contrast on the
+   vivid pink background. */
+[data-theme="sticker-pop"] .player-bottom-container .correct-word.missing-word,
+[data-theme="sticker-pop"] .streamer-bottom-container .correct-word.missing-word {
+  background: var(--sp-pink);
+  border-color: transparent;
+  color: var(--sp-bg-deep);
+}
+
+/* --- Letters panel: dark block with cyan offset shadow ------------------- */
+[data-theme="sticker-pop"] .level-data-container {
+  background: var(--sp-bg-deep);
+  border: none;
+  border-radius: 20px;
+  box-shadow: 6px 6px 0 var(--sp-cyan);
+}
+
+[data-theme="sticker-pop"] .level-data-container .letters-label,
+[data-theme="sticker-pop"] .level-data-container .hidden-letter-label,
+[data-theme="sticker-pop"] .level-data-container .fake-letter-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  /* Brighter than --sp-ink-dim so the labels (e.g. "Big Word") stay legible
+     against the dark sticker panel. */
+  color: var(--sp-ink-muted);
+}
+
+[data-theme="sticker-pop"] .level-data-container .letters {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 2px;
+}
+
+[data-theme="sticker-pop"] .level-data-container .hidden-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--sp-yellow);
+  letter-spacing: 2px;
+}
+
+[data-theme="sticker-pop"] .level-data-container .fake-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--sp-pink);
+  letter-spacing: 2px;
+}

@@ -132,7 +132,9 @@ export class GameSpectator {
    * ever scales down, so short values render at full size.
    */
   private fitHud() {
-    const hud = document.querySelector('.player-channel-data-container') as HTMLElement | null;
+    const hud = document.querySelector(
+      '.player-channel-data-container, .streamer-channel-data-container'
+    ) as HTMLElement | null;
     const overlay = hud?.querySelector('.overlay') as HTMLElement | null;
     if (!hud || !overlay) return;
 
