@@ -42,6 +42,13 @@
   overflow: visible;
 }
 
+/* The word-log wrapper clips its child's offset shadow by default; let it show
+   so the log's yellow offset shadow reaches the gutter like the player's. The
+   log itself still scrolls its own content. */
+[data-theme="sticker-pop"] #streamer-correct-words-log-container {
+  overflow: visible;
+}
+
 /* --- Board: purple block with cyan offset shadow ------------------------- */
 [data-theme="sticker-pop"] .player-wos-board-container,
 [data-theme="sticker-pop"] .streamer-wos-board-container {
