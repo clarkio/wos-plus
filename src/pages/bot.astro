@@ -8,834 +8,771 @@ import Twitch from "../components/Icons/Twitch.astro";
   description="Add the WoS+ Bot to your Twitch channel for automatic game tracking, word definitions, player stats, and more."
   keywords="words on stream, wos, chatbot, twitch bot, wos plus bot, commands, define, streamer tools"
 >
-  <div class="landing-page">
-    <!-- Header -->
-    <header class="header">
-      <div class="header-content">
-        <a href="/" class="logo-section">
-          <span class="brand-name">WoS<span class="plus">+</span></span>
-        </a>
-        <nav class="nav">
-          <a href="/" class="nav-link">Home</a>
-        </nav>
-      </div>
+  <div class="sp-bot">
+    <!-- ===================== Nav ===================== -->
+    <header class="sp-nav">
+      <a href="/" class="sp-brand">WoS<span class="sp-brand-plus">+</span></a>
+      <nav class="sp-nav-links">
+        <a href="/">Home</a>
+        <a href="#features">Features</a>
+        <a href="#commands" class="sp-nav-launch">Add Bot</a>
+      </nav>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-content">
-        <div class="hero-badge">
-          <Twitch width={24} height={24} />
-          <span>Twitch Chatbot for WoS Streamers</span>
-        </div>
-        <h1 class="hero-title">
-          WoS<span class="gradient-text">+</span> Bot
+    <!-- ===================== Hero ===================== -->
+    <section class="sp-hero">
+      <span class="sp-float-tile sp-float-w">🤖</span>
+      <span class="sp-float-tile sp-float-o">!</span>
+
+      <div class="sp-hero-content">
+        <span class="sp-hero-badge">
+          <Twitch width={16} height={16} />
+          Twitch chatbot for WoS streamers
+        </span>
+        <h1 class="sp-hero-title">
+          WoS<span class="sp-hero-accent">+</span> BOT
         </h1>
-        <p class="hero-subtitle">
+        <p class="sp-hero-sub">
           A Twitch chatbot that automatically tracks your Words on Stream
           sessions, looks up word definitions on demand, and keeps stats for
           your channel &mdash; so you can focus on playing.
         </p>
-        <div class="hero-cta">
+        <div class="sp-hero-cta">
           <a
             href="https://wos-plus-bot.onrender.com/auth"
-            class="btn btn-primary"
+            class="sp-btn sp-btn-cyan"
             target="_blank"
             rel="noopener"
           >
-            <Twitch width={20} height={20} />
+            <Twitch width={18} height={18} />
             Add Bot to Your Channel
           </a>
-          <a href="#commands" class="btn btn-secondary">
-            See Commands
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </a>
+          <a href="#commands" class="sp-btn sp-btn-pink">See Commands →</a>
         </div>
       </div>
     </section>
 
-    <!-- Features Section -->
-    <section id="features" class="features">
-      <div class="section-header">
-        <h2 class="section-title">Why add WoS+ Bot?</h2>
-        <p class="section-subtitle">
-          Automatic enhancements for your Words on Stream channel
-        </p>
-      </div>
+    <!-- ===================== Features ===================== -->
+    <section id="features" class="sp-section">
+      <h2 class="sp-section-title">Why add WoS+ Bot?</h2>
+      <p class="sp-section-sub">
+        Automatic enhancements for your Words on Stream channel
+      </p>
 
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🤖</div>
-          <h3 class="feature-title">Automatic Session Tracking</h3>
-          <p class="feature-description">
+      <div class="sp-features">
+        <div class="sp-feature sp-feature-purple">
+          <div class="sp-feature-icon">🤖</div>
+          <h3>Automatic session tracking</h3>
+          <p>
             The bot detects when a WoS game starts and automatically tracks
             levels, results, and player participation in your channel.
           </p>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon">📖</div>
-          <h3 class="feature-title">Instant Word Definitions</h3>
-          <p class="feature-description">
+        <div class="sp-feature sp-feature-pink">
+          <div class="sp-feature-icon">📖</div>
+          <h3>Instant word definitions</h3>
+          <p>
             Players can type <code>!define</code> in chat to look up any word's
             definition without leaving the stream.
           </p>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <h3 class="feature-title">Channel Stats & Records</h3>
-          <p class="feature-description">
+        <div class="sp-feature sp-feature-cyan">
+          <div class="sp-feature-icon">📊</div>
+          <h3>Channel stats &amp; records</h3>
+          <p>
             Track your channel's best levels, daily achievements, and
             top-performing players over time.
           </p>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon">⚡</div>
-          <h3 class="feature-title">Zero Configuration</h3>
-          <p class="feature-description">
-            Authorize once and the bot auto-joins your channel. No setup files,
-            no config, no maintenance required.
+        <div class="sp-feature sp-feature-yellow">
+          <div class="sp-feature-icon">⚡</div>
+          <h3>Zero configuration</h3>
+          <p>
+            Authorize once and the bot auto-joins your channel. No setup
+            files, no config, no maintenance required.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- Commands Section -->
-    <section id="commands" class="commands-section">
-      <div class="section-header">
-        <h2 class="section-title">Available Commands</h2>
-        <p class="section-subtitle">Type these in your Twitch chat</p>
-      </div>
+    <!-- ===================== Commands ===================== -->
+    <section id="commands" class="sp-section">
+      <h2 class="sp-section-title">Available commands</h2>
+      <p class="sp-section-sub">Type these in your Twitch chat</p>
 
-      <div class="commands-grid">
-        <div class="command-card">
-          <code class="command-name">!define &lt;word&gt;</code>
-          <span class="command-alias">aliases: !def, !d, !definition</span>
-          <p class="command-desc">
+      <div class="sp-commands">
+        <div class="sp-command sp-command-1">
+          <code class="sp-command-name">!define &lt;word&gt;</code>
+          <span class="sp-command-alias">aliases: !def, !d, !definition</span>
+          <p class="sp-command-desc">
             Look up the definition of any word directly in chat.
           </p>
         </div>
 
-        <div class="command-card">
-          <code class="command-name">!help</code>
-          <span class="command-alias">aliases: !commands, !h</span>
-          <p class="command-desc">
+        <div class="sp-command sp-command-2">
+          <code class="sp-command-name">!help</code>
+          <span class="sp-command-alias">aliases: !commands, !h</span>
+          <p class="sp-command-desc">
             List all available bot commands and their descriptions.
           </p>
         </div>
 
-        <div class="command-card">
-          <code class="command-name">!ping</code>
-          <span class="command-alias">alias: !p</span>
-          <p class="command-desc">
+        <div class="sp-command sp-command-3">
+          <code class="sp-command-name">!ping</code>
+          <span class="sp-command-alias">alias: !p</span>
+          <p class="sp-command-desc">
             Check if the bot is online and responding in your channel.
           </p>
         </div>
       </div>
 
-      <p class="commands-footer">
+      <p class="sp-commands-footer">
         More commands coming soon &mdash; including channel achievements and
         player stats.
       </p>
     </section>
 
-    <!-- How It Works Section -->
-    <section class="how-it-works">
-      <div class="section-header">
-        <h2 class="section-title">Get started in three steps</h2>
-        <p class="section-subtitle">
-          Add the bot to your channel in under a minute
-        </p>
-      </div>
-
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <h3 class="step-title">Authorize with Twitch</h3>
-          <p class="step-description">
-            Click "Add Bot to Your Channel" and log in with your Twitch account
-            to grant access.
+    <!-- ===================== Steps ===================== -->
+    <section id="steps" class="sp-steps">
+      <h2 class="sp-steps-title">Get started in three steps</h2>
+      <div class="sp-steps-row">
+        <div class="sp-step sp-step-1">
+          <div class="sp-step-num">1</div>
+          <div class="sp-step-label">Authorize with Twitch</div>
+          <p class="sp-step-desc">
+            Click "Add Bot to Your Channel" and log in with your Twitch
+            account to grant access.
           </p>
         </div>
-
-        <div class="step-connector"></div>
-
-        <div class="step">
-          <div class="step-number">2</div>
-          <h3 class="step-title">Bot Joins Your Channel</h3>
-          <p class="step-description">
-            After authorization, WoS+ Bot automatically joins your Twitch chat.
-            No extra setup needed.
+        <div class="sp-step sp-step-2">
+          <div class="sp-step-num">2</div>
+          <div class="sp-step-label">Bot joins your channel</div>
+          <p class="sp-step-desc">
+            After authorization, WoS+ Bot automatically joins your Twitch
+            chat. No extra setup needed.
           </p>
         </div>
-
-        <div class="step-connector"></div>
-
-        <div class="step">
-          <div class="step-number">3</div>
-          <h3 class="step-title">Start Streaming</h3>
-          <p class="step-description">
-            Play Words on Stream as usual. The bot tracks sessions and responds
-            to commands in chat.
+        <div class="sp-step sp-step-3">
+          <div class="sp-step-num">3</div>
+          <div class="sp-step-label">Start streaming</div>
+          <p class="sp-step-desc">
+            Play Words on Stream as usual. The bot tracks sessions and
+            responds to commands in chat.
           </p>
         </div>
       </div>
     </section>
 
-    <!-- CTA Section -->
-    <section class="cta-section">
-      <div class="cta-content">
-        <h2 class="cta-title">Ready to add WoS+ Bot to your channel?</h2>
-        <p class="cta-subtitle">
+    <!-- ===================== CTA ===================== -->
+    <section class="sp-cta">
+      <div class="sp-cta-content">
+        <h2 class="sp-cta-title">Ready to add WoS+ Bot to your channel?</h2>
+        <p class="sp-cta-sub">
           One-click authorization. No configuration needed. Just connect and
           play.
         </p>
         <a
           href="https://wos-plus-bot.onrender.com/auth"
-          class="btn btn-primary btn-large"
+          class="sp-btn sp-btn-yellow"
           target="_blank"
           rel="noopener"
         >
-          Add Bot Now
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-          </svg>
+          Add Bot Now →
         </a>
       </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="footer-content">
-        <div class="footer-brand">
-          <div class="logo-section">
-            <span class="brand-name small"
-              >WoS<span class="plus">+</span></span
-            >
-          </div>
-          <p class="footer-tagline">
-            Enhancing Words on Stream, one word at a time.
-          </p>
-        </div>
-        <div class="footer-links">
-          <a href="/" class="footer-link">Home</a>
-          <a href="/streamer" class="footer-link">Streamer View</a>
-          <a
-            href="https://wos.gg"
-            target="_blank"
-            rel="noopener"
-            class="footer-link">Words on Stream</a
-          >
-          <a
-            href="https://twitch.tv/clarkio"
-            target="_blank"
-            rel="noopener"
-            class="footer-link"
-          >
-            <Twitch /> clarkio
-          </a>
-        </div>
+    <!-- ===================== Footer ===================== -->
+    <footer class="sp-footer">
+      <a href="/" class="sp-footer-brand">WoS<span class="sp-footer-plus">+</span></a>
+      <div class="sp-footer-links">
+        <a href="/">Home</a>
+        <a href="/streamer">Streamer View</a>
+        <a href="https://wos.gg" target="_blank" rel="noopener">Words on Stream</a>
+        <a href="https://twitch.tv/clarkio" target="_blank" rel="noopener">
+          <Twitch width={14} height={14} /> clarkio
+        </a>
       </div>
-      <div class="footer-bottom">
-        <p>Made with 💜 by <a href="https://twitch.tv/clarkio">clarkio</a></p>
+      <div class="sp-footer-by">
+        Made with 💜 by
+        <a href="https://twitch.tv/clarkio" target="_blank" rel="noopener">clarkio</a>
       </div>
     </footer>
   </div>
 </WosBaseLayout>
 
 <style>
-  .landing-page {
+  .sp-bot {
     min-height: 100vh;
     overflow-x: hidden;
-    background-color: var(--bg-dark);
+    background: var(--sp-bg);
+    font-family: var(--font-ui);
+    color: var(--sp-ink);
   }
 
-  /* Header */
-  .header {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: rgba(22, 22, 37, 0.8);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .header-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1rem 2rem;
+  /* ===================== Nav ===================== */
+  .sp-nav {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
+    padding: 18px 32px;
+    background: var(--sp-cyan);
+    color: var(--sp-cyan-ink);
   }
 
-  .logo-section {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    text-decoration: none;
-  }
-
-  .brand-name {
-    font-size: 1.5rem;
+  .sp-brand {
+    font-family: var(--font-display);
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 24px;
+    color: var(--sp-bg-deep);
+    text-decoration: none;
   }
 
-  .brand-name.small {
-    font-size: 1.25rem;
+  .sp-brand-plus {
+    color: var(--sp-purple);
   }
 
-  .brand-name .plus {
-    color: #8b5cf6;
-    font-weight: 800;
-  }
-
-  .nav {
+  .sp-nav-links {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 24px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
   }
 
-  .nav-link {
-    color: rgba(255, 255, 255, 0.6);
+  .sp-nav-links a {
+    color: var(--sp-cyan-ink);
     text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s ease;
   }
 
-  .nav-link:hover {
-    color: #8b5cf6;
+  .sp-nav-launch {
+    padding: 9px 20px;
+    border-radius: 999px;
+    background: var(--sp-bg-deep);
+    color: #fff !important;
+    box-shadow: 3px 3px 0 var(--sp-cyan-shadow);
+    transition: transform 0.12s ease;
   }
 
-  /* Hero Section */
-  .hero {
-    max-width: 800px;
+  .sp-nav-launch:hover {
+    transform: translate(-1px, -1px);
+  }
+
+  /* ===================== Hero ===================== */
+  .sp-hero {
+    position: relative;
+    padding: 54px 32px 50px;
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 6rem 2rem;
+    text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;
-    min-height: calc(100vh - 80px);
+  }
+
+  .sp-float-tile {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 700;
+    box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.35);
+  }
+
+  .sp-float-w {
+    top: 40px;
+    right: 80px;
+    width: 74px;
+    height: 74px;
+    border-radius: 16px;
+    background: var(--sp-yellow);
+    color: var(--sp-bg-deep);
+    font-size: 36px;
+    transform: rotate(-11deg);
+  }
+
+  .sp-float-o {
+    top: 150px;
+    right: 200px;
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    background: var(--sp-pink);
+    color: #fff;
+    font-size: 30px;
+    transform: rotate(9deg);
+  }
+
+  .sp-hero-content {
+    position: relative;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sp-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: var(--sp-purple);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 22px;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .sp-hero-badge :global(svg) {
+    fill: #fff;
+  }
+
+  .sp-hero-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 84px;
+    line-height: 0.95;
+    letter-spacing: -2px;
+    color: #fff;
+    text-shadow: 5px 5px 0 var(--sp-purple);
+  }
+
+  .sp-hero-accent {
+    color: var(--sp-yellow);
+    text-shadow: 5px 5px 0 var(--sp-bg-deep);
+  }
+
+  .sp-hero-sub {
+    margin: 26px 0 32px;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--sp-ink-muted);
+    max-width: 520px;
+    font-weight: 500;
+  }
+
+  .sp-hero-cta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
     justify-content: center;
   }
 
-  .hero-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2rem;
-  }
-
-  .hero-badge {
+  /* ===================== Buttons ===================== */
+  .sp-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: rgba(139, 92, 246, 0.1);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 2rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #8b5cf6;
-    width: fit-content;
+    gap: 8px;
+    padding: 16px 30px;
+    border-radius: 14px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.12s ease;
   }
 
-  .hero-title {
-    font-size: 3.5rem;
-    font-weight: 800;
-    line-height: 1.1;
+  .sp-btn:hover {
+    transform: translate(-1px, -1px);
+  }
+
+  .sp-btn:active {
+    transform: translate(2px, 2px);
+  }
+
+  .sp-btn-cyan {
+    background: var(--sp-cyan);
+    color: var(--sp-cyan-ink);
+    box-shadow: 5px 5px 0 var(--sp-cyan-shadow);
+  }
+
+  .sp-btn-cyan :global(svg) {
+    fill: var(--sp-cyan-ink);
+  }
+
+  .sp-btn-pink {
+    background: var(--sp-pink);
+    color: #fff;
+    box-shadow: 5px 5px 0 var(--sp-pink-shadow);
+  }
+
+  .sp-btn-yellow {
+    background: var(--sp-yellow);
+    color: var(--sp-bg-deep);
+    box-shadow: 5px 5px 0 var(--sp-yellow-shadow);
+  }
+
+  /* ===================== Section headers ===================== */
+  .sp-section {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 60px 32px;
+    text-align: center;
+  }
+
+  .sp-section-title {
+    margin: 0 0 8px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 40px;
+    color: #fff;
+  }
+
+  .sp-section-sub {
+    margin: 0 0 40px;
+    font-size: 17px;
+    color: var(--sp-ink-muted);
+  }
+
+  /* ===================== Features ===================== */
+  .sp-features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+
+  .sp-feature {
+    padding: 38px 34px;
+    text-align: left;
+  }
+
+  .sp-feature h3 {
+    margin: 14px 0 6px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .sp-feature p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.95);
+    font-size: 14.5px;
+    line-height: 1.5;
   }
 
-  .gradient-text {
-    background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 4.5rem;
-    margin-left: 0.25rem;
-    vertical-align: baseline;
+  .sp-feature-icon {
+    font-size: 44px;
     line-height: 1;
   }
 
-  .hero-subtitle {
-    font-size: 1.25rem;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.6);
-    margin: 0;
-    max-width: 600px;
+  .sp-feature-purple {
+    background: var(--sp-purple);
+    color: #fff;
   }
+  .sp-feature-purple h3 { color: #fff; }
+  .sp-feature-purple p { color: #e3d4ff; }
 
-  .hero-cta {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
+  .sp-feature-pink {
+    background: var(--sp-pink);
+    color: #fff;
   }
-
-  .hero-cta .btn-primary :global(svg) {
-    fill: white;
-  }
-
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.875rem 1.75rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 1rem;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    border: none;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
-  }
-
-  .btn-secondary {
-    background: transparent;
-    color: #8b5cf6;
-    border: 2px solid #8b5cf6;
-  }
-
-  .btn-secondary:hover {
-    background: rgba(139, 92, 246, 0.1);
-  }
-
-  .btn-large {
-    padding: 1.125rem 2.25rem;
-    font-size: 1.125rem;
-  }
-
-  /* Features Section */
-  .features {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 6rem 2rem;
-  }
-
-  .section-header {
-    text-align: center;
-    margin-bottom: 4rem;
-  }
-
-  .section-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin: 0 0 1rem 0;
-    color: rgba(255, 255, 255, 0.95);
-  }
-
-  .section-subtitle {
-    font-size: 1.125rem;
-    color: rgba(255, 255, 255, 0.6);
-    margin: 0;
-  }
-
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-  }
-
-  .feature-card {
-    padding: 2rem;
-    background: #1e1e2e;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1rem;
-    transition: all 0.3s ease;
-  }
-
-  .feature-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-  }
-
-  .feature-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-  }
-
-  .feature-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin: 0 0 0.75rem 0;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
-  .feature-description {
-    font-size: 1rem;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.6);
-    margin: 0;
-  }
-
-  .feature-description code {
-    background: rgba(139, 92, 246, 0.15);
-    color: #8b5cf6;
+  .sp-feature-pink h3 { color: #fff; }
+  .sp-feature-pink p { color: #ffe3ee; }
+  .sp-feature-pink p code {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
-    font-size: 0.9em;
   }
 
-  /* Commands Section */
-  .commands-section {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 6rem 2rem;
+  .sp-feature-cyan {
+    background: var(--sp-cyan);
+    color: var(--sp-cyan-ink);
   }
+  .sp-feature-cyan h3 { color: var(--sp-cyan-ink); }
+  .sp-feature-cyan p { color: #0c3a36; }
 
-  .commands-grid {
+  .sp-feature-yellow {
+    background: var(--sp-yellow);
+    color: var(--sp-bg-deep);
+  }
+  .sp-feature-yellow h3 { color: var(--sp-bg-deep); }
+  .sp-feature-yellow p { color: #5a3e08; }
+
+  /* ===================== Commands ===================== */
+  .sp-commands {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 22px;
   }
 
-  .command-card {
-    padding: 1.5rem 2rem;
-    background: #1e1e2e;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1rem;
-    transition: all 0.3s ease;
+  .sp-command {
+    padding: 26px 28px;
+    border-radius: 18px;
+    background: #fff;
+    color: var(--sp-bg-deep);
+    text-align: left;
   }
 
-  .command-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-  }
+  .sp-command-1 { box-shadow: 5px 5px 0 var(--sp-purple); }
+  .sp-command-2 { box-shadow: 5px 5px 0 var(--sp-pink); }
+  .sp-command-3 { box-shadow: 5px 5px 0 var(--sp-cyan); }
 
-  .command-name {
+  .sp-command-name {
     display: inline-block;
-    font-family: "Fira Code", "Courier New", Courier, monospace;
-    font-size: 1.25rem;
+    font-family: var(--font-display);
+    font-size: 1.1rem;
     font-weight: 700;
-    color: #8b5cf6;
-    background: rgba(139, 92, 246, 0.15);
-    padding: 0.375rem 0.75rem;
-    border-radius: 0.375rem;
+    color: #fff;
+    background: var(--sp-purple);
+    padding: 0.35rem 0.7rem;
+    border-radius: 0.5rem;
     margin-bottom: 0.5rem;
   }
 
-  .command-alias {
-    display: block;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.4);
-    margin-bottom: 0.75rem;
+  .sp-command-2 .sp-command-name {
+    background: var(--sp-pink);
   }
 
-  .command-desc {
+  .sp-command-3 .sp-command-name {
+    background: var(--sp-cyan);
+    color: var(--sp-cyan-ink);
+  }
+
+  .sp-command-alias {
+    display: block;
+    font-size: 0.8rem;
+    color: rgba(22, 2, 39, 0.55);
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+  }
+
+  .sp-command-desc {
     font-size: 1rem;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.5;
     margin: 0;
   }
 
-  .commands-footer {
+  .sp-commands-footer {
     text-align: center;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--sp-ink-dim);
     font-style: italic;
-    margin-top: 2rem;
+    margin-top: 32px;
     font-size: 0.95rem;
   }
 
-  /* How It Works Section */
-  .how-it-works {
-    max-width: 1200px;
+  /* ===================== Steps ===================== */
+  .sp-steps {
+    padding: 60px 34px;
+    text-align: center;
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 6rem 2rem;
-    background: linear-gradient(
-      135deg,
-      rgba(139, 92, 246, 0.05) 0%,
-      rgba(236, 72, 153, 0.05) 100%
-    );
-    border-radius: 2rem;
   }
 
-  .steps {
+  .sp-steps-title {
+    margin: 0 0 32px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 36px;
+    color: #fff;
+  }
+
+  .sp-steps-row {
     display: flex;
-    align-items: center;
+    gap: 20px;
     justify-content: center;
-    gap: 2rem;
     flex-wrap: wrap;
   }
 
-  .step {
+  .sp-step {
     flex: 1;
-    min-width: 250px;
+    min-width: 240px;
+    padding: 28px;
+    border-radius: 18px;
+    background: #fff;
+    color: var(--sp-bg-deep);
     text-align: center;
   }
 
-  .step-number {
-    width: 60px;
-    height: 60px;
-    margin: 0 auto 1.5rem;
+  .sp-step-1 { box-shadow: 5px 5px 0 var(--sp-purple); }
+  .sp-step-2 { box-shadow: 5px 5px 0 var(--sp-pink); }
+  .sp-step-3 { box-shadow: 5px 5px 0 var(--sp-yellow); }
+
+  .sp-step-num {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: white;
-    font-size: 1.5rem;
-    font-weight: 700;
     border-radius: 50%;
+    background: var(--sp-purple-deep);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 24px;
   }
 
-  .step-connector {
-    width: 60px;
-    height: 2px;
-    background: linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%);
-    margin-top: -100px;
-  }
+  .sp-step-1 .sp-step-num { background: var(--sp-purple); }
+  .sp-step-2 .sp-step-num { background: var(--sp-pink); }
+  .sp-step-3 .sp-step-num { background: var(--sp-yellow-shadow); color: var(--sp-bg-deep); }
 
-  .step-title {
-    font-size: 1.25rem;
+  .sp-step-label {
+    font-family: var(--font-display);
     font-weight: 600;
-    margin: 0 0 0.75rem 0;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: 17px;
+    margin-bottom: 8px;
   }
 
-  .step-description {
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.6);
+  .sp-step-desc {
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(22, 2, 39, 0.65);
     margin: 0;
   }
 
-  /* CTA Section */
-  .cta-section {
-    max-width: 1200px;
+  /* ===================== CTA ===================== */
+  .sp-cta {
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 6rem 2rem;
+    padding: 20px 34px 70px;
   }
 
-  .cta-content {
+  .sp-cta-content {
     text-align: center;
-    padding: 4rem 2rem;
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    border-radius: 2rem;
-    color: white;
+    padding: 60px 34px;
+    background: var(--sp-purple);
+    border-radius: 24px;
+    box-shadow: 8px 8px 0 var(--sp-bg-deep);
   }
 
-  .cta-title {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 2.5rem;
+  .sp-cta-title {
+    margin: 0 0 12px;
+    font-family: var(--font-display);
     font-weight: 700;
-    margin: 0 0 1rem 0;
+    font-size: 40px;
+    color: #fff;
   }
 
-  .cta-subtitle {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 1.125rem;
-    margin: 0 0 2rem 0;
-    opacity: 0.9;
+  .sp-cta-sub {
+    margin: 0 0 32px;
+    font-size: 17px;
+    color: #e3d4ff;
   }
 
-  .cta-content .btn-primary {
-    background: white;
-    color: #8b5cf6;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-
-  .cta-content .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  }
-
-  /* Footer */
-  .footer {
-    background: #0f0f1a;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .footer-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 3rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    gap: 2rem;
-  }
-
-  .footer-brand {
-    flex: 1;
-  }
-
-  .footer-tagline {
-    margin: 1rem 0 0 0;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.875rem;
-  }
-
-  .footer-links {
-    display: flex;
-    gap: 2rem;
-    flex-wrap: wrap;
-  }
-
-  .footer-link {
-    color: rgba(255, 255, 255, 0.6);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.2s ease;
+  /* ===================== Footer ===================== */
+  .sp-footer {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: space-between;
+    padding: 26px 34px;
+    background: var(--sp-bg-darkest);
+    flex-wrap: wrap;
+    gap: 16px;
   }
 
-  .footer-link:hover {
-    color: #8b5cf6;
+  .sp-footer-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    color: #fff;
+    text-decoration: none;
   }
 
-  .footer-bottom {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 1.5rem 2rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    text-align: center;
+  .sp-footer-plus {
+    color: var(--sp-cyan);
   }
 
-  .footer-bottom p {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.875rem;
+  .sp-footer-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 14px;
+    font-weight: 500;
   }
 
-  .footer-bottom a {
-    color: #8b5cf6;
+  .sp-footer-links a {
+    color: var(--sp-ink-muted);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sp-footer-links a:hover {
+    color: var(--sp-cyan);
+  }
+
+  .sp-footer-by {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--sp-ink-dim);
+  }
+
+  .sp-footer-by a {
+    color: var(--sp-cyan);
     text-decoration: none;
     font-weight: 600;
   }
 
-  .footer-bottom a:hover {
-    text-decoration: underline;
+  /* ===================== Responsive ===================== */
+  @media (max-width: 968px) {
+    .sp-hero-title {
+      font-size: 60px;
+    }
+
+    .sp-features {
+      grid-template-columns: 1fr;
+    }
+
+    .sp-section-title,
+    .sp-cta-title {
+      font-size: 30px;
+    }
+
+    .sp-footer {
+      flex-direction: column;
+      text-align: center;
+    }
   }
 
-  /* Responsive Design */
-  @media (max-width: 968px) {
-    .hero {
-      padding: 3rem 1.5rem;
-      min-height: auto;
+  @media (max-width: 760px) {
+    .sp-hero {
+      padding: 36px 22px 40px;
     }
 
-    .hero-title {
-      font-size: 2.5rem;
-    }
-
-    .gradient-text {
-      font-size: 3.25rem;
-    }
-
-    .section-title {
-      font-size: 2rem;
-    }
-
-    .cta-title {
-      font-size: 2rem;
-    }
-
-    .step-connector {
+    .sp-float-tile {
       display: none;
     }
 
-    .footer-content {
-      flex-direction: column;
+    .sp-nav {
+      padding: 16px 20px;
     }
 
-    .footer-links {
+    .sp-nav-links {
+      gap: 14px;
+      font-size: 14px;
+    }
+
+    .sp-hero-cta {
       flex-direction: column;
-      gap: 1rem;
+      align-items: stretch;
+    }
+
+    .sp-btn {
+      justify-content: center;
     }
   }
 
-  @media (max-width: 640px) {
-    .header-content {
-      padding: 1rem 1rem;
+  @media (max-width: 460px) {
+    .sp-hero-title {
+      font-size: 44px;
     }
 
-    .hero {
-      padding: 2rem 1rem;
-    }
-
-    .hero-title {
-      font-size: 2rem;
-    }
-
-    .gradient-text {
-      font-size: 2.75rem;
-    }
-
-    .hero-subtitle {
-      font-size: 1rem;
-    }
-
-    .hero-cta {
-      flex-direction: column;
-      width: 100%;
-    }
-
-    .btn {
-      width: 100%;
-      justify-content: center;
-    }
-
-    .features {
-      padding: 3rem 1rem;
-    }
-
-    .features-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .commands-section {
-      padding: 3rem 1rem;
-    }
-
-    .commands-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .how-it-works {
-      padding: 3rem 1rem;
-    }
-
-    .cta-section {
-      padding: 3rem 1rem;
-    }
-
-    .cta-content {
-      padding: 2rem 1rem;
+    .sp-nav-links a:not(.sp-nav-launch) {
+      display: none;
     }
   }
 </style>
