@@ -13,6 +13,7 @@ import ThemeControl from "../components/ThemeControl.astro";
   description="WoS+ | Words on Stream Plus - Streamer - An enhanced interface for streamers playing Words on Stream with Twitch chat integration and customizable settings."
   keywords="clarkio, words on stream, wos, twitch, streaming, helper, wordsonstream, tool, wos plus, streamer"
   defaultTheme="default"
+  themeStorageKey="wosPlusTheme:streamer"
 >
   <SettingsDialog id="streamer-settings" title="Streamer Settings">
     <form id="streamer-settings-form" class="settings-form">
@@ -67,7 +68,7 @@ import ThemeControl from "../components/ThemeControl.astro";
           >Play custom clarkio sounds for in game events such as "CLEAR!" when all words on the board are found</small
         >
       </div>
-      <ThemeControl defaultTheme="default" />
+      <ThemeControl defaultTheme="default" storageKey="wosPlusTheme:streamer" />
     </form>
   </SettingsDialog>
 

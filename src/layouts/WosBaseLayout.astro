@@ -10,6 +10,10 @@ const keywords = Astro.props?.keywords ?? Astro.props?.content?.keywords ?? ''
 // matches their original look ("sticker-pop" for the player, "default" for the
 // streamer). A stored preference always wins over this default.
 const defaultTheme = Astro.props?.defaultTheme ?? 'default'
+// localStorage key the theme preference is stored under. Scoped per view (the
+// player and streamer pass distinct keys) so a choice on one view never
+// overrides the other view's default.
+const themeStorageKey = Astro.props?.themeStorageKey ?? 'wosPlusTheme'
 ---
 
 <html lang="en" class="dark">
@@ -63,12 +67,12 @@ const defaultTheme = Astro.props?.defaultTheme ?? 'default'
 
     <!-- Set the UI theme before first paint so there is no flash of the wrong
          theme. A stored preference wins; otherwise the page's default is used. -->
-    <script is:inline define:vars={{ defaultTheme }}>
+    <script is:inline define:vars={{ defaultTheme, themeStorageKey }}>
       (function () {
         var valid = ['default', 'sticker-pop'];
         var theme = valid.indexOf(defaultTheme) !== -1 ? defaultTheme : 'default';
         try {
-          var stored = localStorage.getItem('wosPlusTheme');
+          var stored = localStorage.getItem(themeStorageKey);
           if (stored && valid.indexOf(stored) !== -1) theme = stored;
         } catch (e) {
           /* localStorage may be unavailable */

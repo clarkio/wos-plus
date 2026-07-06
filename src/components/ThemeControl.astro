@@ -11,12 +11,18 @@
  * should match the view's original appearance ("sticker-pop" for the player,
  * "default" for the streamer) so nothing changes for existing users until they
  * opt in.
+ *
+ * `storageKey` scopes the saved preference. The player and streamer pass
+ * distinct keys so each view remembers its own theme and always falls back to
+ * its own default — a choice on one view never changes the other's default. It
+ * must match the key WosBaseLayout reads before first paint.
  */
 export interface Props {
   defaultTheme?: 'default' | 'sticker-pop';
+  storageKey?: string;
 }
 
-const { defaultTheme = 'default' } = Astro.props;
+const { defaultTheme = 'default', storageKey = 'wosPlusTheme' } = Astro.props;
 ---
 
 <div class="form-group">
@@ -26,14 +32,14 @@ const { defaultTheme = 'default' } = Astro.props;
     <option value="sticker-pop">Sticker Pop</option>
   </select>
   <small class="form-help"
-    >Switch between the default look and the bold "Sticker Pop" look. Applies to
-    both the player and streamer views.</small
+    >Switch between the default look and the bold "Sticker Pop" look for this
+    view.</small
   >
 </div>
 
-<script is:inline define:vars={{ defaultTheme }}>
+<script is:inline define:vars={{ defaultTheme, storageKey }}>
   (function () {
-    const STORAGE_KEY = "wosPlusTheme";
+    const STORAGE_KEY = storageKey;
     const VALID = ["default", "sticker-pop"];
 
     const fallbackTheme = VALID.includes(defaultTheme) ? defaultTheme : "default";
