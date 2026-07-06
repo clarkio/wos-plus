@@ -117,6 +117,40 @@
   color: inherit;
 }
 
+/* Streamer HUD parity: the player view lays the LEVEL block and the three
+   record badges out on a single horizontal row (a Sticker Pop design cue). The
+   streamer view keeps its stacked layout in the default theme, so mirror the
+   player's one-row treatment here, scoped to the streamer + Sticker Pop only.
+   fitHud() in the spectator script scales this row down to fit, just like the
+   player. */
+[data-theme="sticker-pop"] .streamer-channel-data-container .overlay {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: clamp(0.3rem, 1vw, 0.6rem);
+}
+
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record-container {
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: clamp(0.3rem, 1vw, 0.6rem);
+}
+
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-current {
+  /* Trim the padding and drop the wide min-width so the level block only takes
+     the space it needs, keeping the whole HUD on one row. */
+  padding: 0.3rem 0.6rem;
+  min-width: 0;
+}
+
+/* Stable digit widths so the badges don't jitter as values change. */
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-value,
+[data-theme="sticker-pop"] .streamer-channel-data-container .level-record-value {
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Word log: dark block with yellow offset shadow ---------------------- */
 [data-theme="sticker-pop"] .player-correct-words-log,
 [data-theme="sticker-pop"] .correct-words-log {
