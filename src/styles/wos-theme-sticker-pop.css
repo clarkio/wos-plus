@@ -20,6 +20,28 @@
   font-family: var(--font-ui);
 }
 
+/* Streamer spacing parity: the Sticker Pop skin uses hard 6px offset shadows,
+   which need room to land in the grid gutter instead of being clipped or
+   bleeding onto neighbors. The player grid already reserves that room (14px
+   gap + padding, visible overflow on the bottom panels); give the streamer the
+   same, scoped to Sticker Pop so its default theme keeps the original tight
+   spacing. */
+[data-theme="sticker-pop"] .streamer-wos-main-grid {
+  gap: 14px;
+  padding: 14px;
+}
+
+[data-theme="sticker-pop"] .streamer-bottom-container {
+  gap: 14px;
+  /* Keep visible so the panels' hard offset shadows render into the gutter
+     instead of being clipped at the right/bottom edges. */
+  overflow: visible;
+}
+
+[data-theme="sticker-pop"] .streamer-level-data-grid-container {
+  overflow: visible;
+}
+
 /* --- Board: purple block with cyan offset shadow ------------------------- */
 [data-theme="sticker-pop"] .player-wos-board-container,
 [data-theme="sticker-pop"] .streamer-wos-board-container {
