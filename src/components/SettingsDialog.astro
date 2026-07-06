@@ -249,18 +249,42 @@ const { id = 'settings-dialog', title = 'Settings' } = Astro.props;
       }
 
       // Run the save callback and close unless it explicitly aborts by
-      // returning false (e.g. validation failed and the dialog should stay
-      // open so the user can fix their input).
-      const trySave = () => {
+      // returning (or resolving to) false — e.g. validation failed and the
+      // dialog should stay open so the user can fix their input. The
+      // callback may be async (e.g. it needs to verify a Twitch channel over
+      // the network), so the save button is disabled for the duration to
+      // prevent duplicate submits.
+      const trySave = async () => {
         const data = getData();
-        if (saveCallback && saveCallback(data) === false) {
+        if (!saveCallback) {
+          close();
           return;
         }
-        close();
+
+        const originalLabel = saveBtn ? saveBtn.textContent : null;
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Saving...';
+        }
+
+        try {
+          const result = await saveCallback(data);
+          if (result === false) {
+            return;
+          }
+          close();
+        } finally {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalLabel;
+          }
+        }
       };
 
       if (saveBtn) {
-        saveBtn.addEventListener('click', trySave);
+        saveBtn.addEventListener('click', () => {
+          trySave();
+        });
       }
 
       // Handle Enter key press to trigger save

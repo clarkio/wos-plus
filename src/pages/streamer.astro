@@ -47,6 +47,9 @@ import ThemeControl from "../components/ThemeControl.astro";
           >The Twitch channel to connect to. You can paste the full channel URL
           or just the username.</small
         >
+        <small class="form-error" id="streamer-twitch-channel-error" hidden
+          >Enter a valid, existing Twitch channel name.</small
+        >
       </div>
       <div class="form-group">
         <label class="toggle-label">
@@ -255,6 +258,10 @@ import ThemeControl from "../components/ThemeControl.astro";
 <script>
   import { GameSpectator } from "../scripts/wos-plus-main";
   import { normalizeMirrorUrl } from "../scripts/mirror-url";
+  import {
+    isValidTwitchLoginFormat,
+    twitchChannelExists,
+  } from "../scripts/twitch-channel";
 
   const boardContainer = document.getElementById(
     "wos-board",
@@ -280,6 +287,29 @@ import ThemeControl from "../components/ThemeControl.astro";
   const clearMirrorUrlError = () => {
     mirrorUrlErrorEl()?.setAttribute("hidden", "");
     mirrorUrlInputEl()?.classList.remove("input-invalid");
+  };
+
+  const twitchChannelErrorEl = () =>
+    document.getElementById(
+      "streamer-twitch-channel-error",
+    ) as HTMLElement | null;
+  const twitchChannelInputEl = () =>
+    document.getElementById(
+      "streamer-twitch-channel-input",
+    ) as HTMLInputElement | null;
+
+  const showTwitchChannelError = (message?: string) => {
+    const errorEl = twitchChannelErrorEl();
+    if (errorEl && message) {
+      errorEl.textContent = message;
+    }
+    errorEl?.removeAttribute("hidden");
+    twitchChannelInputEl()?.classList.add("input-invalid");
+  };
+
+  const clearTwitchChannelError = () => {
+    twitchChannelErrorEl()?.setAttribute("hidden", "");
+    twitchChannelInputEl()?.classList.remove("input-invalid");
   };
 
   const extractTwitchChannel = (input: string): string => {
@@ -361,7 +391,7 @@ import ThemeControl from "../components/ThemeControl.astro";
     if (!settingsDialog) return;
 
     // Set up save callback
-    settingsDialog.onSave((data: Record<string, any>) => {
+    settingsDialog.onSave(async (data: Record<string, any>) => {
       // Validate the mirror URL before applying anything. Only official WoS
       // mirror links (https://wos.gg/r/<gameId>) are allowed — anything else
       // (other sites, other paths) is rejected so the board iframe can't be
@@ -377,19 +407,39 @@ import ThemeControl from "../components/ThemeControl.astro";
       }
       clearMirrorUrlError();
 
+      // Validate the Twitch channel. A malformed or nonexistent channel name
+      // otherwise leaves the chat embed stuck on "Connecting to chat" with no
+      // indication of why (issue #103), so reject it here instead.
+      let newChannel = twitchChannel;
+      if (data.twitchChannel) {
+        const channel = extractTwitchChannel(data.twitchChannel);
+        if (!channel || !isValidTwitchLoginFormat(channel)) {
+          showTwitchChannelError("Enter a valid Twitch channel name.");
+          return false;
+        }
+
+        const exists = await twitchChannelExists(channel);
+        if (exists === false) {
+          showTwitchChannelError(
+            `No Twitch channel found named "${channel}".`,
+          );
+          return false;
+        }
+        // `exists === null` means the check couldn't be completed (e.g. the
+        // lookup service is unreachable) — don't block saving on that.
+
+        clearTwitchChannelError();
+        newChannel = channel;
+      } else {
+        clearTwitchChannelError();
+      }
+
       const params = new URLSearchParams(window.location.search);
 
       if (data.mirrorUrl) {
         params.set("mirrorUrl", normalizedMirrorUrl);
       }
-      let newChannel = twitchChannel;
-      if (data.twitchChannel) {
-        const channel = extractTwitchChannel(data.twitchChannel);
-        if (channel) {
-          params.set("twitchChannel", channel);
-          newChannel = channel;
-        }
-      }
+      params.set("twitchChannel", newChannel);
       // Handle clear sound toggle
       params.set("clearSound", data.clearSound ? "true" : "false");
 
