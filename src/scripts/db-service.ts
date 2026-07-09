@@ -2,9 +2,13 @@ export interface ChannelStats {
   allTimePersonalBest: number;
   dailyBest: number;
   dailyClears: number;
+  // Whether the channel has the chatbot enabled (its Twitch username is in the
+  // `users` table). Only chatbot-enabled channels get daily stats, so the UI
+  // uses this to hide the daily best/clears components otherwise (issue #79).
+  chatbotEnabled: boolean;
 }
 
-const defaultStats: ChannelStats = { allTimePersonalBest: 0, dailyBest: 0, dailyClears: 0 };
+const defaultStats: ChannelStats = { allTimePersonalBest: 0, dailyBest: 0, dailyClears: 0, chatbotEnabled: false };
 
 export async function fetchChannelStats(channel: string): Promise<ChannelStats> {
   if (typeof channel !== 'string' || channel.length === 0) {
@@ -38,6 +42,7 @@ export async function fetchChannelStats(channel: string): Promise<ChannelStats> 
       allTimePersonalBest: data.allTimePersonalBest ?? 0,
       dailyBest: data.dailyBest ?? 0,
       dailyClears: data.dailyClears ?? 0,
+      chatbotEnabled: data.chatbotEnabled ?? false,
     };
   } catch (error) {
     console.error('Error fetching channel stats:', error);

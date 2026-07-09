@@ -44,7 +44,7 @@ export const GET: APIRoute = async ({ params }) => {
 
     const todayUtc = new Date().toISOString().slice(0, 10);
 
-    const [allTimeResult, dailyResult] = await Promise.all([
+    const [allTimeResult, dailyResult, userResult] = await Promise.all([
       supabase
         .from('wos_channel_all_time_records')
         .select('all_time_highest_level_reached')
@@ -56,16 +56,30 @@ export const GET: APIRoute = async ({ params }) => {
         .eq('channel', cleanChannel)
         .eq('stat_date_utc', todayUtc)
         .single(),
+      // The chatbot is the source of truth for daily stats and only writes them
+      // for channels that have it enabled. A channel counts as chatbot-enabled
+      // when its Twitch username appears in the `users` table's
+      // `twitch_usernames` list (issue #79).
+      supabase
+        .from('users')
+        .select('twitch_usernames')
+        .contains('twitch_usernames', [cleanChannel])
+        .limit(1),
     ]);
 
     const allTimePersonalBest = allTimeResult.data?.all_time_highest_level_reached ?? 0;
     const dailyBest = dailyResult.data?.highest_level_reached ?? 0;
     const dailyClears = dailyResult.data?.board_clears ?? 0;
+    // Fail closed: if the lookup errors we treat the channel as not enabled so
+    // empty daily badges stay hidden rather than showing blank values.
+    const chatbotEnabled =
+      !userResult.error && Array.isArray(userResult.data) && userResult.data.length > 0;
 
     return new Response(JSON.stringify({
       allTimePersonalBest,
       dailyBest,
       dailyClears,
+      chatbotEnabled,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
