@@ -35,7 +35,7 @@ vi.mock('@scripts/wos-words', async (importActual) => {
 vi.mock('@scripts/db-service', () => ({
   saveBoard: vi.fn(),
   fetchBoard: vi.fn(),
-  fetchChannelStats: vi.fn().mockResolvedValue({ allTimePersonalBest: 0, dailyBest: 0, dailyClears: 0 }),
+  fetchChannelStats: vi.fn().mockResolvedValue({ allTimePersonalBest: 0, dailyBest: 0, dailyClears: 0, chatbotEnabled: false }),
 }));
 
 // Mock socket.io-client
@@ -63,6 +63,9 @@ vi.mock('@tmi.js/chat', () => ({
 // programmatically (see buildTestDom) rather than assigning an HTML string to
 // document.body.innerHTML.
 const TEST_DOM_IDS = [
+  'pb-record',
+  'daily-pb-record',
+  'daily-clear-record',
   'pb-value',
   'daily-pb-value',
   'daily-clear-value',
@@ -207,6 +210,7 @@ describe('GameSpectator class', () => {
         allTimePersonalBest: 15,
         dailyBest: 10,
         dailyClears: 3,
+        chatbotEnabled: true,
       });
 
       await (spectator as any).loadChannelRecords('testchannel');
@@ -222,6 +226,7 @@ describe('GameSpectator class', () => {
         allTimePersonalBest: 0,
         dailyBest: 0,
         dailyClears: 0,
+        chatbotEnabled: false,
       });
 
       await (spectator as any).loadChannelRecords('newchannel');
@@ -236,6 +241,7 @@ describe('GameSpectator class', () => {
         allTimePersonalBest: 20,
         dailyBest: 15,
         dailyClears: 5,
+        chatbotEnabled: true,
       });
 
       await (spectator as any).loadChannelRecords('testchannel');
@@ -243,6 +249,43 @@ describe('GameSpectator class', () => {
       expect(document.getElementById('pb-value')!.innerText).toBe('20');
       expect(document.getElementById('daily-pb-value')!.innerText).toBe('15');
       expect(document.getElementById('daily-clear-value')!.innerText).toBe('5');
+    });
+
+    it('should hide the daily best and daily clears badges when the chatbot is not enabled', async () => {
+      vi.mocked(fetchChannelStats).mockResolvedValueOnce({
+        allTimePersonalBest: 20,
+        dailyBest: 0,
+        dailyClears: 0,
+        chatbotEnabled: false,
+      });
+
+      await (spectator as any).loadChannelRecords('nochatbot');
+
+      expect(spectator.chatbotEnabled).toBe(false);
+      // All-time best is always shown; daily best/clears are hidden (issue #79).
+      expect(document.getElementById('pb-record')!.style.display).toBe('');
+      expect(document.getElementById('daily-pb-record')!.style.display).toBe('none');
+      expect(document.getElementById('daily-clear-record')!.style.display).toBe('none');
+    });
+
+    it('should show the daily best and daily clears badges when the chatbot is enabled', async () => {
+      // Start hidden to prove the badges are re-shown for a chatbot-enabled channel.
+      document.getElementById('daily-pb-record')!.style.display = 'none';
+      document.getElementById('daily-clear-record')!.style.display = 'none';
+
+      vi.mocked(fetchChannelStats).mockResolvedValueOnce({
+        allTimePersonalBest: 20,
+        dailyBest: 15,
+        dailyClears: 5,
+        chatbotEnabled: true,
+      });
+
+      await (spectator as any).loadChannelRecords('haschatbot');
+
+      expect(spectator.chatbotEnabled).toBe(true);
+      expect(document.getElementById('pb-record')!.style.display).toBe('');
+      expect(document.getElementById('daily-pb-record')!.style.display).toBe('');
+      expect(document.getElementById('daily-clear-record')!.style.display).toBe('');
     });
   });
 
@@ -659,6 +702,7 @@ describe('GameSpectator class', () => {
         allTimePersonalBest: 10,
         dailyBest: 5,
         dailyClears: 2,
+        chatbotEnabled: true,
       });
 
       spectator.connectToTwitch('testchannel');

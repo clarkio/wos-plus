@@ -59,6 +59,11 @@ export class GameSpectator {
   personalBest: number = 0;
   dailyBest: number = 0;
   dailyClears: number = 0;
+  // Whether the connected channel has the chatbot enabled. Daily best/clears are
+  // only tracked by the chatbot, so we hide those badges for channels without it
+  // (issue #79). The all-time best always shows since it comes from the WoS game
+  // instance over the websocket.
+  chatbotEnabled: boolean = false;
   currentLevelBigWord: string = '';
   currentLevelCorrectWords: string[] = [];
   wosEventQueue: any[] = [];
@@ -95,6 +100,7 @@ export class GameSpectator {
     this.personalBest = stats.allTimePersonalBest;
     this.dailyBest = stats.dailyBest;
     this.dailyClears = stats.dailyClears;
+    this.chatbotEnabled = stats.chatbotEnabled;
     this.updateStatsDisplay();
   }
 
@@ -106,6 +112,7 @@ export class GameSpectator {
     this.personalBest = Math.max(this.personalBest, stats.allTimePersonalBest);
     this.dailyBest = Math.max(this.dailyBest, stats.dailyBest);
     this.dailyClears = Math.max(this.dailyClears, stats.dailyClears);
+    this.chatbotEnabled = stats.chatbotEnabled;
     this.updateStatsDisplay();
   }
 
@@ -122,7 +129,30 @@ export class GameSpectator {
     if (clearElement) {
       clearElement.innerText = `${this.dailyClears}`;
     }
+    this.updateStatsVisibility();
     this.fitHud();
+  }
+
+  /**
+   * Shows or hides the daily best / daily clears badges based on whether the
+   * connected channel has the chatbot enabled. Those two stats are only tracked
+   * by the chatbot, so on channels without it they would otherwise render as
+   * empty badges taking up space (issue #79). The all-time best badge is always
+   * left visible since it comes from the WoS game instance over the websocket.
+   */
+  private updateStatsVisibility() {
+    const dailyRecord =
+      document.getElementById('daily-pb-record') ||
+      document.getElementById('daily-pb-value')?.closest('.level-record');
+    const clearRecord =
+      document.getElementById('daily-clear-record') ||
+      document.getElementById('daily-clear-value')?.closest('.level-record');
+
+    for (const record of [dailyRecord, clearRecord]) {
+      if (record instanceof HTMLElement) {
+        record.style.display = this.chatbotEnabled ? '' : 'none';
+      }
+    }
   }
 
   /**
