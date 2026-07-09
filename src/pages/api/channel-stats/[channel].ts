@@ -58,12 +58,13 @@ export const GET: APIRoute = async ({ params }) => {
         .single(),
       // The chatbot is the source of truth for daily stats and only writes them
       // for channels that have it enabled. A channel counts as chatbot-enabled
-      // when its Twitch username appears in the `users` table's
-      // `twitch_usernames` list (issue #79).
+      // when its Twitch username appears in the `users` table (issue #79).
+      // Twitch login names are canonically lowercase, matching the already
+      // lowercased `cleanChannel`, so an equality match is sufficient.
       supabase
         .from('users')
-        .select('twitch_usernames')
-        .contains('twitch_usernames', [cleanChannel])
+        .select('twitch_username')
+        .eq('twitch_username', cleanChannel)
         .limit(1),
     ]);
 
