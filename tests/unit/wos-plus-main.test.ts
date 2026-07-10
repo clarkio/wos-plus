@@ -1283,6 +1283,72 @@ describe('GameSpectator class', () => {
         expect.arrayContaining(['test*', 'word*', 'words*', 'testing*'])
       );
     });
+
+    it('should not report the same missed word twice across two runs (VARIATE/VERT regression)', async () => {
+      // When a run ends on a failed level WoS emits both a "Level Results"
+      // and a "Game Ended" event, so logMissingWords executes twice. On the
+      // VARIATE board the first run used board-based detection (vert, atria,
+      // vitae) while the second fell back to the dictionary and re-derived
+      // only vert — which then showed up starred twice on the overlay.
+      const dbService = await import('@scripts/db-service');
+      const fetchBoardMock = vi.mocked(dbService.fetchBoard);
+      const mockBoard = {
+        id: 'VARIATE',
+        created_at: '2024-01-01T00:00:00Z',
+        slots: [
+          { letters: ['v', 'e', 'r', 't'], word: 'vert', user: 'user1', hitMax: false, index: 0, length: 4 },
+        ],
+      };
+      // First run finds the board; the second run's fetch fails transiently.
+      fetchBoardMock.mockResolvedValueOnce(mockBoard).mockResolvedValueOnce(null);
+
+      vi.mocked(wosWords.findMissingWordsFromBoard).mockReturnValueOnce(['vert', 'atria', 'vitae']);
+      vi.mocked(wosWords.findAllMissingWords).mockReturnValueOnce(['vert']);
+
+      spectator.currentLevelBigWord = 'V A R I A T E';
+      spectator.currentLevelCorrectWords = ['aria', 'avert'];
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+
+      await (spectator as any).logMissingWords();
+      await (spectator as any).logMissingWords();
+
+      const starred = spectator.currentLevelCorrectWords.filter(w => w.endsWith('*'));
+      expect(starred.sort()).toEqual(['atria*', 'vert*', 'vitae*']);
+    });
+
+    it('should not add a starred entry for a word already displayed as guessed', async () => {
+      const dbService = await import('@scripts/db-service');
+      vi.mocked(dbService.fetchBoard).mockResolvedValueOnce(null);
+      vi.mocked(wosWords.findAllMissingWords).mockReturnValueOnce(['vert', 'atria']);
+
+      spectator.currentLevelBigWord = 'V A R I A T E';
+      spectator.currentLevelCorrectWords = ['vert'];
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+
+      await (spectator as any).logMissingWords();
+
+      expect(spectator.currentLevelCorrectWords.sort()).toEqual(['atria*', 'vert']);
+    });
+
+    it('should display a missed word once when a detector returns it twice', async () => {
+      const dbService = await import('@scripts/db-service');
+      vi.mocked(dbService.fetchBoard).mockResolvedValueOnce(null);
+      vi.mocked(wosWords.findAllMissingWords).mockReturnValueOnce(['vert', 'VERT']);
+
+      spectator.currentLevelBigWord = 'V A R I A T E';
+      spectator.currentLevelCorrectWords = [];
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+
+      await (spectator as any).logMissingWords();
+
+      expect(spectator.currentLevelCorrectWords).toEqual(['vert*']);
+    });
   });
 
   describe('worker routing (startEventProcessors)', () => {

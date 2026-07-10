@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { findMissingWordsFromBoard, canFormWord } from '@scripts/wos-words';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { findMissingWordsFromBoard, findAllMissingWords, loadWordsFromDb, canFormWord } from '@scripts/wos-words';
 import type { Slot } from '@scripts/wos-words';
 
 /**
@@ -22,9 +22,36 @@ describe('wos-words module', () => {
   });
 
   describe('findAllMissingWords', () => {
-    it.todo('should identify missing words from a level');
-    it.todo('should respect minimum word length');
-    it.todo('should handle known letters correctly');
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    // Loads the module-level dictionary through the same path production uses.
+    const loadDictionary = async (words: string[]) => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => words,
+      }));
+      await loadWordsFromDb();
+    };
+
+    it('should identify missing words from a level', async () => {
+      await loadDictionary(['aria', 'vert', 'atria']);
+
+      const result = findAllMissingWords(['aria'], 'variate', 4);
+
+      expect(result.sort()).toEqual(['atria', 'vert']);
+    });
+
+    it('should treat *-marked known words as already reported (VARIATE/VERT regression)', async () => {
+      await loadDictionary(['aria', 'vert', 'atria']);
+
+      // 'vert*' and 'atria*' were appended by an earlier missed-word pass;
+      // a re-run must not surface them as missing again.
+      const result = findAllMissingWords(['aria', 'vert*', 'atria*'], 'variate', 4);
+
+      expect(result).toEqual([]);
+    });
   });
 
   describe('findMissingWordsFromBoard', () => {
@@ -76,6 +103,22 @@ describe('wos-words module', () => {
       const result = findMissingWordsFromBoard(currentSlots, boardSlots);
 
       expect(result).toEqual(['word']);
+    });
+
+    it('should report a word only once when board data contains duplicate slots', () => {
+      const currentSlots: Slot[] = [
+        { letters: ['v', 'e', 'r', 't'], word: '', user: undefined, hitMax: false },
+        { letters: ['v', 'e', 'r', 't'], word: '', user: undefined, hitMax: false },
+      ];
+
+      const boardSlots: Slot[] = [
+        { letters: ['v', 'e', 'r', 't'], word: 'vert', user: 'user1', hitMax: false },
+        { letters: ['v', 'e', 'r', 't'], word: 'vert', user: 'user2', hitMax: false },
+      ];
+
+      const result = findMissingWordsFromBoard(currentSlots, boardSlots);
+
+      expect(result).toEqual(['vert']);
     });
 
     it('should skip empty words in board data', () => {

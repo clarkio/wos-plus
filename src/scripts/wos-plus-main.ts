@@ -478,7 +478,24 @@ export class GameSpectator {
     }
 
     if (missingWords.length > 0) {
+      // Guard against double-reporting. When a run ends on a failed level the
+      // WoS server emits both a "Level Results" (type 4) and a "Game Ended"
+      // (type 5) event, and both handlers call logMissingWords. The two runs
+      // can even resolve the missing set through different paths (board-based
+      // vs the dictionary fallback), so rather than trusting the detectors,
+      // skip anything already displayed — whether guessed or previously
+      // reported as missed (entries carry a trailing '*' marker). This check
+      // is synchronous with the append below, so concurrent invocations of
+      // logMissingWords can't both pass it for the same word.
+      const displayedWords = new Set(
+        this.currentLevelCorrectWords.map(word => word.replace('*', '').toLowerCase())
+      );
       missingWords.forEach(word => {
+        const key = word.toLowerCase();
+        if (displayedWords.has(key)) {
+          return;
+        }
+        displayedWords.add(key);
         this.updateCorrectWordsDisplayed(word + "*");
       });
     }

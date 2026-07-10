@@ -152,6 +152,9 @@ export function findMissingWordsFromBoard(currentSlots: Slot[], boardSlots: Slot
       const currentSlot = currentSlots[index];
       if (currentSlot && !currentSlot.user) {
         missingWords.push(word);
+        // Track it as seen so duplicate slot entries in stored board data
+        // can't produce the same missed word twice.
+        guessedWords.add(word.toLowerCase());
       }
     }
   });
@@ -167,8 +170,11 @@ export function findMissingWordsFromBoard(currentSlots: Slot[], boardSlots: Slot
  * @returns Array of words from dictionaryWords that are not in knownWords
  */
 function findMissingWordsFromList(knownWords: string[], dictionaryWords: string[]): string[] {
-  // Create a Set of knownWords for efficient lookup
-  const knownWordsSet = new Set(knownWords.map(word => word.toLowerCase()));
+  // Create a Set of knownWords for efficient lookup. Known words may carry the
+  // missed-word display marker ('word*') when an earlier logMissingWords pass
+  // already reported them — strip it so those entries still count as known and
+  // don't get re-reported as missing a second time.
+  const knownWordsSet = new Set(knownWords.map(word => word.replace('*', '').toLowerCase()));
 
   // Filter dictionaryWords to find words not in knownWordsSet
   return dictionaryWords.filter(word => !knownWordsSet.has(word.toLowerCase()));
