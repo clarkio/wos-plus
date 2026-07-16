@@ -1,3 +1,5 @@
+import { findRedundantWords, hasRedundantWords } from '../lib/board-utils';
+
 export interface ChannelStats {
   allTimePersonalBest: number;
   dailyBest: number;
@@ -64,21 +66,60 @@ export interface Board {
   created_at: string;
 }
 
-async function boardExists(boardId: string): Promise<boolean> {
+async function fetchExistingBoard(boardId: string): Promise<{ exists: boolean; board: Board | null }> {
   const url = `/api/boards/${encodeURIComponent(boardId)}`;
   const response = await fetch(url, {
     method: 'GET',
   });
 
   if (response.status === 404) {
-    return false;
+    return { exists: false, board: null };
   }
 
   if (!response.ok) {
     throw new Error(`Failed to verify board existence: ${response.status} ${response.statusText}`);
   }
 
-  return true;
+  // The board exists; if its body can't be read we still report existence so
+  // the caller falls back to the safe "already saved" path.
+  try {
+    return { exists: true, board: await response.json() };
+  } catch {
+    return { exists: true, board: null };
+  }
+}
+
+// Replaces the slots of an already-stored board that was saved with redundant
+// words (issue #119). The server only accepts this update when the stored
+// board is actually corrupted, so a clean board can never be overwritten.
+async function updateBoardSlots(boardId: string, slots: Slot[]) {
+  try {
+    const response = await fetch(`/api/boards/${encodeURIComponent(boardId)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ slots }),
+    });
+
+    if (!response.ok) {
+      let errorBody: any = null;
+      try {
+        errorBody = await response.json();
+      } catch {
+        errorBody = null;
+      }
+
+      const apiMessage = errorBody?.message || errorBody?.error;
+      throw new Error(apiMessage || `Network response was not ok: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`Board ${boardId} updated with clean slots:`, data);
+    return data;
+  } catch (error) {
+    console.error('Error updating board with clean slots:', error);
+  }
 }
 
 export async function saveBoard(boardId: string, slots: Slot[]) {
@@ -131,9 +172,31 @@ export async function saveBoard(boardId: string, slots: Slot[]) {
     return;
   }
 
+  // Guard (issue #119): every slot on a board is a distinct word, so slots
+  // containing the same word more than once are corrupted capture data and
+  // must never reach the database.
+  const redundantWords = findRedundantWords(slots);
+  if (redundantWords.length > 0) {
+    const redundantMessage = `Cannot save board ${cleanBoardId}: redundant words detected in slots: ${redundantWords.join(', ')}.`;
+    console.warn(redundantMessage);
+    return {
+      error: 'Redundant words in board slots',
+      message: redundantMessage,
+      code: 'REDUNDANT_WORDS',
+    };
+  }
+
   try {
-    const exists = await boardExists(cleanBoardId);
+    const { exists, board: existingBoard } = await fetchExistingBoard(cleanBoardId);
     if (exists) {
+      // Self-healing (issue #119): if the stored copy of this board was saved
+      // with redundant words, replace its slots with this clean capture
+      // instead of skipping the save.
+      if (existingBoard && hasRedundantWords(existingBoard.slots)) {
+        console.warn(`Board ${cleanBoardId} exists with redundant words; updating it with the clean version.`);
+        return await updateBoardSlots(cleanBoardId, slots);
+      }
+
       const duplicateMessage = `Board ${cleanBoardId} has already been saved.`;
       console.warn(duplicateMessage);
       return {

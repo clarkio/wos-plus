@@ -406,7 +406,20 @@ export class GameSpectator {
     const history = this.twitchChatLog.get(username.toLowerCase());
     if (!history || history.length === 0) return null;
 
-    const candidates = history.filter(m => !m.consumed && m.message.length === length);
+    // Words already placed in a slot can't be the answer to a new masked
+    // guess — WoS rejects repeat guesses of a word that's already on the
+    // board. Excluding them keeps a re-typed or mis-matched chat message from
+    // filling a second slot with a duplicate word, which is how boards ended
+    // up saved with redundant words (issue #119).
+    const placedWords = new Set(
+      this.currentLevelSlots
+        .filter(slot => slot.user && typeof slot.word === 'string' && slot.word.length > 0)
+        .map(slot => slot.word.toLowerCase())
+    );
+
+    const candidates = history.filter(
+      m => !m.consumed && m.message.length === length && !placedWords.has(m.message.toLowerCase())
+    );
     if (candidates.length === 0) return null;
 
     // Prefer real dictionary words whose letters also fit within the level's

@@ -382,6 +382,154 @@ describe('db-service module', () => {
       });
     });
 
+    describe('redundant words guard (issue #119)', () => {
+      const slotsWithRedundantWords: Slot[] = [
+        {
+          letters: ['t', 'e', 's', 't'],
+          user: 'testuser',
+          hitMax: false,
+          word: 'test',
+        },
+        {
+          letters: ['t', 'e', 's', 't'],
+          user: 'anotheruser',
+          hitMax: false,
+          word: 'test',
+        },
+        {
+          letters: ['w', 'o', 'r', 'd'],
+          user: 'thirduser',
+          hitMax: true,
+          word: 'word',
+        },
+      ];
+
+      it('should reject slots containing the same word in multiple slots without calling the API', async () => {
+        global.fetch = vi.fn();
+
+        const result = await saveBoard('TEST', slotsWithRedundantWords);
+
+        expect(result).toEqual({
+          error: 'Redundant words in board slots',
+          message: 'Cannot save board TEST: redundant words detected in slots: test.',
+          code: 'REDUNDANT_WORDS',
+        });
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Cannot save board TEST: redundant words detected in slots: test.'
+        );
+      });
+
+      it('should detect redundant words case-insensitively', async () => {
+        global.fetch = vi.fn();
+
+        const mixedCaseSlots: Slot[] = [
+          {
+            letters: ['t', 'e', 's', 't'],
+            user: 'testuser',
+            hitMax: false,
+            word: 'Test',
+          },
+          {
+            letters: ['T', 'E', 'S', 'T'],
+            user: 'anotheruser',
+            hitMax: false,
+            word: 'TEST',
+          },
+        ];
+
+        const result = await saveBoard('TEST', mixedCaseSlots);
+
+        expect(result).toEqual(
+          expect.objectContaining({ code: 'REDUNDANT_WORDS' })
+        );
+        expect(global.fetch).not.toHaveBeenCalled();
+      });
+
+      it('should update the existing board when the stored version has redundant words (self-healing)', async () => {
+        const storedCorruptBoard = {
+          id: 'TEST',
+          slots: [
+            { letters: ['t', 'e', 's', 't'], user: 'a', hitMax: false, word: 'test' },
+            { letters: ['t', 'e', 's', 't'], user: 'b', hitMax: false, word: 'test' },
+          ],
+          created_at: '2024-01-01T00:00:00Z',
+        };
+        const updatedBoard = [{ id: 'TEST', slots: validSlots }];
+
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() => mockFetchResponse(storedCorruptBoard))
+          .mockImplementationOnce(() => mockFetchResponse(updatedBoard));
+
+        const result = await saveBoard('TEST', validSlots);
+
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          2,
+          '/api/boards/TEST',
+          expect.objectContaining({
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ slots: validSlots }),
+          })
+        );
+        expect(result).toEqual(updatedBoard);
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Board TEST exists with redundant words; updating it with the clean version.'
+        );
+      });
+
+      it('should not update the existing board when the stored version is clean', async () => {
+        const storedCleanBoard = {
+          id: 'TEST',
+          slots: validSlots,
+          created_at: '2024-01-01T00:00:00Z',
+        };
+
+        global.fetch = vi.fn(() => mockFetchResponse(storedCleanBoard));
+
+        const result = await saveBoard('TEST', validSlots);
+
+        expect(result).toEqual({
+          error: 'Board already exists',
+          message: 'Board TEST has already been saved.',
+          code: 'BOARD_EXISTS',
+        });
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+      });
+
+      it('should handle self-healing update failures gracefully', async () => {
+        const storedCorruptBoard = {
+          id: 'TEST',
+          slots: [
+            { letters: ['t', 'e', 's', 't'], user: 'a', hitMax: false, word: 'test' },
+            { letters: ['t', 'e', 's', 't'], user: 'b', hitMax: false, word: 'test' },
+          ],
+          created_at: '2024-01-01T00:00:00Z',
+        };
+
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() => mockFetchResponse(storedCorruptBoard))
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 500,
+              statusText: 'Internal Server Error',
+              json: () => Promise.resolve({ error: 'Update failed' }),
+            } as Response)
+          );
+
+        const result = await saveBoard('TEST', validSlots);
+
+        expect(result).toBeUndefined();
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          'Error updating board with clean slots:',
+          expect.any(Error)
+        );
+      });
+    });
+
     describe('successful save', () => {
       it('should successfully save valid board data', async () => {
         const mockResponse = { success: true, id: 'TEST' };
