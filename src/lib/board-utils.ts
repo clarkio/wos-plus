@@ -32,3 +32,22 @@ export function findRedundantWords(slots: unknown): string[] {
 export function hasRedundantWords(slots: unknown): boolean {
   return findRedundantWords(slots).length > 0;
 }
+
+/**
+ * Normalizes a Twitch channel name for storage on a board (lowercase, no
+ * leading '#'). Returns null when the value isn't a valid Twitch username
+ * (letters, digits, underscores, max 50 chars) so callers can simply omit it —
+ * the channel is informational and must never block a board from saving.
+ */
+export function normalizeTwitchChannel(channel: unknown): string | null {
+  if (typeof channel !== 'string') {
+    return null;
+  }
+
+  const cleanChannel = channel.trim().replace(/^#/, '').toLowerCase();
+  if (!/^[a-z0-9_]{1,50}$/.test(cleanChannel)) {
+    return null;
+  }
+
+  return cleanChannel;
+}

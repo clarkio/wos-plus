@@ -1,4 +1,4 @@
-import { findRedundantWords, hasRedundantWords } from '../lib/board-utils';
+import { findRedundantWords, hasRedundantWords, normalizeTwitchChannel } from '../lib/board-utils';
 
 export interface ChannelStats {
   allTimePersonalBest: number;
@@ -64,6 +64,9 @@ export interface Board {
   id: string;
   slots: Slot[];
   created_at: string;
+  // Twitch channel the board was captured from; null for boards saved before
+  // the column existed.
+  twitch_channel?: string | null;
 }
 
 async function fetchExistingBoard(boardId: string): Promise<{ exists: boolean; board: Board | null }> {
@@ -92,14 +95,16 @@ async function fetchExistingBoard(boardId: string): Promise<{ exists: boolean; b
 // Replaces the slots of an already-stored board that was saved with redundant
 // words (issue #119). The server only accepts this update when the stored
 // board is actually corrupted, so a clean board can never be overwritten.
-async function updateBoardSlots(boardId: string, slots: Slot[]) {
+async function updateBoardSlots(boardId: string, slots: Slot[], twitchChannel: string | null) {
   try {
     const response = await fetch(`/api/boards/${encodeURIComponent(boardId)}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ slots }),
+      body: JSON.stringify(
+        twitchChannel ? { slots, twitch_channel: twitchChannel } : { slots }
+      ),
     });
 
     if (!response.ok) {
@@ -122,7 +127,7 @@ async function updateBoardSlots(boardId: string, slots: Slot[]) {
   }
 }
 
-export async function saveBoard(boardId: string, slots: Slot[]) {
+export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: string) {
   // Validate boardId is a string and not too long
   if (typeof boardId !== 'string' || boardId.length === 0) {
     console.warn('Cannot save board: boardId must be a non-empty string.');
@@ -186,6 +191,13 @@ export async function saveBoard(boardId: string, slots: Slot[]) {
     };
   }
 
+  // The channel is informational metadata: an invalid or missing value is
+  // dropped rather than blocking the save.
+  const cleanTwitchChannel = normalizeTwitchChannel(twitchChannel);
+  if (twitchChannel !== undefined && cleanTwitchChannel === null) {
+    console.warn('Saving board without twitch channel: channel name is invalid.');
+  }
+
   try {
     const { exists, board: existingBoard } = await fetchExistingBoard(cleanBoardId);
     if (exists) {
@@ -194,7 +206,7 @@ export async function saveBoard(boardId: string, slots: Slot[]) {
       // instead of skipping the save.
       if (existingBoard && hasRedundantWords(existingBoard.slots)) {
         console.warn(`Board ${cleanBoardId} exists with redundant words; updating it with the clean version.`);
-        return await updateBoardSlots(cleanBoardId, slots);
+        return await updateBoardSlots(cleanBoardId, slots, cleanTwitchChannel);
       }
 
       const duplicateMessage = `Board ${cleanBoardId} has already been saved.`;
@@ -220,6 +232,7 @@ export async function saveBoard(boardId: string, slots: Slot[]) {
         id: cleanBoardId,
         slots: slots,
         created_at: new Date().toISOString(),
+        ...(cleanTwitchChannel ? { twitch_channel: cleanTwitchChannel } : {}),
       }),
     });
 

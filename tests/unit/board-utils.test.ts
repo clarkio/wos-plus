@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findRedundantWords, hasRedundantWords } from '@/lib/board-utils';
+import { findRedundantWords, hasRedundantWords, normalizeTwitchChannel } from '@/lib/board-utils';
 
 /**
  * Unit tests for board-utils.ts module (issue #119)
@@ -80,6 +80,39 @@ describe('board-utils module', () => {
 
     it('should return false for non-array input', () => {
       expect(hasRedundantWords(null)).toBe(false);
+    });
+  });
+
+  describe('normalizeTwitchChannel', () => {
+    it('should lowercase and trim a valid channel name', () => {
+      expect(normalizeTwitchChannel('  Clarkio ')).toBe('clarkio');
+    });
+
+    it('should strip a leading # from the channel name', () => {
+      expect(normalizeTwitchChannel('#clarkio')).toBe('clarkio');
+    });
+
+    it('should accept digits and underscores', () => {
+      expect(normalizeTwitchChannel('some_user123')).toBe('some_user123');
+    });
+
+    it('should return null for invalid characters', () => {
+      expect(normalizeTwitchChannel('bad channel')).toBeNull();
+      expect(normalizeTwitchChannel('bad;drop')).toBeNull();
+      expect(normalizeTwitchChannel('name!')).toBeNull();
+    });
+
+    it('should return null for empty or non-string input', () => {
+      expect(normalizeTwitchChannel('')).toBeNull();
+      expect(normalizeTwitchChannel('#')).toBeNull();
+      expect(normalizeTwitchChannel(null)).toBeNull();
+      expect(normalizeTwitchChannel(undefined)).toBeNull();
+      expect(normalizeTwitchChannel(42)).toBeNull();
+    });
+
+    it('should return null for names longer than 50 characters', () => {
+      expect(normalizeTwitchChannel('a'.repeat(51))).toBeNull();
+      expect(normalizeTwitchChannel('a'.repeat(50))).toBe('a'.repeat(50));
     });
   });
 });

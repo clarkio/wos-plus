@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
-import { findRedundantWords, hasRedundantWords } from '../../../lib/board-utils';
+import { findRedundantWords, hasRedundantWords, normalizeTwitchChannel } from '../../../lib/board-utils';
 
 export const prerender = false;
 
@@ -153,9 +153,16 @@ export const PUT: APIRoute = async ({ params, request }) => {
       }, 409);
     }
 
+    // Also record (or back-fill) the channel the clean capture came from when
+    // a valid one is provided; invalid values are dropped, not rejected.
+    const cleanTwitchChannel = normalizeTwitchChannel(body?.twitch_channel);
+    const updatePayload = cleanTwitchChannel
+      ? { slots, twitch_channel: cleanTwitchChannel }
+      : { slots };
+
     const { data, error } = await supabase
       .from('boards')
-      .update({ slots })
+      .update(updatePayload)
       .eq('id', cleanId)
       .select();
 

@@ -330,7 +330,7 @@ export class GameSpectator {
         console.log('[WOS Helper] Board Slots:', this.currentLevelSlots);
         let slots = this.currentLevelSlots;
         if (slots[slots.length - 1].word !== this.currentLevelBigWord) this.currentLevelBigWord = slots[slots.length - 1].word;
-        await saveBoard(this.currentLevelBigWord, this.currentLevelSlots);
+        await saveBoard(this.currentLevelBigWord, this.currentLevelSlots, this.currentChannel);
       }
 
       this.playSound('level_clear');

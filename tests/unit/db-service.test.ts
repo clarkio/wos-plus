@@ -530,6 +530,86 @@ describe('db-service module', () => {
       });
     });
 
+    describe('twitch channel capture', () => {
+      it('should include the normalized twitch channel in the POST body', async () => {
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
+
+        await saveBoard('TEST', validSlots, '#Clarkio');
+
+        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
+        expect(requestBody.twitch_channel).toBe('clarkio');
+      });
+
+      it('should omit the twitch channel when it is invalid', async () => {
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
+
+        await saveBoard('TEST', validSlots, 'bad channel!');
+
+        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
+        expect(requestBody).not.toHaveProperty('twitch_channel');
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Saving board without twitch channel: channel name is invalid.'
+        );
+      });
+
+      it('should omit the twitch channel when none is provided', async () => {
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
+
+        await saveBoard('TEST', validSlots);
+
+        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
+        expect(requestBody).not.toHaveProperty('twitch_channel');
+      });
+
+      it('should include the twitch channel in the self-healing update', async () => {
+        const storedCorruptBoard = {
+          id: 'TEST',
+          slots: [
+            { letters: ['t', 'e', 's', 't'], user: 'a', hitMax: false, word: 'test' },
+            { letters: ['t', 'e', 's', 't'], user: 'b', hitMax: false, word: 'test' },
+          ],
+          created_at: '2024-01-01T00:00:00Z',
+        };
+
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() => mockFetchResponse(storedCorruptBoard))
+          .mockImplementationOnce(() => mockFetchResponse([{ id: 'TEST', slots: validSlots }]));
+
+        await saveBoard('TEST', validSlots, 'clarkio');
+
+        const putCall = (global.fetch as any).mock.calls[1];
+        expect(putCall[0]).toBe('/api/boards/TEST');
+        expect(JSON.parse(putCall[1].body)).toEqual({
+          slots: validSlots,
+          twitch_channel: 'clarkio',
+        });
+      });
+    });
+
     describe('successful save', () => {
       it('should successfully save valid board data', async () => {
         const mockResponse = { success: true, id: 'TEST' };

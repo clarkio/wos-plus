@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
-import { findRedundantWords } from '../../../lib/board-utils';
+import { findRedundantWords, normalizeTwitchChannel } from '../../../lib/board-utils';
 
 export const prerender = false;
 const corsHeaders = {
@@ -51,6 +51,18 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
+  }
+
+  // The twitch channel is informational metadata: store the normalized value
+  // when it's a valid channel name, otherwise drop it rather than failing the
+  // save.
+  if ('twitch_channel' in (body ?? {})) {
+    const cleanTwitchChannel = normalizeTwitchChannel(body.twitch_channel);
+    if (cleanTwitchChannel) {
+      body.twitch_channel = cleanTwitchChannel;
+    } else {
+      delete body.twitch_channel;
+    }
   }
 
   try {
