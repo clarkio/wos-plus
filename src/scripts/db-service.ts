@@ -67,6 +67,10 @@ export interface Board {
   // Twitch channel the board was captured from; null for boards saved before
   // the column existed.
   twitch_channel?: string | null;
+  // When the board row was last updated; stamped by a database trigger on any
+  // UPDATE (see db-scripts/add-updated-at-to-boards.sql). Null for boards that
+  // have never been updated since being saved.
+  updated_at?: string | null;
 }
 
 async function fetchExistingBoard(boardId: string): Promise<{ exists: boolean; board: Board | null }> {

@@ -155,6 +155,9 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     // Also record (or back-fill) the channel the clean capture came from when
     // a valid one is provided; invalid values are dropped, not rejected.
+    // updated_at is intentionally absent from the payload: a database trigger
+    // (db-scripts/add-updated-at-to-boards.sql) stamps it on every UPDATE so
+    // it always reflects server time regardless of how the row was changed.
     const cleanTwitchChannel = normalizeTwitchChannel(body?.twitch_channel);
     const updatePayload = cleanTwitchChannel
       ? { slots, twitch_channel: cleanTwitchChannel }
