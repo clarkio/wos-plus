@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findRedundantWords, hasRedundantWords, normalizeTwitchChannel } from '@/lib/board-utils';
+import { coerceSlots, findRedundantWords, hasRedundantWords, normalizeTwitchChannel } from '@/lib/board-utils';
 
 /**
  * Unit tests for board-utils.ts module (issue #119)
@@ -67,6 +67,22 @@ describe('board-utils module', () => {
       expect(findRedundantWords('slots')).toEqual([]);
       expect(findRedundantWords({})).toEqual([]);
     });
+
+    it('should detect redundant words in a JSON-string slots column', () => {
+      const stored = JSON.stringify([
+        { word: 'test' },
+        { word: 'word' },
+        { word: 'test' },
+      ]);
+
+      expect(findRedundantWords(stored)).toEqual(['test']);
+    });
+
+    it('should return empty array for a clean JSON-string slots column', () => {
+      const stored = JSON.stringify([{ word: 'test' }, { word: 'word' }]);
+
+      expect(findRedundantWords(stored)).toEqual([]);
+    });
   });
 
   describe('hasRedundantWords', () => {
@@ -80,6 +96,33 @@ describe('board-utils module', () => {
 
     it('should return false for non-array input', () => {
       expect(hasRedundantWords(null)).toBe(false);
+    });
+
+    it('should return true for a JSON-string slots column with duplicates', () => {
+      expect(hasRedundantWords(JSON.stringify([{ word: 'test' }, { word: 'test' }]))).toBe(true);
+    });
+  });
+
+  describe('coerceSlots', () => {
+    it('should return an array unchanged', () => {
+      const slots = [{ word: 'test' }];
+      expect(coerceSlots(slots)).toBe(slots);
+    });
+
+    it('should parse a JSON-string array', () => {
+      expect(coerceSlots('[{"word":"test"}]')).toEqual([{ word: 'test' }]);
+    });
+
+    it('should return null for JSON that is not an array', () => {
+      expect(coerceSlots('{"word":"test"}')).toBeNull();
+    });
+
+    it('should return null for invalid JSON and non-slot values', () => {
+      expect(coerceSlots('not json')).toBeNull();
+      expect(coerceSlots(null)).toBeNull();
+      expect(coerceSlots(undefined)).toBeNull();
+      expect(coerceSlots(42)).toBeNull();
+      expect(coerceSlots({})).toBeNull();
     });
   });
 

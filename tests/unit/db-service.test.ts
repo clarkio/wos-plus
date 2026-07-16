@@ -480,6 +480,48 @@ describe('db-service module', () => {
         );
       });
 
+      it('should self-heal when the stored slots column is a JSON string with redundant words', async () => {
+        const storedCorruptBoard = {
+          id: 'TEST',
+          slots: JSON.stringify([
+            { letters: ['t', 'e', 's', 't'], user: 'a', hitMax: false, word: 'test' },
+            { letters: ['t', 'e', 's', 't'], user: 'b', hitMax: false, word: 'test' },
+          ]),
+          created_at: '2024-01-01T00:00:00Z',
+        };
+        const updatedBoard = [{ id: 'TEST', slots: validSlots }];
+
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() => mockFetchResponse(storedCorruptBoard))
+          .mockImplementationOnce(() => mockFetchResponse(updatedBoard));
+
+        const result = await saveBoard('TEST', validSlots);
+
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          2,
+          '/api/boards/TEST',
+          expect.objectContaining({ method: 'PUT' })
+        );
+        expect(result).toEqual(updatedBoard);
+      });
+
+      it('should not update the existing board when the stored slots column is a clean JSON string', async () => {
+        const storedCleanBoard = {
+          id: 'TEST',
+          slots: JSON.stringify(validSlots),
+          created_at: '2024-01-01T00:00:00Z',
+        };
+
+        global.fetch = vi.fn(() => mockFetchResponse(storedCleanBoard));
+
+        const result = await saveBoard('TEST', validSlots);
+
+        expect(result).toEqual(
+          expect.objectContaining({ code: 'BOARD_EXISTS' })
+        );
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+      });
+
       it('should not update the existing board when the stored version is clean', async () => {
         const storedCleanBoard = {
           id: 'TEST',
