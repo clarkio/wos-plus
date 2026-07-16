@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
+import { findRedundantWords, normalizeTwitchChannel } from '../../../lib/board-utils';
 
 export const prerender = false;
 const corsHeaders = {
@@ -34,6 +35,35 @@ export const GET: APIRoute = async () => {
 
 export const POST: APIRoute = async ({ request }) => {
   const body = await request.json();
+
+  // Guard (issue #119): reject boards whose slots contain the same word more
+  // than once — that data is corrupted and would need manual cleanup later.
+  const redundantWords = findRedundantWords(body?.slots);
+  if (redundantWords.length > 0) {
+    return new Response(
+      JSON.stringify({
+        error: 'Redundant words in board slots',
+        message: `Board ${body?.id || 'ID'} contains redundant words: ${redundantWords.join(', ')}.`,
+        code: 'REDUNDANT_WORDS',
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  // The twitch channel is informational metadata: store the normalized value
+  // when it's a valid channel name, otherwise drop it rather than failing the
+  // save.
+  if ('twitch_channel' in (body ?? {})) {
+    const cleanTwitchChannel = normalizeTwitchChannel(body.twitch_channel);
+    if (cleanTwitchChannel) {
+      body.twitch_channel = cleanTwitchChannel;
+    } else {
+      delete body.twitch_channel;
+    }
+  }
 
   try {
     const supabase = createClient(
