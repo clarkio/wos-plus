@@ -1,7 +1,7 @@
 import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
-import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosWord, canFormWord } from './wos-words';
+import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosWord, canFormWord, determineBoardId } from './wos-words';
 import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
 import { getMirrorGameId } from './mirror-url';
 import { wosLanguageIdToCode } from '../lib/board-utils';
@@ -342,11 +342,13 @@ export class GameSpectator {
       // Capture board data
       if (this.currentLevelBigWord && this.currentLevelSlots) {
         console.log('[WOS Helper] Saving board data to database...');
-        console.log('[WOS Helper] Board ID:', this.currentLevelBigWord);
+        // Save under the canonical id (the alphabetically last big word) —
+        // not whichever anagram happened to be guessed or to sit in the
+        // game's last slot, both of which vary per session.
+        const boardId = this.determineBoardId();
+        console.log('[WOS Helper] Board ID:', boardId);
         console.log('[WOS Helper] Board Slots:', this.currentLevelSlots);
-        let slots = this.currentLevelSlots;
-        if (slots[slots.length - 1].word !== this.currentLevelBigWord) this.currentLevelBigWord = slots[slots.length - 1].word;
-        await saveBoard(this.currentLevelBigWord, this.currentLevelSlots, this.currentChannel, this.currentLanguageCode);
+        await saveBoard(boardId, this.currentLevelSlots, this.currentChannel, this.currentLanguageCode);
       }
 
       this.playSound('level_clear');
@@ -488,8 +490,21 @@ export class GameSpectator {
 
     // Try to fetch board data if we have a big word
     if (this.currentLevelBigWord !== '') {
-      console.log('Attempting to fetch board with ID:', this.currentLevelBigWord);
-      const board = await fetchBoard(this.currentLevelBigWord);
+      // Look the board up under its canonical id (the alphabetically last big
+      // word): the guessed big word may be a different anagram of the id the
+      // board was stored under (e.g. LURING guessed, board saved as RULING).
+      const boardId = this.determineBoardId();
+      console.log('Attempting to fetch board with ID:', boardId);
+      let board = await fetchBoard(boardId);
+
+      // Boards saved before ids were canonicalized are keyed by whichever big
+      // word that session happened to capture, so retry with the guessed word
+      // before falling back to dictionary-based detection.
+      const guessedBoardId = this.currentLevelBigWord.replace(/\s+/g, '').toUpperCase();
+      if (!board && guessedBoardId !== boardId) {
+        console.log('Board not found under canonical ID, retrying with guessed big word:', guessedBoardId);
+        board = await fetchBoard(guessedBoardId);
+      }
 
       if (board && board.slots) {
         console.log('Board found in database, using board slots for missed words detection');
@@ -697,6 +712,17 @@ export class GameSpectator {
           this.currentLevelHiddenLetters.map(l => l.toUpperCase()).join(' ');
       }
     }
+  }
+
+  // Canonical database id for the current board: the alphabetically last big
+  // word of the level. Filled slot words are passed as extra candidates so a
+  // big-word anagram captured in a slot still wins even when the dictionary
+  // hasn't loaded (determineBoardId ignores non-anagram words).
+  private determineBoardId(): string {
+    const slotWords = this.currentLevelSlots
+      .filter(slot => typeof slot.word === 'string' && slot.word.length > 0)
+      .map(slot => slot.word);
+    return determineBoardId(this.currentLevelBigWord, slotWords);
   }
 
   private updateCurrentLevelSlots(username: string, letters: string[], index: number, hitMax: boolean) {

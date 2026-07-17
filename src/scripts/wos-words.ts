@@ -62,6 +62,51 @@ export interface Slot {
   length?: number;
 }
 
+/**
+ * Determines the canonical database id for a board: the alphabetically last
+ * big word of the level. A level can have several valid big words — anagrams
+ * of the same letters, e.g. LURING and RULING — and which one players happen
+ * to guess (or which one lands in the game's final slot) varies per session.
+ * Keying boards by the anagram that sorts last alphabetically makes every
+ * session derive the same id for the same board, on save and on lookup.
+ *
+ * Candidates are the dictionary anagrams of `bigWord` plus any
+ * `extraCandidates` observed during play (e.g. filled slot words); candidates
+ * that aren't anagrams of `bigWord` are ignored. Falls back to `bigWord`
+ * itself when the dictionary hasn't loaded and nothing else qualifies.
+ * Returns the id uppercased with any display spaces removed.
+ */
+export function determineBoardId(bigWord: string, extraCandidates: string[] = []): string {
+  const cleanBigWord = bigWord.replace(/\s+/g, '').toLowerCase();
+  if (cleanBigWord.length === 0) {
+    return '';
+  }
+
+  const signature = cleanBigWord.split('').sort().join('');
+  const isAnagram = (word: string) =>
+    word.length === cleanBigWord.length && word.split('').sort().join('') === signature;
+
+  const candidates = new Set<string>([cleanBigWord]);
+
+  for (const candidate of extraCandidates) {
+    const clean = candidate.replace(/\s+/g, '').toLowerCase();
+    if (isAnagram(clean)) {
+      candidates.add(clean);
+    }
+  }
+
+  if (wosDictionary) {
+    for (const word of wosDictionary) {
+      const clean = word.toLowerCase();
+      if (isAnagram(clean)) {
+        candidates.add(clean);
+      }
+    }
+  }
+
+  return [...candidates].sort((a, b) => a.localeCompare(b)).pop()!.toUpperCase();
+}
+
 export async function updateWordsDb(word: string) {
   try {
     if (wosDictionary && wosDictionary.includes(word)) {

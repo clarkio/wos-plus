@@ -47,7 +47,9 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  return `Fix boards.id to match last slot word
+  return `Fix boards.id to match the canonical board id: the alphabetically
+last big word of the board (the level can have several big-word anagrams,
+e.g. LURING and RULING, and sessions may have captured any of them).
 
 If an id update fails due to a duplicate key, the script will fetch the existing row
 for the desired id and compare its slots to the mismatched row's slots (by slot "word" values).
@@ -88,16 +90,35 @@ function coerceSlots(slots) {
   return null;
 }
 
-function getLastSlotWord(slotsArray) {
+// The canonical board id is the alphabetically last big word (see
+// determineBoardId in src/scripts/wos-words.ts). Candidates are the row's
+// max-length slot words plus the row's current id when it is itself an
+// anagram of them — so a row that is already keyed canonically (e.g. RULING)
+// is never re-keyed back to an alphabetically earlier anagram that happened
+// to be captured in its slots (e.g. LURING in the last slot).
+function getDesiredBoardId(currentIdNorm, slotsArray) {
   if (!Array.isArray(slotsArray) || slotsArray.length === 0) return null;
-  const last = slotsArray[slotsArray.length - 1];
-  if (!last || typeof last !== "object") return null;
 
-  if (typeof last.word === "string" && last.word.trim().length > 0) {
-    return last.word;
+  const words = slotsArray
+    .map((slot) => (slot && typeof slot === "object" ? slot.word : null))
+    .map((word) => normalizeId(word))
+    .filter(Boolean);
+
+  if (words.length === 0) return null;
+
+  const maxLength = Math.max(...words.map((word) => word.length));
+  const candidates = new Set(words.filter((word) => word.length === maxLength));
+
+  const signature = [...candidates][0].split("").sort().join("");
+  if (
+    currentIdNorm &&
+    currentIdNorm.length === maxLength &&
+    currentIdNorm.split("").sort().join("") === signature
+  ) {
+    candidates.add(currentIdNorm);
   }
 
-  return null;
+  return [...candidates].sort((a, b) => a.localeCompare(b)).pop();
 }
 
 function isDuplicateKeyError(error) {
@@ -309,17 +330,12 @@ async function main() {
 
       const currentId = row?.id;
       const slotsArray = coerceSlots(row?.slots);
-      const lastWord = getLastSlotWord(slotsArray);
-
-      if (!currentId || !lastWord) {
-        skipped += 1;
-        continue;
-      }
-
       const currentIdNorm = normalizeId(currentId);
-      const desiredIdNorm = normalizeId(lastWord);
+      const desiredIdNorm = currentIdNorm
+        ? getDesiredBoardId(currentIdNorm, slotsArray)
+        : null;
 
-      if (!desiredIdNorm) {
+      if (!currentIdNorm || !desiredIdNorm) {
         skipped += 1;
         continue;
       }
@@ -327,7 +343,7 @@ async function main() {
       if (currentIdNorm !== desiredIdNorm) {
         mismatched += 1;
         console.log(
-          `Mismatch: id=${currentIdNorm} -> slots[last].word=${desiredIdNorm}`
+          `Mismatch: id=${currentIdNorm} -> canonical big word=${desiredIdNorm}`
         );
 
         if (args.apply) {
