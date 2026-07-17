@@ -20,14 +20,12 @@
     "@sentry/astro": "10.65.0",
     "@sentry/cloudflare": "10.52.0",
     "@supabase/supabase-js": "2.105.4",
-    "@tmi.js/chat": "0.4.1",
+    "@tmi.js/chat": "0.8.0",
     "astro": "7.0.9",
-    "socket.io-client": "2.5.0",
-    "tmi.js": "1.8.5"
+    "socket.io-client": "2.5.0"
   },
   "devDependencies": {
     "@types/socket.io-client": "1.4.36",
-    "@types/tmi.js": "1.8.6",
     "@vitest/coverage-v8": "4.1.9",
     "@vitest/ui": "4.1.9",
     "happy-dom": "^20.9.0",
