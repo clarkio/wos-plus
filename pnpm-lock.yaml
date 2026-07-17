@@ -24,24 +24,18 @@ importers:
         specifier: 2.105.4
         version: 2.105.4
       '@tmi.js/chat':
-        specifier: 0.4.1
-        version: 0.4.1
+        specifier: 0.8.0
+        version: 0.8.0
       astro:
         specifier: 7.0.9
         version: 7.0.9(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.2)(@types/node@26.1.1)(rollup@4.62.2)
       socket.io-client:
         specifier: 2.5.0
         version: 2.5.0
-      tmi.js:
-        specifier: 1.8.5
-        version: 1.8.5
     devDependencies:
       '@types/socket.io-client':
         specifier: 1.4.36
         version: 1.4.36
-      '@types/tmi.js':
-        specifier: 1.8.6
-        version: 1.8.6
       '@vitest/coverage-v8':
         specifier: 4.1.9
         version: 4.1.9(vitest@4.1.9)
@@ -1216,8 +1210,8 @@ packages:
     resolution: {integrity: sha512-cEnx+k49knU+qdIP7rXwR6fqEXPHZs+74xFK1R0S8MgQ7v9tbePVdGxvO03n3bPympMdJWVLadARBfU4TgNHCQ==}
     engines: {node: '>=20.0.0'}
 
-  '@tmi.js/chat@0.4.1':
-    resolution: {integrity: sha512-lDLc1t9ZmEieDBxmyn4b2+2oowj2X6jjj8khFE3IT2z6mIlkOJzNDJPLaiwxe9HcsKUi428oTtuRoRQwPF9uWw==}
+  '@tmi.js/chat@0.8.0':
+    resolution: {integrity: sha512-fkJnRWoRTcD+sc2Q2/p0DWua4scq8uTM+RNUtAM5Xeg1otAJqEmqGO4+Ek3ExrKrzr1MUoZWmp13qTV0VSHw6w==}
     engines: {node: '>=22'}
 
   '@tmi.js/irc-parser@0.5.0':
@@ -1252,9 +1246,6 @@ packages:
 
   '@types/socket.io-client@1.4.36':
     resolution: {integrity: sha512-ZJWjtFBeBy1kRSYpVbeGYTElf6BqPQUkXDlHHD4k/42byCN5Rh027f4yARHCink9sKAkbtGZXEAmR0ZCnc2/Ag==}
-
-  '@types/tmi.js@1.8.6':
-    resolution: {integrity: sha512-LVzNK7AxTMyh9qHLanAQR1o0I9XzfbIcXk85cx85igmCJHHO1Sm71sdhQ8Mj1WmRGzynPIoCXx6mVaFynWbsQw==}
 
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
@@ -2208,10 +2199,6 @@ packages:
     resolution: {integrity: sha512-Bf+ILmBgretUrdJxzXM0SgXLZ3XfiaUuOj/IKQHuTXip+05Xn+uyEYdVg0kYDipTBcLrCVyUzAPz7QmArb0mmw==}
     engines: {node: '>=14.0.0'}
 
-  tmi.js@1.8.5:
-    resolution: {integrity: sha512-A9qrydfe1e0VWM9MViVhhxVgvLpnk7pFShVUWePsSTtoi+A1X+Zjdoa7OJd7/YsgHXGj3GkNEvnWop/1WwZuew==}
-    engines: {node: '>=10.0.0'}
-
   to-array@0.1.4:
     resolution: {integrity: sha512-LhVdShQD/4Mk4zXNroIQZJC+Ap3zgLcDuwEdcmLv9CCO73NWockQDwyUnW/m8VX/EElfL6FcYx7EeutN4HJA6A==}
 
@@ -2484,18 +2471,6 @@ packages:
     peerDependencies:
       bufferutil: ^4.0.1
       utf-8-validate: ^5.0.2
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
-  ws@8.20.1:
-    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
     peerDependenciesMeta:
       bufferutil:
         optional: true
@@ -3568,7 +3543,7 @@ snapshots:
       '@supabase/realtime-js': 2.105.4
       '@supabase/storage-js': 2.105.4
 
-  '@tmi.js/chat@0.4.1':
+  '@tmi.js/chat@0.8.0':
     dependencies:
       '@tmi.js/irc-parser': 0.5.0
 
@@ -3609,8 +3584,6 @@ snapshots:
       undici-types: 8.3.0
 
   '@types/socket.io-client@1.4.36': {}
-
-  '@types/tmi.js@1.8.6': {}
 
   '@types/unist@3.0.3': {}
 
@@ -4716,15 +4689,6 @@ snapshots:
 
   tinyrainbow@3.1.0: {}
 
-  tmi.js@1.8.5:
-    dependencies:
-      node-fetch: 2.7.0
-      ws: 8.20.1
-    transitivePeerDependencies:
-      - bufferutil
-      - encoding
-      - utf-8-validate
-
   to-array@0.1.4: {}
 
   totalist@3.0.1: {}
@@ -4914,8 +4878,6 @@ snapshots:
       - utf-8-validate
 
   ws@7.5.12: {}
-
-  ws@8.20.1: {}
 
   ws@8.21.0: {}
 
