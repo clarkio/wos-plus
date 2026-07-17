@@ -1,4 +1,4 @@
-import { findRedundantWords, hasRedundantWords, normalizeTwitchChannel } from '../lib/board-utils';
+import { findRedundantWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../lib/board-utils';
 
 export interface ChannelStats {
   allTimePersonalBest: number;
@@ -71,6 +71,11 @@ export interface Board {
   // UPDATE (see db-scripts/add-updated-at-to-boards.sql). Null for boards that
   // have never been updated since being saved.
   updated_at?: string | null;
+  // Two-letter code for the language of the board's words ('en', 'pt' or
+  // 'fr'), captured from the WoS game instance (issue #124). Boards saved
+  // before the column existed default to 'en' — the only language WoS+
+  // supported at the time.
+  language_code?: string | null;
 }
 
 async function fetchExistingBoard(boardId: string): Promise<{ exists: boolean; board: Board | null }> {
@@ -99,16 +104,18 @@ async function fetchExistingBoard(boardId: string): Promise<{ exists: boolean; b
 // Replaces the slots of an already-stored board that was saved with redundant
 // words (issue #119). The server only accepts this update when the stored
 // board is actually corrupted, so a clean board can never be overwritten.
-async function updateBoardSlots(boardId: string, slots: Slot[], twitchChannel: string | null) {
+async function updateBoardSlots(boardId: string, slots: Slot[], twitchChannel: string | null, languageCode: string) {
   try {
     const response = await fetch(`/api/boards/${encodeURIComponent(boardId)}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(
-        twitchChannel ? { slots, twitch_channel: twitchChannel } : { slots }
-      ),
+      body: JSON.stringify({
+        slots,
+        language_code: languageCode,
+        ...(twitchChannel ? { twitch_channel: twitchChannel } : {}),
+      }),
     });
 
     if (!response.ok) {
@@ -131,7 +138,7 @@ async function updateBoardSlots(boardId: string, slots: Slot[], twitchChannel: s
   }
 }
 
-export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: string) {
+export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: string, languageCode?: string) {
   // Validate boardId is a string and not too long
   if (typeof boardId !== 'string' || boardId.length === 0) {
     console.warn('Cannot save board: boardId must be a non-empty string.');
@@ -202,6 +209,14 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
     console.warn('Saving board without twitch channel: channel name is invalid.');
   }
 
+  // Language is informational metadata too (issue #124): fall back to English
+  // rather than blocking the save, since 'en' was the implicit language of
+  // every board saved before language capture existed.
+  const cleanLanguageCode = normalizeLanguageCode(languageCode) ?? 'en';
+  if (languageCode !== undefined && normalizeLanguageCode(languageCode) === null) {
+    console.warn(`Saving board with default language 'en': language code is invalid.`);
+  }
+
   try {
     const { exists, board: existingBoard } = await fetchExistingBoard(cleanBoardId);
     if (exists) {
@@ -210,7 +225,7 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
       // instead of skipping the save.
       if (existingBoard && hasRedundantWords(existingBoard.slots)) {
         console.warn(`Board ${cleanBoardId} exists with redundant words; updating it with the clean version.`);
-        return await updateBoardSlots(cleanBoardId, slots, cleanTwitchChannel);
+        return await updateBoardSlots(cleanBoardId, slots, cleanTwitchChannel, cleanLanguageCode);
       }
 
       const duplicateMessage = `Board ${cleanBoardId} has already been saved.`;
@@ -236,6 +251,7 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
         id: cleanBoardId,
         slots: slots,
         created_at: new Date().toISOString(),
+        language_code: cleanLanguageCode,
         ...(cleanTwitchChannel ? { twitch_channel: cleanTwitchChannel } : {}),
       }),
     });

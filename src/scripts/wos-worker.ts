@@ -15,6 +15,10 @@ export interface WosWorkerMessage {
     slots?: any[];
     index?: number;
     record?: number;
+    // Numeric id of the language the game instance's words are in
+    // (1 = pt, 2 = en, 4 = fr). Present on state-carrying events such as
+    // "Game Connected".
+    language?: number;
   };
 }
 
@@ -32,6 +36,8 @@ export interface WosWorkerResult {
   hiddenLetters: string[];
   slots: any[];
   index?: number;
+  // Passed through untranslated; the main thread maps it to a language code.
+  language?: number;
 }
 
 let currentLevel = 0;
@@ -54,6 +60,7 @@ self.onmessage = function (e: MessageEvent<WosWorkerMessage>) {
       falseLetters: data.falseLetters || [],
       hiddenLetters: data.hiddenLetters || [],
       slots: data.slots || [],
+      language: data.language,
     };
 
     // console.log(`[WOS Worker] Event Type: ${eventType}`, data);

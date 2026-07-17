@@ -471,7 +471,7 @@ describe('db-service module', () => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ slots: validSlots }),
+            body: JSON.stringify({ slots: validSlots, language_code: 'en' }),
           })
         );
         expect(result).toEqual(updatedBoard);
@@ -647,7 +647,84 @@ describe('db-service module', () => {
         expect(putCall[0]).toBe('/api/boards/TEST');
         expect(JSON.parse(putCall[1].body)).toEqual({
           slots: validSlots,
+          language_code: 'en',
           twitch_channel: 'clarkio',
+        });
+      });
+    });
+
+    describe('language capture (issue #124)', () => {
+      const notFoundThenSuccess = () =>
+        vi.fn()
+          .mockImplementationOnce(() =>
+            Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found',
+            } as Response)
+          )
+          .mockImplementationOnce(() => mockFetchResponse({ success: true }));
+
+      it('should include the language code in the POST body', async () => {
+        global.fetch = notFoundThenSuccess();
+
+        await saveBoard('TEST', validSlots, 'clarkio', 'pt');
+
+        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
+        expect(requestBody.language_code).toBe('pt');
+      });
+
+      it('should normalize the language code before sending it', async () => {
+        global.fetch = notFoundThenSuccess();
+
+        await saveBoard('TEST', validSlots, 'clarkio', ' FR ');
+
+        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
+        expect(requestBody.language_code).toBe('fr');
+      });
+
+      it('should default to en when no language code is provided', async () => {
+        global.fetch = notFoundThenSuccess();
+
+        await saveBoard('TEST', validSlots);
+
+        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
+        expect(requestBody.language_code).toBe('en');
+      });
+
+      it('should default to en when the language code is unsupported', async () => {
+        global.fetch = notFoundThenSuccess();
+
+        await saveBoard('TEST', validSlots, 'clarkio', 'es');
+
+        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
+        expect(requestBody.language_code).toBe('en');
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          `Saving board with default language 'en': language code is invalid.`
+        );
+      });
+
+      it('should include the language code in the self-healing update', async () => {
+        const storedCorruptBoard = {
+          id: 'TEST',
+          slots: [
+            { letters: ['t', 'e', 's', 't'], user: 'a', hitMax: false, word: 'test' },
+            { letters: ['t', 'e', 's', 't'], user: 'b', hitMax: false, word: 'test' },
+          ],
+          created_at: '2024-01-01T00:00:00Z',
+        };
+
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() => mockFetchResponse(storedCorruptBoard))
+          .mockImplementationOnce(() => mockFetchResponse([{ id: 'TEST', slots: validSlots }]));
+
+        await saveBoard('TEST', validSlots, undefined, 'fr');
+
+        const putCall = (global.fetch as any).mock.calls[1];
+        expect(putCall[0]).toBe('/api/boards/TEST');
+        expect(JSON.parse(putCall[1].body)).toEqual({
+          slots: validSlots,
+          language_code: 'fr',
         });
       });
     });

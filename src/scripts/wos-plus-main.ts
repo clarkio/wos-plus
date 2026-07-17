@@ -4,6 +4,7 @@ import io from 'socket.io-client';
 import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosWord, canFormWord } from './wos-words';
 import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
 import { getMirrorGameId } from './mirror-url';
+import { wosLanguageIdToCode } from '../lib/board-utils';
 
 
 const twitchWorker = new Worker(
@@ -56,6 +57,12 @@ export class GameSpectator {
   wosSocket: any;
   twitchClient: tmiClient | void = undefined;
   currentChannel: string = '';
+  // Two-letter code for the language of the words in the current game
+  // instance ('en', 'pt' or 'fr'), derived from the numeric language id WoS
+  // includes on its socket events (issue #124). Stored with each saved board
+  // so multi-lingual support can build on the data later. Defaults to English
+  // since that's the only language WoS+ fully supports today.
+  currentLanguageCode: string = 'en';
   personalBest: number = 0;
   dailyBest: number = 0;
   dailyClears: number = 0;
@@ -199,10 +206,19 @@ export class GameSpectator {
     // Set up WOS worker message handler
     wosWorker.onmessage = async (e) => {
       if (e.data.type === 'wos_event') {
-        const { wosEventType, wosEventName, username, letters, hitMax, stars, level, falseLetters, hiddenLetters, slots, index } = e.data;
+        const { wosEventType, wosEventName, username, letters, hitMax, stars, level, falseLetters, hiddenLetters, slots, index, language } = e.data;
 
         const message = username ? `:${username} - ${letters.join('')} - Big Word: ${hitMax}` : '';
         console.log(`[WOS Event] <${wosEventName}>${message}`);
+
+        // Capture the game's word language whenever an event carries it
+        // (issue #124). Unknown/absent ids leave the current value alone so a
+        // mid-game state refresh can't wipe an already-known language.
+        const languageCode = wosLanguageIdToCode(language);
+        if (languageCode && languageCode !== this.currentLanguageCode) {
+          this.currentLanguageCode = languageCode;
+          this.log(`Game language: ${languageCode}`, this.wosGameLogId);
+        }
 
         if (wosEventType === 1 || wosEventType === 12) {
           this.handleGameInitialization(level, wosEventType, letters, slots);
@@ -330,7 +346,7 @@ export class GameSpectator {
         console.log('[WOS Helper] Board Slots:', this.currentLevelSlots);
         let slots = this.currentLevelSlots;
         if (slots[slots.length - 1].word !== this.currentLevelBigWord) this.currentLevelBigWord = slots[slots.length - 1].word;
-        await saveBoard(this.currentLevelBigWord, this.currentLevelSlots, this.currentChannel);
+        await saveBoard(this.currentLevelBigWord, this.currentLevelSlots, this.currentChannel, this.currentLanguageCode);
       }
 
       this.playSound('level_clear');

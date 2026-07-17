@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
-import { findRedundantWords, normalizeTwitchChannel } from '../../../lib/board-utils';
+import { findRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../../../lib/board-utils';
 
 export const prerender = false;
 const corsHeaders = {
@@ -62,6 +62,18 @@ export const POST: APIRoute = async ({ request }) => {
       body.twitch_channel = cleanTwitchChannel;
     } else {
       delete body.twitch_channel;
+    }
+  }
+
+  // Same treatment for the board's word language (issue #124): store the
+  // normalized code when it's one WoS supports, otherwise drop it so the
+  // column's database default ('en') applies instead of failing the save.
+  if ('language_code' in (body ?? {})) {
+    const cleanLanguageCode = normalizeLanguageCode(body.language_code);
+    if (cleanLanguageCode) {
+      body.language_code = cleanLanguageCode;
+    } else {
+      delete body.language_code;
     }
   }
 

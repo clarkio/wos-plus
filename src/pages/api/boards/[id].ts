@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
-import { findRedundantWords, hasRedundantWords, normalizeTwitchChannel } from '../../../lib/board-utils';
+import { findRedundantWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../../../lib/board-utils';
 
 export const prerender = false;
 
@@ -158,10 +158,18 @@ export const PUT: APIRoute = async ({ params, request }) => {
     // updated_at is intentionally absent from the payload: a database trigger
     // (db-scripts/add-updated-at-to-boards.sql) stamps it on every UPDATE so
     // it always reflects server time regardless of how the row was changed.
+    // The board's word language (issue #124) is treated the same way: a valid
+    // code is recorded (or back-filled) with the clean capture, an invalid or
+    // missing one leaves the stored value untouched.
     const cleanTwitchChannel = normalizeTwitchChannel(body?.twitch_channel);
-    const updatePayload = cleanTwitchChannel
-      ? { slots, twitch_channel: cleanTwitchChannel }
-      : { slots };
+    const cleanLanguageCode = normalizeLanguageCode(body?.language_code);
+    const updatePayload: Record<string, unknown> = { slots };
+    if (cleanTwitchChannel) {
+      updatePayload.twitch_channel = cleanTwitchChannel;
+    }
+    if (cleanLanguageCode) {
+      updatePayload.language_code = cleanLanguageCode;
+    }
 
     const { data, error } = await supabase
       .from('boards')
