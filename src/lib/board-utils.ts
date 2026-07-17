@@ -56,6 +56,46 @@ export function hasRedundantWords(slots: unknown): boolean {
   return findRedundantWords(slots).length > 0;
 }
 
+// Words on Stream supports three word languages. The game's socket events
+// carry the language as a numeric id (e.g. on the "Game Connected" payload);
+// the official wos.gg client resolves that id through its /api/language?id=N
+// endpoint, which returns these codes: 1 → 'pt', 2 → 'en', 4 → 'fr'.
+export const WOS_LANGUAGE_ID_TO_CODE: Readonly<Record<number, string>> = {
+  1: 'pt',
+  2: 'en',
+  4: 'fr',
+};
+
+const SUPPORTED_LANGUAGE_CODES = new Set(Object.values(WOS_LANGUAGE_ID_TO_CODE));
+
+/**
+ * Maps the numeric language id from a WoS socket event to its two-letter
+ * language code. Returns null for unknown ids (including future languages WoS
+ * may add) so callers can fall back to their current language instead of
+ * storing a bogus code.
+ */
+export function wosLanguageIdToCode(languageId: unknown): string | null {
+  if (typeof languageId !== 'number' || !Number.isInteger(languageId)) {
+    return null;
+  }
+  return WOS_LANGUAGE_ID_TO_CODE[languageId] ?? null;
+}
+
+/**
+ * Normalizes a language code for storage on a board (lowercase, trimmed).
+ * Returns null when the value isn't one of the languages Words on Stream
+ * supports ('en', 'pt', 'fr') so callers can simply omit it — the language is
+ * informational metadata and must never block a board from saving.
+ */
+export function normalizeLanguageCode(code: unknown): string | null {
+  if (typeof code !== 'string') {
+    return null;
+  }
+
+  const cleanCode = code.trim().toLowerCase();
+  return SUPPORTED_LANGUAGE_CODES.has(cleanCode) ? cleanCode : null;
+}
+
 /**
  * Normalizes a Twitch channel name for storage on a board (lowercase, no
  * leading '#'). Returns null when the value isn't a valid Twitch username

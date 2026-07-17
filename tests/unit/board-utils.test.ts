@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coerceSlots, findRedundantWords, hasRedundantWords, normalizeTwitchChannel } from '@/lib/board-utils';
+import { coerceSlots, findRedundantWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel, wosLanguageIdToCode } from '@/lib/board-utils';
 
 /**
  * Unit tests for board-utils.ts module (issue #119)
@@ -156,6 +156,55 @@ describe('board-utils module', () => {
     it('should return null for names longer than 50 characters', () => {
       expect(normalizeTwitchChannel('a'.repeat(51))).toBeNull();
       expect(normalizeTwitchChannel('a'.repeat(50))).toBe('a'.repeat(50));
+    });
+  });
+
+  describe('wosLanguageIdToCode (issue #124)', () => {
+    it('should map the WoS language ids to their codes', () => {
+      expect(wosLanguageIdToCode(1)).toBe('pt');
+      expect(wosLanguageIdToCode(2)).toBe('en');
+      expect(wosLanguageIdToCode(4)).toBe('fr');
+    });
+
+    it('should return null for unknown ids', () => {
+      expect(wosLanguageIdToCode(0)).toBeNull();
+      expect(wosLanguageIdToCode(3)).toBeNull();
+      expect(wosLanguageIdToCode(5)).toBeNull();
+      expect(wosLanguageIdToCode(-1)).toBeNull();
+    });
+
+    it('should return null for non-integer input', () => {
+      expect(wosLanguageIdToCode('2')).toBeNull();
+      expect(wosLanguageIdToCode(2.5)).toBeNull();
+      expect(wosLanguageIdToCode(null)).toBeNull();
+      expect(wosLanguageIdToCode(undefined)).toBeNull();
+      expect(wosLanguageIdToCode({})).toBeNull();
+    });
+  });
+
+  describe('normalizeLanguageCode (issue #124)', () => {
+    it('should accept the supported language codes', () => {
+      expect(normalizeLanguageCode('en')).toBe('en');
+      expect(normalizeLanguageCode('pt')).toBe('pt');
+      expect(normalizeLanguageCode('fr')).toBe('fr');
+    });
+
+    it('should lowercase and trim the code', () => {
+      expect(normalizeLanguageCode('EN')).toBe('en');
+      expect(normalizeLanguageCode(' Fr ')).toBe('fr');
+    });
+
+    it('should return null for unsupported codes', () => {
+      expect(normalizeLanguageCode('es')).toBeNull();
+      expect(normalizeLanguageCode('english')).toBeNull();
+      expect(normalizeLanguageCode('e')).toBeNull();
+    });
+
+    it('should return null for empty or non-string input', () => {
+      expect(normalizeLanguageCode('')).toBeNull();
+      expect(normalizeLanguageCode(null)).toBeNull();
+      expect(normalizeLanguageCode(undefined)).toBeNull();
+      expect(normalizeLanguageCode(2)).toBeNull();
     });
   });
 });
