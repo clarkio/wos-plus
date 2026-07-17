@@ -28,6 +28,10 @@ vi.mock('@scripts/wos-words', async (importActual) => {
     // dependency, so hidden-word resolution genuinely validates that a candidate
     // fits within the level's letters.
     canFormWord: actual.canFormWord,
+    // Keep the real board-id canonicalization too: with the dictionary unloaded
+    // in tests it works purely from the big word and the slot-word candidates,
+    // so save/fetch key derivation is genuinely exercised.
+    determineBoardId: actual.determineBoardId,
   };
 });
 
@@ -910,6 +914,30 @@ describe('GameSpectator class', () => {
       expect(document.getElementById('level-title')!.innerText).toBe('NEXT LEVEL');
       expect(document.getElementById('level-value')!.innerText).toBe('13');
     });
+
+    it('should save a cleared board under the alphabetically last big word', async () => {
+      // The level has two big words (anagrams LURING and RULING). LURING was
+      // the guessed big word and also sits in the game's last slot, but the
+      // canonical board id must be RULING — the alphabetically last anagram.
+      const dbService = await import('@scripts/db-service');
+      const saveBoardMock = vi.mocked(dbService.saveBoard);
+
+      spectator.currentLevelBigWord = 'L U R I N G';
+      spectator.currentLevelSlots = [
+        { letters: ['r', 'i', 'n', 'g'], word: 'ring', user: 'user1', hitMax: false, index: 0, length: 4 },
+        { letters: ['r', 'u', 'l', 'i', 'n', 'g'], word: 'ruling', user: 'user2', hitMax: true, index: 1, length: 6 },
+        { letters: ['l', 'u', 'r', 'i', 'n', 'g'], word: 'luring', user: 'user3', hitMax: true, index: 2, length: 6 },
+      ];
+
+      await (spectator as any).handleLevelResults(5);
+
+      expect(saveBoardMock).toHaveBeenCalledWith(
+        'RULING',
+        spectator.currentLevelSlots,
+        spectator.currentChannel,
+        spectator.currentLanguageCode
+      );
+    });
   });
 
   describe('handleLevelEnd', () => {
@@ -1167,7 +1195,9 @@ describe('GameSpectator class', () => {
 
       await (spectator as any).logMissingWords();
 
-      expect(fetchBoardMock).toHaveBeenCalledWith('T E S T I N G');
+      // The board is looked up under its canonical id: spaces removed,
+      // alphabetically last anagram.
+      expect(fetchBoardMock).toHaveBeenCalledWith('TESTING');
       expect(findAllMissingWordsMock).toHaveBeenCalledTimes(1);
       expect(spectator.currentLevelCorrectWords).toEqual(
         expect.arrayContaining(['alpha*', 'beta*'])
@@ -1243,13 +1273,71 @@ describe('GameSpectator class', () => {
 
       await (spectator as any).logMissingWords();
 
-      expect(fetchBoardMock).toHaveBeenCalledWith('T E S T I N G');
+      expect(fetchBoardMock).toHaveBeenCalledWith('TESTING');
       expect(findMissingWordsFromBoardMock).toHaveBeenCalledWith(
         spectator.currentLevelSlots,
         mockBoard.slots
       );
       expect(spectator.currentLevelCorrectWords).toEqual(
         expect.arrayContaining(['miss*'])
+      );
+    });
+
+    it('should fetch the board under the alphabetically last big word anagram', async () => {
+      // RULING was captured in a slot while LURING is the guessed big word:
+      // the lookup must use RULING, the canonical (alphabetically last) id.
+      const dbService = await import('@scripts/db-service');
+      const fetchBoardMock = vi.mocked(dbService.fetchBoard);
+      fetchBoardMock.mockResolvedValueOnce({
+        id: 'RULING',
+        created_at: '2024-01-01T00:00:00Z',
+        slots: [],
+      });
+      vi.mocked(wosWords.findMissingWordsFromBoard).mockReturnValueOnce([]);
+
+      spectator.currentLevelBigWord = 'L U R I N G';
+      spectator.currentLevelSlots = [
+        { letters: ['r', 'u', 'l', 'i', 'n', 'g'], word: 'ruling', user: 'user1', hitMax: true, index: 0, length: 6 },
+        { letters: ['l', 'u', 'r', 'i', 'n', 'g'], word: '', hitMax: false, index: 1, length: 6 },
+      ];
+
+      await (spectator as any).logMissingWords();
+
+      expect(fetchBoardMock).toHaveBeenCalledTimes(1);
+      expect(fetchBoardMock).toHaveBeenCalledWith('RULING');
+    });
+
+    it('should retry the fetch with the guessed big word when the canonical id is not stored', async () => {
+      // Boards saved before ids were canonicalized are keyed by whichever big
+      // word that session captured — here the board is stored as LURING.
+      const dbService = await import('@scripts/db-service');
+      const fetchBoardMock = vi.mocked(dbService.fetchBoard);
+      const legacyBoard = {
+        id: 'LURING',
+        created_at: '2024-01-01T00:00:00Z',
+        slots: [
+          { letters: ['l', 'u', 'r', 'i', 'n', 'g'], word: 'luring', user: 'user1', hitMax: true, index: 0, length: 6 },
+        ],
+      };
+      fetchBoardMock.mockResolvedValueOnce(null); // canonical id RULING not found
+      fetchBoardMock.mockResolvedValueOnce(legacyBoard);
+
+      const findMissingWordsFromBoardMock = vi.mocked(wosWords.findMissingWordsFromBoard);
+      findMissingWordsFromBoardMock.mockReturnValueOnce([]);
+
+      spectator.currentLevelBigWord = 'L U R I N G';
+      spectator.currentLevelSlots = [
+        { letters: ['r', 'u', 'l', 'i', 'n', 'g'], word: 'ruling', user: 'user1', hitMax: true, index: 0, length: 6 },
+        { letters: ['l', 'u', 'r', 'i', 'n', 'g'], word: '', hitMax: false, index: 1, length: 6 },
+      ];
+
+      await (spectator as any).logMissingWords();
+
+      expect(fetchBoardMock).toHaveBeenNthCalledWith(1, 'RULING');
+      expect(fetchBoardMock).toHaveBeenNthCalledWith(2, 'LURING');
+      expect(findMissingWordsFromBoardMock).toHaveBeenCalledWith(
+        spectator.currentLevelSlots,
+        legacyBoard.slots
       );
     });
 
