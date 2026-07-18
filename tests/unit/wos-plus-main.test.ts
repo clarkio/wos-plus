@@ -1492,16 +1492,103 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelCorrectWords).toContain('test');
     });
 
-    it('should return early only for a hidden word with no matching message', () => {
+    it('should record an unresolvable hidden guess as solved with the word masked (issue #143)', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
-      // A masked word that cannot be resolved from chat is the only case that
-      // should be dropped — there is genuinely no way to know the word.
-      (spectator as any).updateGameState('testuser', ['?', '?', '?', '?'], 0, false);
+      // Mobile players guess in the WoS app, not Twitch chat, so their level-19+
+      // hidden guesses can't be reconstructed. Rather than dropping the guess
+      // (which made the slot read as *missed* at level end), it is recorded as
+      // solved by the user with the word left masked.
+      (spectator as any).updateGameState('mobileuser', ['?', '?', '?', '?'], 0, false);
 
       expect(warnSpy).toHaveBeenCalled();
-      expect(spectator.currentLevelCorrectWords).toEqual([]);
+      // The slot is marked solved so it's excluded from missed/empty-word tallies.
+      expect(spectator.currentLevelSlots[0].user).toBe('mobileuser');
+      // A masked placeholder is shown but never mistaken for a real word.
+      expect(spectator.currentLevelCorrectWords).toContain('????');
+
+      // It renders as a distinct hidden-word chip (not a plain correct word and
+      // not a missed word).
+      const chip = document
+        .getElementById('correct-words-log')!
+        .querySelector('.correct-word');
+      expect(chip).not.toBeNull();
+      expect(chip!.classList.contains('hidden-word')).toBe(true);
+      expect(chip!.classList.contains('missing-word')).toBe(false);
+      expect(chip!.textContent).toBe('????');
       warnSpy.mockRestore();
+    });
+
+    it('should keep an unresolvable hidden guess out of the empty-slot tally (issue #143)', () => {
+      // Seeded slots carry per-tile placeholders; logEmptySlots tallies by
+      // slot.letters.length.
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', hitMax: false, index: 0, length: 4 },
+        { letters: ['.', '.', '.', '.', '.'], word: '', hitMax: false, index: 1, length: 5 },
+      ];
+
+      // A mobile player solves slot 0 with a hidden word we can't recover.
+      (spectator as any).updateGameState('mobileuser', ['?', '?', '?', '?'], 0, false);
+
+      (spectator as any).logEmptySlots();
+
+      // Slot 0 is solved (masked) and must not be counted as empty; only the
+      // genuinely-unsolved slot 1 (5 letters) remains.
+      expect(spectator.currentLevelEmptySlotsCount[4]).toBeUndefined();
+      expect(spectator.currentLevelEmptySlotsCount[5]).toBe(1);
+    });
+
+    it('should not treat a masked hidden guess as a missed word against the board (issue #143)', async () => {
+      const dbService = await import('@scripts/db-service');
+      const fetchBoardMock = vi.mocked(dbService.fetchBoard);
+      const findMissingWordsFromBoardMock = vi.mocked(wosWords.findMissingWordsFromBoard);
+      // Delegate to the real implementation to exercise the slot.user exclusion.
+      const actual = await vi.importActual<typeof import('@scripts/wos-words')>('@scripts/wos-words');
+      findMissingWordsFromBoardMock.mockImplementation(actual.findMissingWordsFromBoard);
+
+      spectator.currentLevelBigWord = 'B E A R D';
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 5 },
+      ];
+
+      // Slot 0 solved by a mobile player (masked); slot 1 solved from chat.
+      (spectator as any).updateGameState('mobileuser', ['?', '?', '?', '?'], 0, false);
+      (spectator as any).updateGameState('chatuser', ['b', 'e', 'a', 'r', 'd'], 1, false);
+
+      fetchBoardMock.mockResolvedValueOnce({
+        id: 'BEARD',
+        created_at: '2024-01-01T00:00:00Z',
+        slots: [
+          { letters: ['b', 'e', 'a', 'r'], word: 'bear', hitMax: false },
+          { letters: ['b', 'e', 'a', 'r', 'd'], word: 'beard', hitMax: false },
+        ],
+      });
+
+      await (spectator as any).logMissingWords();
+
+      // The board's 4-letter word ('bear') sits at the index a mobile player
+      // solved, so it must NOT be reported as missed even though we don't know
+      // the exact word they typed.
+      expect(spectator.currentLevelCorrectWords).not.toContain('bear*');
+    });
+
+    it('should not let a masked hidden guess corrupt hidden-letter detection (issue #143)', () => {
+      // Level letters include a '?' slot so a spurious '?' hidden letter would
+      // actually surface in the display if the masked entry weren't skipped.
+      spectator.currentLevelLetters = ['t', 'e', 's', '?'];
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 4 },
+      ];
+
+      // An earlier unresolved mobile hidden guess adds a '????' placeholder.
+      (spectator as any).updateGameState('mobileuser', ['?', '?', '?', '?'], 0, false);
+      // A later resolvable guess triggers hidden-letter frequency inference; the
+      // '????' placeholder must be ignored so '?' is never inferred as hidden.
+      (spectator as any).updateGameState('chatuser', ['t', 'e', 's', 't'], 1, false);
+
+      expect(document.getElementById('hidden-letter')!.innerText).not.toContain('?');
     });
 
     it('should capture a non-hidden guess directly from letters without any chat message (issue #96)', () => {

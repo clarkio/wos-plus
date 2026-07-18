@@ -204,6 +204,19 @@ body {
   color: var(--missing-text);
 }
 
+/* A hidden (level 19+) guess whose exact word we couldn't recover — mobile
+   players submit guesses in the WoS app rather than Twitch chat, so there's no
+   message to reconstruct the masked word from (issue #143). Rendered as a
+   masked placeholder ("????") with a dashed outline so it clearly reads as "a
+   word was found here, text unknown" and is never mistaken for a real correct
+   or missed word. `outline` (not `border`) is used so it shows even in themes
+   whose chips have no border width. */
+.correct-word.hidden-word {
+  outline: 2px dashed currentColor;
+  outline-offset: -3px;
+  opacity: 0.85;
+}
+
 /* Scale correct-word sizing based on the word-log container size so
    words fill the available space dynamically */
 @container word-log (min-width: 300px) {

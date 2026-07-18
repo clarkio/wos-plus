@@ -556,11 +556,19 @@ export class GameSpectator {
       if (resolved) {
         word = resolved;
       } else {
+        // Mobile players submit guesses in the WoS app (play.wos.gg) rather than
+        // Twitch chat, so on hidden levels (19+) there's no chat message to
+        // reconstruct their masked word from (issue #143). Dropping the guess
+        // here made its slot read as a *missed* word at level end, which is
+        // wrong — the slot was actually solved. Record it as solved by this
+        // user with the word left masked so the missed/empty-word tallies stay
+        // honest, even though the exact word can't be recovered.
         console.warn(
-          `[WOS Helper] Could not find matching message for ${lowerUsername}`,
+          `[WOS Helper] Could not recover hidden word for ${lowerUsername}; recording slot as solved with a masked word.`,
           `[WOS Helper] Chat history: ${JSON.stringify(this.twitchChatLog.get(lowerUsername))}`
         );
-        return; // Skip updating UI if we can't find the word
+        this.recordUnknownHiddenGuess(lowerUsername, letters, index, hitMax);
+        return;
       }
     }
 
@@ -607,8 +615,11 @@ export class GameSpectator {
       const correctLettersFrequency = new Map<string, number>();
 
       this.currentLevelCorrectWords.forEach(word => {
-        // Skip words marked with * (these are missing words added by the system)
-        if (!word.includes('*')) {
+        // Skip system-added missing words ('*') and masked hidden guesses whose
+        // text we couldn't recover ('?', issue #143). Neither is a real guessed
+        // word, so feeding them into hidden-letter frequency inference would
+        // corrupt it (e.g. registering '?' itself as a hidden letter).
+        if (!word.includes('*') && !word.includes('?')) {
           // Count letter frequencies in this specific word
           const wordLetterFrequency = new Map<string, number>();
           const letters = word.toLowerCase().split('');
@@ -699,6 +710,25 @@ export class GameSpectator {
     }
   }
 
+  // Record a hidden-level (19+) correct guess whose word we couldn't recover.
+  // Mobile players submit guesses in the WoS app rather than Twitch chat
+  // (issue #143), so there's no message to un-mask their word — but the WoS
+  // event still tells us who guessed and which slot (index) plus how many
+  // letters. We mark that slot solved by the user with the word left masked
+  // ('????'), which:
+  //   - keeps it out of the missed/empty-word tallies (those key off slot.user),
+  //   - shows a distinct masked placeholder chip in the correct-words log, and
+  //   - never reaches the boards table (saveBoard rejects any '?'-bearing slot),
+  //     so a masked word can't corrupt saved board data.
+  // The exact word stays unknown, so the dictionary-fallback missed-word path
+  // (used only when the board isn't in the DB) may still list it — we have no
+  // text to exclude it by. The board-based path excludes it correctly via
+  // slot.user.
+  private recordUnknownHiddenGuess(username: string, letters: string[], index: number, hitMax: boolean) {
+    this.updateCurrentLevelSlots(username, letters, index, hitMax);
+    this.updateCorrectWordsDisplayed(letters.join(''));
+  }
+
   private updateCurrentLevelSlots(username: string, letters: string[], index: number, hitMax: boolean) {
     // Update the current level slots with the correct guess word
     if (index >= 0 && index < this.currentLevelSlots.length) {
@@ -781,10 +811,20 @@ export class GameSpectator {
         wordsContainer.className = 'word-group__words';
 
         words.forEach(current => {
+          const isMissing = current.endsWith('*');
+          // A masked entry ('????') is a hidden guess we recorded as solved but
+          // couldn't un-mask (issue #143). Style it distinctly from both real
+          // correct words and missed words so it reads as "a word was found
+          // here, text unknown".
+          const isHidden = !isMissing && current.includes('?');
           const displayWord = current.replace('*', '').toUpperCase();
           const wordEl = document.createElement('span');
-          wordEl.className = `correct-word${current.endsWith('*') ? ' missing-word' : ''}`;
-          wordEl.textContent = `${displayWord}${current.endsWith('*') ? '*' : ''}`;
+          const modifier = isMissing ? ' missing-word' : isHidden ? ' hidden-word' : '';
+          wordEl.className = `correct-word${modifier}`;
+          wordEl.textContent = `${displayWord}${isMissing ? '*' : ''}`;
+          if (isHidden) {
+            wordEl.title = 'Hidden guess — word not captured (mobile player)';
+          }
           wordsContainer.appendChild(wordEl);
         });
 
