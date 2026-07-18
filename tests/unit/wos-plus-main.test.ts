@@ -375,6 +375,86 @@ describe('GameSpectator class', () => {
     });
   });
 
+  describe('reconcileRevealedSlots (issue #143)', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+    });
+
+    it('backfills a masked slot with the revealed word and drops the placeholder', () => {
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 5 },
+      ];
+      // Slot 0 recorded as a masked mobile guess; slot 1 solved from chat.
+      (spectator as any).recordUnknownHiddenGuess('mobileuser', ['?', '?', '?', '?'], 0, false);
+      (spectator as any).updateCurrentLevelSlots('chatuser', ['b', 'e', 'a', 'r', 'd'], 1, false);
+      (spectator as any).updateCorrectWordsDisplayed('beard');
+
+      // The game reveals the full board before the level ends.
+      (spectator as any).reconcileRevealedSlots([
+        { index: 0, word: 'bear', user: 'mobileuser' },
+        { index: 1, word: 'beard', user: 'chatuser' },
+      ]);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('bear');
+      expect(spectator.currentLevelSlots[0].user).toBe('mobileuser');
+      expect(spectator.currentLevelCorrectWords).not.toContain('????');
+      expect(spectator.currentLevelCorrectWords).toContain('bear');
+    });
+
+    it('leaves genuinely-unsolved (missed) slots untouched', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+
+      (spectator as any).reconcileRevealedSlots([{ index: 0, word: 'miss' }]);
+
+      // The slot was empty (not masked), so it must stay empty for missed-word
+      // detection rather than being filled from the reveal.
+      expect(spectator.currentLevelSlots[0].user).toBeUndefined();
+      expect(spectator.currentLevelSlots[0].word).toBe('');
+      expect(spectator.currentLevelCorrectWords).not.toContain('miss');
+    });
+
+    it('never overwrites an already-resolved real word', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'e', 's', 't'], word: 'test', user: 'chatuser', hitMax: false, index: 0, length: 4 },
+      ];
+
+      (spectator as any).reconcileRevealedSlots([{ index: 0, word: 'best', user: 'x' }]);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('test');
+      expect(spectator.currentLevelSlots[0].user).toBe('chatuser');
+    });
+
+    it('reads the revealed word from a slot letters array when word is absent', () => {
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+      (spectator as any).recordUnknownHiddenGuess('mobileuser', ['?', '?', '?', '?'], 0, false);
+
+      (spectator as any).reconcileRevealedSlots([{ index: 0, letters: ['b', 'e', 'a', 'r'] }]);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('bear');
+      expect(spectator.currentLevelCorrectWords).toContain('bear');
+    });
+
+    it('does nothing when nothing usable is revealed', () => {
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+      (spectator as any).recordUnknownHiddenGuess('mobileuser', ['?', '?', '?', '?'], 0, false);
+
+      (spectator as any).reconcileRevealedSlots([]);
+      (spectator as any).reconcileRevealedSlots(undefined);
+      (spectator as any).reconcileRevealedSlots([{ index: 0, word: '????' }]);
+
+      // Still masked because nothing real was revealed for the slot.
+      expect(spectator.currentLevelSlots[0].word).toBe('????');
+      expect(spectator.currentLevelCorrectWords).toContain('????');
+    });
+  });
+
   describe('updateCorrectWordsDisplayed', () => {
     beforeEach(() => {
       spectator = new GameSpectator();
@@ -909,6 +989,21 @@ describe('GameSpectator class', () => {
 
       expect(document.getElementById('level-title')!.innerText).toBe('NEXT LEVEL');
       expect(document.getElementById('level-value')!.innerText).toBe('13');
+    });
+
+    it('should reveal masked hidden guesses from the level-results slots (issue #143)', async () => {
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+      // A mobile player solved slot 0 with a word we couldn't recover.
+      (spectator as any).recordUnknownHiddenGuess('mobileuser', ['?', '?', '?', '?'], 0, false);
+
+      // Level results carry the revealed board words.
+      await (spectator as any).handleLevelResults(3, [{ index: 0, word: 'bear', user: 'mobileuser' }]);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('bear');
+      expect(spectator.currentLevelCorrectWords).not.toContain('????');
+      expect(spectator.currentLevelCorrectWords).toContain('bear');
     });
   });
 
@@ -1589,6 +1684,25 @@ describe('GameSpectator class', () => {
       (spectator as any).updateGameState('chatuser', ['t', 'e', 's', 't'], 1, false);
 
       expect(document.getElementById('hidden-letter')!.innerText).not.toContain('?');
+    });
+
+    it('should replace a masked hidden guess with the real word once it is revealed (issue #143)', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+
+      // A mobile player's hidden guess is first recorded masked.
+      (spectator as any).updateGameState('mobileuser', ['?', '?', '?', '?'], 0, false);
+      expect(spectator.currentLevelCorrectWords).toContain('????');
+
+      // WoS reveals the real word for that same slot (a non-masked event 3).
+      (spectator as any).updateGameState('mobileuser', ['b', 'e', 'a', 'r'], 0, false);
+
+      // The placeholder is replaced by the real word — no leftover '????' and
+      // no duplicate entry.
+      expect(spectator.currentLevelCorrectWords).not.toContain('????');
+      expect(spectator.currentLevelCorrectWords.filter(w => w === 'bear')).toHaveLength(1);
+      expect(spectator.currentLevelSlots[0].word).toBe('bear');
+      expect(spectator.currentLevelSlots[0].user).toBe('mobileuser');
+      warnSpy.mockRestore();
     });
 
     it('should capture a non-hidden guess directly from letters without any chat message (issue #96)', () => {
