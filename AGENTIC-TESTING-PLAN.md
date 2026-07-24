@@ -44,13 +44,52 @@ and passes shallow tests, but defects cluster in predictable categories:
 | 10 | **Accurate agent instructions + PR discipline** | Agent instruction files (`copilot-instructions.md`, `CLAUDE.md`) are part of the quality system. Stale or wrong instructions produce wrong agent behavior. PRs from agents stay small, single-purpose, and carry a verification checklist. |
 | 11 | **Production feedback loop** | Monitoring (already present here via Sentry) closes the loop: release health per deploy tells you whether the gates are actually working. |
 
-### 1.3 The one-sentence version
+### 1.3 Uncle Bob's "Agentic Discipline" — ATDD as the control system
+
+Robert C. Martin ("Uncle Bob"), long the loudest advocate for clean,
+reviewable, human-written code, now teaches a specific workflow for keeping
+control of AI agents (his *Agentic Discipline* series on cleancoders.com and
+posts from his Empire project). It sharpens the consensus above into a
+concrete control system, and this plan adopts it. His workflow:
+
+1. **Two independent test streams, both green at once.**
+   - **Acceptance tests** — written in *domain language* (Given/When/Then),
+     describing what the system does from the outside. These are the
+     behavioral contract, co-authored with and approved by the human
+     **before implementation exists**.
+   - **Unit tests** — verifying internal structure, written test-first as
+     development proceeds.
+
+   His key observation: *"The two different streams of tests cause Claude to
+   think much more deeply about the structure of the code. It can't just
+   willy-nilly plop code around and write a unit test for it."* A single
+   stream — especially agent-written unit tests — is self-confirming; the
+   dual constraint is what forces real structure.
+2. **Mutation testing as the third layer** — acceptance tests verify *what*,
+   unit tests verify *how*, mutation testing verifies the tests themselves
+   *actually catch bugs*. Together, ATDD + mutation testing form a "semantic
+   firewall": agents can refactor and extend without intended behavior
+   drifting.
+3. **Discipline lives in deterministic tools, not prompt rules.** Instruction
+   files erode; gates the agent must mechanically satisfy (test pipelines,
+   architecture checks, thresholds) do not. Anything you care about must be a
+   check the agent cannot talk its way past.
+4. **Code-quality / change-risk analysis** — e.g. CRAP scores
+   (cyclomatic complexity × coverage risk) on changed code, so complex,
+   under-tested functions are flagged mechanically rather than left to
+   reviewer stamina.
+5. **The human stays the architect.** Specs and architecture decisions are
+   human-approved artifacts; agent autonomy is tunable per task, and
+   architecture-level changes always require sign-off.
+
+### 1.4 The one-sentence version
 
 > Confidence in agentic AI code comes from **independent, machine-checkable
-> verification at every layer** — types, lint, unit, integration, E2E, mutation
-> score, dependency audit — enforced by CI, runnable by the agent itself, with
-> tests authored as specifications *before* implementation rather than as
-> after-the-fact rationalizations.
+> verification at every layer** — types, lint, unit, acceptance, E2E, mutation
+> score, change-risk, dependency audit — enforced by deterministic gates the
+> agent must satisfy (never just prompt rules), with **two test streams**
+> (human-approved acceptance specs + unit tests) authored *before*
+> implementation rather than as after-the-fact rationalizations.
 
 ---
 
@@ -100,12 +139,16 @@ Every phase ends with a CI-enforced, agent-runnable gate.
    `.github/copilot-instructions.md` to describe the real suite, and add a
    `CLAUDE.md` at repo root with the agent contract:
    - Write or update tests **before** implementation for any behavior change;
-     commit failing tests first when practical.
+     commit failing tests first when practical. Once Phase 3 lands: behavior
+     changes start with a human-approved spec diff in `specs/`.
    - Never delete or weaken an existing test/assertion to make a change pass —
      flag it in the PR instead.
    - Never add a dependency without stating why in the PR; exact-pin it.
    - Before declaring done, run the full local gate:
      `pnpm run check && pnpm run lint && pnpm run test:coverage && pnpm run build`.
+   - **Promote rules into tools.** Any recurring instruction in this file that
+     can be a lint rule, script, or CI check becomes one — prompt rules erode;
+     deterministic gates don't (Uncle Bob's core agentic-discipline principle).
 2. **Make CI explicit and complete.** In `.github/workflows/tests.yml`:
    `pnpm test` → `pnpm run test:run --coverage`; add `pnpm run check`
    (new script: `astro check` for type-checking `.astro` + `.ts` — the current
@@ -168,27 +211,47 @@ single documented command sequence to self-verify.
 
 **Gate:** `vitest run --coverage` fails the build below thresholds.
 
-### Phase 3 — Real integration tests for API routes (week 1)
+### Phase 3 — The acceptance-test stream (ATDD, per Uncle Bob) (week 1)
 
-Replace the 28 `it.todo` stubs with real tests. These routes are small, pure
-`APIRoute` functions — test them by invoking the exported handlers directly
-with a constructed `Request` and a mocked `locals.runtime.env`, asserting on
-the `Response` (status, headers, JSON body). No server needed; runs in Vitest.
+This is not just "fill in the integration tests" — it establishes the
+**second test stream**: acceptance tests as a human-approved behavioral
+contract, distinct from the unit stream. Both streams must be green for any
+change to land; an agent cannot satisfy the acceptance stream by writing unit
+tests around whatever it happened to build.
 
-1. Build one shared harness: `tests/integration/api-harness.ts` that fabricates
-   Astro `APIContext` (params, request, locals with fake `SUPABASE_URL`/`KEY`).
-2. Mock the network **at the boundary, not the module**: use **MSW (Mock
-   Service Worker)** to intercept the Supabase REST calls the
-   `@supabase/supabase-js` client makes, so the real client code (query
-   building, error mapping) is exercised. Same approach for the
-   `clarkio.com/wos-dictionary` fetch in `wos-words.ts`.
-3. Cover per route: happy path, validation rejections (bad board id, oversized
-   payloads, non-alpha words), Supabase error propagation, CORS headers
-   (`cors.ts` is currently at 0%), and correct status codes.
-4. Keep deterministic: fake timers where timing matters, zero real network
+1. **Write the specs first, in domain language.** Create `specs/` with one
+   markdown spec per behavior area, in Given/When/Then form, written in WoS
+   terms (levels, slots, letters, guesses, boards, clears) with no
+   implementation detail. Seed them from what the system already does — the
+   28 existing `it.todo` titles are a starting outline — and have the human
+   maintainer approve them. From then on, **new features start with a spec
+   diff the human approves before implementation** (spec → tests → code).
+2. **Encode them as executable acceptance tests** in `tests/acceptance/`
+   (plain Vitest `describe`/`it` mirroring the Gherkin phrasing — no need
+   for cucumber-js overhead at this project's size; each test cites its spec
+   section). Two suites:
+   - **API behavior**: invoke the exported `APIRoute` handlers directly with
+     a constructed `Request` and mocked `locals.runtime.env`, via a shared
+     harness (`tests/acceptance/api-harness.ts`) that fabricates Astro's
+     `APIContext`. Assert on the `Response` — status, headers, JSON body.
+   - **Game behavior**: fixture-driven scenarios through `GameSpectator` +
+     workers — recorded WoS event sequences in, observable UI/state out
+     ("Given a level starts with letters …, when a correct guess event
+     arrives for slot 3, then slot 3 shows the word and the guesser").
+3. Mock the network **at the boundary, not the module**: **MSW (Mock Service
+   Worker)** intercepts the Supabase REST calls the `@supabase/supabase-js`
+   client makes, so the real client code (query building, error mapping) is
+   exercised. Same for the `clarkio.com/wos-dictionary` fetch.
+4. Cover per API route: happy path, validation rejections (bad board id,
+   oversized payloads, non-alpha words), Supabase error propagation, CORS
+   headers (`cors.ts` is currently at 0%), and correct status codes.
+5. Keep deterministic: fake timers where timing matters, zero real network
    (fail the suite on unmatched MSW requests).
 
-**Gate:** integration suite in CI; the `it.todo` count for API routes is 0.
+**Gate:** acceptance suite is a separate required CI step (`test:acceptance`)
+so both streams are independently visible; the `it.todo` count for API routes
+is 0; PRs that change behavior must touch `specs/` (checklist item, enforced
+by review).
 
 ### Phase 4 — Property-based tests for the algorithmic core (week 2)
 
@@ -214,7 +277,12 @@ agents produce and example tests overfit around.
 **Gate:** fast-check suites run in the normal `vitest` run (bounded run count,
 seeded for reproducibility; failing seeds get pinned as regression tests).
 
-### Phase 5 — Mutation testing: verify the tests themselves (week 2–3)
+### Phase 5 — Mutation testing + change-risk analysis: verify the tests themselves (week 2–3)
+
+This is the third layer of Uncle Bob's stack: acceptance tests verify *what*,
+unit tests verify *how*, mutation testing verifies the tests **actually catch
+bugs** — together forming the "semantic firewall" that lets agents refactor
+without behavior drifting.
 
 1. Add **StrykerJS** with `@stryker-mutator/vitest-runner`.
 2. Scope initially to the pure-logic modules where mutants are meaningful and
@@ -227,6 +295,13 @@ seeded for reproducibility; failing seeds get pinned as regression tests).
 5. **Policy:** a surviving mutant on lines an AI-authored PR touched means the
    PR's tests don't actually constrain the new code — add assertions, don't
    suppress.
+6. **Change-risk (CRAP) analysis.** Flag complex, under-tested functions
+   mechanically: ESLint's `complexity` rule caps cyclomatic complexity
+   (baseline generously against `GameSpectator`'s current methods, then
+   ratchet), combined with the per-file coverage floors from Phase 2 this
+   approximates CRAP scoring (complexity × coverage risk) with zero new
+   tooling. A function that is both complex and poorly covered blocks merge
+   instead of relying on reviewer stamina to notice it.
 
 **Gate:** `pnpm run test:mutation` — incremental in PRs, full weekly, score
 thresholds enforced by Stryker's `thresholds.break`.
@@ -268,7 +343,14 @@ Phase 2.
 
 1. **Branch protection on `main`**: require the check/lint/test/build jobs (and
    later mutation + E2E) to pass; require PRs; no direct pushes.
-2. **PR template** with an AI-disclosure + verification checklist:
+2. **The human stays the architect.** Agent autonomy is scoped per task:
+   behavior changes require an approved spec diff (Phase 3); architecture
+   changes (new modules, data flows, dependencies, worker boundaries) require
+   explicit maintainer sign-off before implementation, regardless of how
+   confident the agent is. Bug fixes and refactors inside existing structure
+   can proceed autonomously against the existing gates.
+3. **PR template** with an AI-disclosure + verification checklist:
+   - [ ] Spec in `specs/` added/updated for any behavior change
    - [ ] Tests written/updated *before or with* the implementation
    - [ ] `pnpm run check && lint && test:coverage && build` pass locally
    - [ ] No existing test weakened or deleted (or explicitly justified)
@@ -276,11 +358,11 @@ Phase 2.
    - [ ] Code authored with AI assistance: yes/no (routes reviewer attention —
      review AI code as untrusted-contributor code, focusing on edge cases,
      error handling, and boundaries)
-3. **Keep instruction files load-bearing**: `CLAUDE.md` /
+4. **Keep instruction files load-bearing**: `CLAUDE.md` /
    `copilot-instructions.md` are updated in the same PR as any change to
    scripts, gates, or conventions — stale agent instructions are a defect
    class of their own (see the current "no test suite exists" line).
-4. **Close the loop in production**: tag Sentry releases per deploy so
+5. **Close the loop in production**: tag Sentry releases per deploy so
    regressions are attributable to specific merges; a spike after an
    agent-authored merge feeds back into which gate should have caught it.
 
@@ -293,7 +375,8 @@ Phase 2.
   ┌───────────────────────┐
   │  E2E (thin)           │  Playwright + wrangler     required job
   ├───────────────────────┤
-  │  Integration (fat)    │  Vitest + MSW harness      required job
+  │  Acceptance (fat)     │  specs/ (Given/When/Then)  required job,
+  │                       │  → Vitest + MSW harness    human-approved specs
   ├───────────────────────┤
   │  Unit + property      │  Vitest + fast-check       coverage ≥ 85/80/85/85
   ├───────────────────────┤
@@ -312,13 +395,25 @@ Phase 2.
 ```
 
 **Definition of done for the whole plan:** an agent (or human) cannot land a
-change on `main` unless independent specification-style tests exist for it,
-every static/dynamic gate passes, the tests themselves are proven meaningful
-by mutation score, and nothing new entered the supply chain unreviewed.
+change on `main` unless a human-approved acceptance spec covers its behavior,
+both test streams (acceptance + unit) are green, every static/dynamic gate
+passes, the tests themselves are proven meaningful by mutation score, and
+nothing new entered the supply chain unreviewed.
 
 ---
 
 ## Sources
+
+**Uncle Bob's agentic discipline (the workflow this plan aligns to):**
+
+- [Uncle Bob Martin on X — agentic AI coding workflow](https://x.com/unclebobmartin/status/2080257779395154409)
+- [Uncle Bob Martin on X — Agentic Discipline video series announcement (cleancoders.com)](https://x.com/unclebobmartin/status/2026746465742180595)
+- [O'Reilly — AI Agents for Clean Code with "Uncle Bob" Martin](https://www.oreilly.com/live-events/ai-agents-for-clean-code-with-uncle-bob-martin/0642572376765/)
+- [swingerman/disciplined-agentic-engineering — ATDD for Claude Code, inspired by Uncle Bob's approach](https://github.com/swingerman/disciplined-agentic-engineering)
+- [Emily Bache — Test-Driven Development with Agentic AI](https://coding-is-like-cooking.info/2026/03/test-driven-development-with-agentic-ai/)
+- [DevAssure — Why TDD is having a second act in the age of AI coding agents](https://www.devassure.io/blog/tdd-second-act-ai-coding-agents/)
+
+**General research:**
 
 - [Anthropic — Claude Code best practices](https://code.claude.com/docs/en/best-practices)
 - [Anthropic — Building verification loops in Claude Code with skills](https://claude.com/blog/building-verification-loops-in-claude-code-with-skills)
