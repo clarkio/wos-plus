@@ -27,6 +27,12 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
-    - run: pnpm install --frozen-lockfile
-    - run: pnpm run build --if-present
-    - run: pnpm test
+    # Gate order: install -> type-check -> tests + coverage -> build
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    - name: Type check
+      run: pnpm run check
+    - name: Run tests with coverage
+      run: pnpm run test:run --coverage
+    - name: Build
+      run: pnpm run build

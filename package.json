@@ -8,6 +8,7 @@
     "build": "astro build",
     "preview": "npm run build && wrangler dev",
     "astro": "astro",
+    "check": "astro check",
     "db:fix-board-ids": "node db-scripts/fix-board-ids.mjs",
     "db:insert-words-from-boards": "node db-scripts/insert-words-from-boards.mjs",
     "test": "vitest",
@@ -25,10 +26,12 @@
     "socket.io-client": "2.5.0"
   },
   "devDependencies": {
+    "@astrojs/check": "0.9.9",
     "@types/socket.io-client": "1.4.36",
     "@vitest/coverage-v8": "4.1.9",
     "@vitest/ui": "4.1.9",
     "happy-dom": "^20.9.0",
+    "typescript": "6.0.3",
     "vitest": "4.1.9",
     "wrangler": "4.110.0"
   }

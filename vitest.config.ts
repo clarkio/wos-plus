@@ -16,6 +16,17 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+
+      // Report on every source file, not just the ones a test happens to
+      // import. Without `all`, untested modules are silently absent from the
+      // report and the headline number flatters us.
+      all: true,
+
+      // NOTE: this `include` is the *coverage* file set (which source files to
+      // instrument and report). It is distinct from `test.include` below,
+      // which is the *test* file pattern.
+      include: ['src/**/*.ts'],
+
       exclude: [
         'node_modules/',
         'dist/',
