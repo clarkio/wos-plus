@@ -439,6 +439,64 @@ describe('GameSpectator class', () => {
       expect(spectator.currentLevelCorrectWords).toContain('bear');
     });
 
+    it('is reachable via the Level Ended event (type 8), which the game sends as it reveals the board', async () => {
+      const wosWorker = findWorkerByUrlSubstring('wos-worker');
+      expect(wosWorker).toBeTruthy();
+
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+      (spectator as any).recordUnknownHiddenGuess('mobileuser', ['?', '?', '?', '?'], 0, false);
+
+      await wosWorker.emitMessage({
+        type: 'wos_event',
+        wosEventType: 8,
+        wosEventName: 'Level Ended',
+        username: '',
+        letters: [],
+        hitMax: false,
+        stars: 0,
+        level: 19,
+        falseLetters: [],
+        hiddenLetters: [],
+        slots: [{ index: 0, word: 'bear', user: 'mobileuser' }],
+        index: 0,
+      });
+
+      expect(spectator.currentLevelSlots[0].word).toBe('bear');
+      expect(spectator.currentLevelCorrectWords).not.toContain('????');
+      expect(spectator.currentLevelCorrectWords).toContain('bear');
+    });
+
+    it('stays a safe no-op for a real event-4 payload, which carries no slots', async () => {
+      // The event-4 payload captured in LIST.todo has stars/ranking/rankingTurn
+      // and no `slots`, so the worker normalizes it to []. Reconciliation must
+      // leave the masked slot alone rather than corrupting it.
+      spectator.isSoundsEnabled = false;
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+      (spectator as any).recordUnknownHiddenGuess('mobileuser', ['?', '?', '?', '?'], 0, false);
+
+      await (spectator as any).handleLevelResults(3, []);
+
+      expect(spectator.currentLevelSlots[0].word).toBe('????');
+      expect(spectator.currentLevelSlots[0].user).toBe('mobileuser');
+    });
+
+    it('logs the masked slots that were never revealed (diagnostic)', () => {
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 4 },
+      ];
+      (spectator as any).recordUnknownHiddenGuess('mobileuser', ['?', '?', '?', '?'], 0, false);
+
+      (spectator as any).logUnresolvedMaskedSlots();
+
+      const gameLog = document.getElementById('wos-game-log')!.innerText;
+      expect(gameLog).toContain('1 hidden guess(es) never revealed');
+      expect(gameLog).toContain('mobileuser');
+    });
+
     it('does nothing when nothing usable is revealed', () => {
       spectator.currentLevelSlots = [
         { letters: [], word: '', hitMax: false, index: 0, length: 4 },

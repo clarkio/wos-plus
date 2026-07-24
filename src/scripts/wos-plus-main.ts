@@ -240,6 +240,14 @@ export class GameSpectator {
           await this.handleLevelEnd(slots);
           await new Promise(resolve => setTimeout(resolve, 1500));
           await this.refreshChannelStats();
+        } else if (wosEventType === 8) {
+          // 'Level Ended' fires as the game closes out a level and reveals the
+          // board. It carries no state we act on beyond the revealed slots, so
+          // we only reconcile masked hidden guesses here (issue #143) and leave
+          // the end-of-level logic to events 4/5. Reconciliation is idempotent
+          // and a no-op when the event carries no usable slot data, so routing
+          // this event is safe regardless of which event actually reveals.
+          this.reconcileRevealedSlots(slots);
         } else if (wosEventType === 10) {
           this.handleLetterReveal(hiddenLetters, falseLetters);
         }
@@ -333,6 +341,7 @@ export class GameSpectator {
     // any slots we'd only recorded as masked hidden guesses (issue #143) so they
     // count as solved with their real word rather than a '????' placeholder.
     this.reconcileRevealedSlots(revealedSlots);
+    this.logUnresolvedMaskedSlots();
     this.log(`Level ${this.currentLevel} ended with ${stars} stars`, this.wosGameLogId);
     console.log(`[WOS Helper] Level ${this.currentLevel} ended`);
     this.log(`[WOS Helper] Total slots for level ${this.currentLevel}: ${this.currentLevelSlots.length}`, this.wosGameLogId);
@@ -803,6 +812,25 @@ export class GameSpectator {
       this.updateCorrectWordsDisplayed(revealedWord);
       this.log(`[WOS Event] Revealed hidden word for slot ${index}: ${revealedWord}`, this.wosGameLogId);
     });
+  }
+
+  // Diagnostic for issue #143: report slots still carrying a masked '????' once
+  // the level is over. WoS is not documented to hand revealed words to
+  // spectators (it's why this tool needs a boards DB and a dictionary fallback
+  // at all), so this makes it visible from a single real session whether any
+  // event actually delivers them — and which masked guesses went unrecovered.
+  private logUnresolvedMaskedSlots() {
+    const masked = this.currentLevelSlots.filter(
+      slot => slot && typeof slot.word === 'string' && slot.word.includes('?')
+    );
+    if (masked.length === 0) return;
+
+    this.log(
+      `${masked.length} hidden guess(es) never revealed: ${masked
+        .map(slot => `slot ${slot.index} (${slot.word.length} letters, ${slot.user || 'unknown'})`)
+        .join(', ')}`,
+      this.wosGameLogId
+    );
   }
 
   private updateCurrentLevelSlots(username: string, letters: string[], index: number, hitMax: boolean) {
