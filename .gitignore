@@ -142,3 +142,6 @@ vite.config.ts.timestamp-*
 .dev.*
 .astro/
 .pnpm-store/
+
+# Claude Code agent worktrees (transient, never committed)
+.claude/worktrees/
