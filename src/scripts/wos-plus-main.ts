@@ -229,7 +229,7 @@ export class GameSpectator {
           // Wait for any last-millisecond correct guesses still in the queue
           // to process before reading the board state for results.
           await new Promise(resolve => setTimeout(resolve, this.levelEndGraceDelay));
-          await this.handleLevelResults(stars);
+          await this.handleLevelResults(stars, slots);
           // Delay to allow the chatbot to update the DB before reading
           await new Promise(resolve => setTimeout(resolve, 1500));
           await this.refreshChannelStats();
@@ -237,9 +237,17 @@ export class GameSpectator {
           // Wait for any last-millisecond correct guesses still in the queue
           // to process before running the game-end logic.
           await new Promise(resolve => setTimeout(resolve, this.levelEndGraceDelay));
-          await this.handleLevelEnd();
+          await this.handleLevelEnd(slots);
           await new Promise(resolve => setTimeout(resolve, 1500));
           await this.refreshChannelStats();
+        } else if (wosEventType === 8) {
+          // 'Level Ended' fires as the game closes out a level and reveals the
+          // board. It carries no state we act on beyond the revealed slots, so
+          // we only reconcile masked hidden guesses here (issue #143) and leave
+          // the end-of-level logic to events 4/5. Reconciliation is idempotent
+          // and a no-op when the event carries no usable slot data, so routing
+          // this event is safe regardless of which event actually reveals.
+          this.reconcileRevealedSlots(slots);
         } else if (wosEventType === 10) {
           this.handleLetterReveal(hiddenLetters, falseLetters);
         }
@@ -297,7 +305,10 @@ export class GameSpectator {
     }
   }
 
-  private async handleLevelEnd() {
+  private async handleLevelEnd(revealedSlots: any[] = []) {
+    // The game reveals the board's words as it ends; fill in any slots we'd only
+    // recorded as masked hidden guesses (issue #143) before running end logic.
+    this.reconcileRevealedSlots(revealedSlots);
     this.log(`Game Ended on Level ${this.currentLevel}`, this.wosGameLogId);
 
     await this.logMissingWords();
@@ -325,7 +336,12 @@ export class GameSpectator {
     });
   }
 
-  private async handleLevelResults(stars: any) {
+  private async handleLevelResults(stars: any, revealedSlots: any[] = []) {
+    // If the WoS game revealed the board's words before the level ended, fill in
+    // any slots we'd only recorded as masked hidden guesses (issue #143) so they
+    // count as solved with their real word rather than a '????' placeholder.
+    this.reconcileRevealedSlots(revealedSlots);
+    this.logUnresolvedMaskedSlots();
     this.log(`Level ${this.currentLevel} ended with ${stars} stars`, this.wosGameLogId);
     console.log(`[WOS Helper] Level ${this.currentLevel} ended`);
     this.log(`[WOS Helper] Total slots for level ${this.currentLevel}: ${this.currentLevelSlots.length}`, this.wosGameLogId);
@@ -556,15 +572,32 @@ export class GameSpectator {
       if (resolved) {
         word = resolved;
       } else {
+        // Mobile players submit guesses in the WoS app (play.wos.gg) rather than
+        // Twitch chat, so on hidden levels (19+) there's no chat message to
+        // reconstruct their masked word from (issue #143). Dropping the guess
+        // here made its slot read as a *missed* word at level end, which is
+        // wrong — the slot was actually solved. Record it as solved by this
+        // user with the word left masked so the missed/empty-word tallies stay
+        // honest, even though the exact word can't be recovered.
         console.warn(
-          `[WOS Helper] Could not find matching message for ${lowerUsername}`,
+          `[WOS Helper] Could not recover hidden word for ${lowerUsername}; recording slot as solved with a masked word.`,
           `[WOS Helper] Chat history: ${JSON.stringify(this.twitchChatLog.get(lowerUsername))}`
         );
-        return; // Skip updating UI if we can't find the word
+        this.recordUnknownHiddenGuess(lowerUsername, letters, index, hitMax);
+        return;
       }
     }
 
     this.log(`[WOS Event] ${lowerUsername} correctly guessed: ${word}`, this.wosGameLogId);
+
+    // If this resolves a slot we'd previously recorded as a masked hidden guess
+    // (issue #143) — e.g. the WoS game revealed the word before the level ended,
+    // or chat resolution caught up — drop the obsolete '????' placeholder so the
+    // real word replaces it instead of showing alongside it.
+    const maskedSlot = this.currentLevelSlots[index];
+    if (maskedSlot && typeof maskedSlot.word === 'string' && maskedSlot.word.includes('?')) {
+      this.removeMaskedPlaceholder(maskedSlot.word.length);
+    }
 
     // Add to correct words list
     this.updateCorrectWordsDisplayed(word);
@@ -607,8 +640,11 @@ export class GameSpectator {
       const correctLettersFrequency = new Map<string, number>();
 
       this.currentLevelCorrectWords.forEach(word => {
-        // Skip words marked with * (these are missing words added by the system)
-        if (!word.includes('*')) {
+        // Skip system-added missing words ('*') and masked hidden guesses whose
+        // text we couldn't recover ('?', issue #143). Neither is a real guessed
+        // word, so feeding them into hidden-letter frequency inference would
+        // corrupt it (e.g. registering '?' itself as a hidden letter).
+        if (!word.includes('*') && !word.includes('?')) {
           // Count letter frequencies in this specific word
           const wordLetterFrequency = new Map<string, number>();
           const letters = word.toLowerCase().split('');
@@ -699,6 +735,104 @@ export class GameSpectator {
     }
   }
 
+  // Record a hidden-level (19+) correct guess whose word we couldn't recover.
+  // Mobile players submit guesses in the WoS app rather than Twitch chat
+  // (issue #143), so there's no message to un-mask their word — but the WoS
+  // event still tells us who guessed and which slot (index) plus how many
+  // letters. We mark that slot solved by the user with the word left masked
+  // ('????'), which:
+  //   - keeps it out of the missed/empty-word tallies (those key off slot.user),
+  //   - shows a distinct masked placeholder chip in the correct-words log, and
+  //   - never reaches the boards table (saveBoard rejects any '?'-bearing slot),
+  //     so a masked word can't corrupt saved board data.
+  // The exact word stays unknown, so the dictionary-fallback missed-word path
+  // (used only when the board isn't in the DB) may still list it — we have no
+  // text to exclude it by. The board-based path excludes it correctly via
+  // slot.user.
+  private recordUnknownHiddenGuess(username: string, letters: string[], index: number, hitMax: boolean) {
+    this.updateCurrentLevelSlots(username, letters, index, hitMax);
+    this.updateCorrectWordsDisplayed(letters.join(''));
+  }
+
+  // Remove a single masked placeholder ('????') of the given length from the
+  // correct-words list. Used when the real word for a previously-masked hidden
+  // guess becomes known, so the placeholder is replaced rather than duplicated.
+  // Same-length placeholders are interchangeable, so removing any one of them
+  // keeps the per-length count correct.
+  private removeMaskedPlaceholder(length: number): boolean {
+    const placeholder = '?'.repeat(length);
+    const idx = this.currentLevelCorrectWords.indexOf(placeholder);
+    if (idx === -1) return false;
+    this.currentLevelCorrectWords.splice(idx, 1);
+    return true;
+  }
+
+  // Pull a usable word out of a raw WoS slot, preferring its `word` field and
+  // falling back to joining its `letters`. Returns '' when neither is present.
+  private extractSlotWord(slot: any): string {
+    if (!slot) return '';
+    if (typeof slot.word === 'string' && slot.word.length > 0) return slot.word;
+    if (Array.isArray(slot.letters)) return slot.letters.join('');
+    return '';
+  }
+
+  // Fill in slots we'd recorded as masked hidden guesses (issue #143) once the
+  // WoS game reveals the real words before the level ends. `revealedSlots` is
+  // the game's authoritative board state (as carried on level-results / level-
+  // end events). For every position where our slot is still masked ('????') but
+  // the revealed slot carries a real word, replace the placeholder with the real
+  // word, keeping the original guesser. Genuinely-unsolved slots are left
+  // untouched so end-of-level missed-word detection still runs for them.
+  private reconcileRevealedSlots(revealedSlots: any[]) {
+    if (!Array.isArray(revealedSlots) || revealedSlots.length === 0) return;
+
+    revealedSlots.forEach((revealed, position) => {
+      const index = typeof revealed?.index === 'number' ? revealed.index : position;
+      const current = this.currentLevelSlots[index];
+      // Only backfill slots we previously masked; never overwrite a real word or
+      // fill a genuinely-unsolved slot (those must stay for missed-word logic).
+      if (!current || typeof current.word !== 'string' || !current.word.includes('?')) {
+        return;
+      }
+
+      const revealedWord = this.extractSlotWord(revealed);
+      if (!revealedWord || revealedWord.includes('?')) {
+        return; // nothing usable was revealed for this slot
+      }
+
+      this.removeMaskedPlaceholder(current.word.length);
+      this.currentLevelSlots[index] = {
+        letters: revealedWord.split(''),
+        word: revealedWord,
+        user: current.user || revealed?.user || '',
+        hitMax: current.hitMax || !!revealed?.hitMax,
+        index,
+        length: revealedWord.length,
+      };
+      this.updateCorrectWordsDisplayed(revealedWord);
+      this.log(`[WOS Event] Revealed hidden word for slot ${index}: ${revealedWord}`, this.wosGameLogId);
+    });
+  }
+
+  // Diagnostic for issue #143: report slots still carrying a masked '????' once
+  // the level is over. WoS is not documented to hand revealed words to
+  // spectators (it's why this tool needs a boards DB and a dictionary fallback
+  // at all), so this makes it visible from a single real session whether any
+  // event actually delivers them — and which masked guesses went unrecovered.
+  private logUnresolvedMaskedSlots() {
+    const masked = this.currentLevelSlots.filter(
+      slot => slot && typeof slot.word === 'string' && slot.word.includes('?')
+    );
+    if (masked.length === 0) return;
+
+    this.log(
+      `${masked.length} hidden guess(es) never revealed: ${masked
+        .map(slot => `slot ${slot.index} (${slot.word.length} letters, ${slot.user || 'unknown'})`)
+        .join(', ')}`,
+      this.wosGameLogId
+    );
+  }
+
   private updateCurrentLevelSlots(username: string, letters: string[], index: number, hitMax: boolean) {
     // Update the current level slots with the correct guess word
     if (index >= 0 && index < this.currentLevelSlots.length) {
@@ -781,10 +915,20 @@ export class GameSpectator {
         wordsContainer.className = 'word-group__words';
 
         words.forEach(current => {
+          const isMissing = current.endsWith('*');
+          // A masked entry ('????') is a hidden guess we recorded as solved but
+          // couldn't un-mask (issue #143). Style it distinctly from both real
+          // correct words and missed words so it reads as "a word was found
+          // here, text unknown".
+          const isHidden = !isMissing && current.includes('?');
           const displayWord = current.replace('*', '').toUpperCase();
           const wordEl = document.createElement('span');
-          wordEl.className = `correct-word${current.endsWith('*') ? ' missing-word' : ''}`;
-          wordEl.textContent = `${displayWord}${current.endsWith('*') ? '*' : ''}`;
+          const modifier = isMissing ? ' missing-word' : isHidden ? ' hidden-word' : '';
+          wordEl.className = `correct-word${modifier}`;
+          wordEl.textContent = `${displayWord}${isMissing ? '*' : ''}`;
+          if (isHidden) {
+            wordEl.title = 'Hidden guess — word not captured (mobile player)';
+          }
           wordsContainer.appendChild(wordEl);
         });
 

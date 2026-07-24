@@ -236,6 +236,16 @@
   color: var(--sp-bg-deep);
 }
 
+/* Hidden guess whose word couldn't be recovered (mobile players guess in the
+   WoS app, not chat — issue #143). Cyan chip with the shared dashed outline so
+   it reads as "a word was found here, text unknown" — distinct from both the
+   purple found-word chips and the pink missed-word chips. */
+[data-theme="sticker-pop"] .player-bottom-container .correct-word.hidden-word,
+[data-theme="sticker-pop"] .streamer-bottom-container .correct-word.hidden-word {
+  background: var(--sp-cyan);
+  color: var(--sp-bg-deep);
+}
+
 /* --- Letters panel: dark block with cyan offset shadow ------------------- */
 [data-theme="sticker-pop"] .level-data-container {
   background: var(--sp-bg-deep);
