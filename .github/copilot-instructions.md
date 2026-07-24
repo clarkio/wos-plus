@@ -106,16 +106,56 @@ npm run db:insert-words-from-boards -- --apply
 ### Code Quality
 - **No linter configured**: Follow existing code style in each file
 - **TypeScript strict mode**: Enabled via `astro/tsconfigs/strict`
+- **Type checking**: `pnpm run check` (`astro check`) type-checks `.astro` and
+  `.ts` files. The Cloudflare build does *not* type-check, so run this too.
 - **Build validation**: Always run `npm run build` after code changes to ensure TypeScript compilation succeeds
+- **Full local gate** (see [CLAUDE.md](../CLAUDE.md)):
+  `pnpm run check && pnpm run test:coverage && pnpm run build`
 
 ### Testing
-- **No automated test suite exists**: Manual testing required
-- **Manual testing approach**:
-  1. Start dev server with `npm run dev`
+
+**An automated test suite exists and is the primary way to verify changes.** See
+[TESTING.md](../TESTING.md) for the full guide (conventions, patterns, examples).
+
+- **Stack**: [Vitest](https://vitest.dev/) 4 with `happy-dom` as the test
+  environment and `@vitest/coverage-v8` for coverage. Config lives in
+  [vitest.config.ts](../vitest.config.ts); `globals: true`, so `describe`/`it`/
+  `expect`/`vi` need no import.
+- **Layout**:
+  - `tests/unit/` — unit tests for individual modules (`src/scripts/*`, `src/lib/*`)
+  - `tests/integration/` — API route tests (`src/pages/api/**`)
+  - `tests/setup.ts` — global setup, loaded via `setupFiles`; mocks `Worker`,
+    `WebSocket`, and env vars for every test
+  - `tests/test-utils.ts` — shared helpers (`mockFetchResponse`,
+    `createMockLocalStorage`, `createMockWebSocket`, `createMockWorker`, `wait`)
+  - `tests/smoke.test.ts` — basic sanity checks
+- **Path aliases** work in tests exactly as in source: `@/`, `@scripts/`,
+  `@components/`, `@layouts/`, `@pages/`.
+- **Commands**:
+  ```bash
+  pnpm test            # watch mode — local development only, never CI
+  pnpm run test:run    # single run — this is the CI/agent command
+  pnpm run test:ui     # Vitest visual UI
+  pnpm run test:coverage  # single run + v8 coverage report
+  ```
+- **Expectation for changes**: any behavior change should come with unit tests.
+  Add or update tests alongside (preferably before) the implementation, and
+  never delete or weaken an existing assertion to make a change pass.
+- **Coverage** is reported for every file under `src/**/*.ts`, including files
+  no test imports yet — so untested modules show up as `0%` rather than
+  disappearing from the report.
+
+#### Manual verification (supplement, not substitute)
+
+The automated suite cannot exercise the live WoS WebSocket or Twitch chat. After
+the suite is green, verify end-to-end behavior by hand when touching those paths:
+
+  1. Start dev server with `pnpm run dev`
   2. Open player view: `http://localhost:4321/player.astro?mirrorUrl=ROOM_ID&twitchChannel=CHANNEL`
   3. Open streamer view: `http://localhost:4321/streamer.astro?mirrorUrl=ROOM_ID&twitchChannel=CHANNEL`
   4. Connect to an active WoS game to observe behavior
-- **Validation checklist**:
+
+- **Manual validation checklist**:
   - Check browser console for errors
   - Verify WebSocket connections establish successfully
   - Confirm UI updates when game events occur
