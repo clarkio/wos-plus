@@ -146,9 +146,11 @@ const eventTable: EventRow[] = [
     expectedName: 'Correct Guess',
     expected: {
       username: 'clarkio',
-      // '?' placeholders survive untouched; the main thread resolves them
-      // against the Twitch chat log.
-      letters: ['c', '?', 'u', 't', 'i', 'o', 'n'],
+      // A hidden guess masks EVERY letter of the word, not a subset — the
+      // length is all the main thread learns from the event itself. The
+      // placeholders survive the worker untouched; the main thread resolves
+      // the word against the Twitch chat log.
+      letters: ['?', '?', '?', '?', '?', '?', '?'],
       index: 3,
       hitMax: true,
     },

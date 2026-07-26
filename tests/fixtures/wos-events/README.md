@@ -24,6 +24,7 @@ before trusting any field as protocol truth.
 | `data.user.name` | **Known** | `wos-worker.ts` reads `data.user?.name`; the legacy handler kept in comments at the bottom of `wos-plus-main.ts` reads `data.user.name`. |
 | `data.letters` (array of single-character strings) | **Known** | `data.letters.join('')` / `data.letters.length` in the legacy handler; `letters.join(' ')` in `handleGameInitialization`. |
 | `'?'` placeholders inside `data.letters` | **Known** | `updateGameState()` branches on `word.includes('?')` for hidden words (level 19+), and `handleLetterReveal()` fills `'?'` slots. |
+| A hidden guess masks **every** letter | **Known (maintainer)** | Confirmed in review of PR #159. On a hidden correct-guess event the whole word is `'?'` — never a partial mask — so the length is all the event itself reveals. Partial masks only appear *later*, as `handleLetterReveal()` fills individual slots from event 10. `03-correct-guess-hidden.json` originally carried a partial mask, which was an invalid state. |
 | `data.hitMax` (boolean) | **Known** | `data.hitMax === true` in the legacy handler; drives big-word detection. |
 | `data.index` (number) | **Known** | Used as the slot index in `updateCurrentLevelSlots()`. |
 | `data.stars` (number) on event 4 | **Known** | `data.stars` in the legacy handler; a real recorded event-4 payload is quoted in `LIST.todo`. |
