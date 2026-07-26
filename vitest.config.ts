@@ -63,6 +63,9 @@ export default defineConfig({
       '@components': resolve(__dirname, './src/components'),
       '@layouts': resolve(__dirname, './src/layouts'),
       '@pages': resolve(__dirname, './src/pages'),
+      // Workers-runtime virtual module; unresolvable under Vitest, which
+      // dropped every route importing it from the coverage report.
+      'cloudflare:workers': resolve(__dirname, './tests/stubs/cloudflare-workers.ts'),
     },
   },
 });
