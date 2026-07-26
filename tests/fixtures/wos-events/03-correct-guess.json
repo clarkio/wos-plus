@@ -1,0 +1,9 @@
+{
+  "eventType": 3,
+  "data": {
+    "user": { "name": "SMC_May_I" },
+    "letters": ["c", "o", "a", "t"],
+    "index": 2,
+    "hitMax": false
+  }
+}

@@ -1,456 +1,183 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { TwitchWorkerMessage, TwitchWorkerResult } from '@scripts/twitch-chat-worker';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import type { TwitchWorkerMessage } from '@scripts/twitch-chat-worker';
 
 /**
- * Unit tests for twitch-chat-worker.ts module
- * 
- * Tests the Twitch chat message filtering worker that validates
- * messages matching /^[a-zA-Z]{4,12}$/ pattern.
+ * Unit tests for src/scripts/twitch-chat-worker.ts — the Web Worker that
+ * filters Twitch chat down to plausible WoS guesses (/^[a-zA-Z]{4,12}$/) before
+ * `GameSpectator` correlates them with masked correct-guess events.
+ *
+ * These tests drive the REAL module. An earlier version of this file declared a
+ * local copy of the worker's filtering logic inside `beforeEach` and asserted
+ * against that copy, so it imported only types, never executed a line of
+ * src/, and reported 0% coverage while appearing to pass 23 tests. Anything
+ * added here must go through `loadWorkerWithFreshScope()` so it exercises
+ * production code.
+ *
+ * The worker installs its handlers on `self` (worker scope, no DOM), so the
+ * harness stubs `globalThis.self`, imports the module so it binds to that stub,
+ * then invokes `self.onmessage` directly and asserts on `self.postMessage`.
  */
 
-// Type for mock Worker global
-interface MockWorkerGlobalScope {
+/** The subset of `WorkerGlobalScope` that twitch-chat-worker.ts actually uses. */
+interface WorkerScopeStub {
   postMessage: ReturnType<typeof vi.fn>;
   onmessage: ((event: MessageEvent) => void) | null;
-  onerror: ((event: ErrorEvent) => void) | null;
-  onmessageerror: ((event: MessageEvent) => void) | null;
-  addEventListener: ReturnType<typeof vi.fn>;
-  removeEventListener: ReturnType<typeof vi.fn>;
-  dispatchEvent: ReturnType<typeof vi.fn>;
+  onerror: ((event: unknown) => void) | null;
+  onmessageerror: ((event: unknown) => void) | null;
 }
 
-// Helper to get mock postMessage
-function getMockPostMessage(): ReturnType<typeof vi.fn> {
-  return ((global as any).self as MockWorkerGlobalScope).postMessage;
-}
+let scope: WorkerScopeStub;
 
-describe('twitch-chat-worker', () => {
-  let worker: Worker;
-  let messageHandler: (event: MessageEvent) => void;
-  let errorHandler: (event: ErrorEvent) => void;
-  let messageErrorHandler: (event: MessageEvent) => void;
+/** Fresh worker scope + a fresh module instance bound to it. */
+async function loadWorkerWithFreshScope(): Promise<void> {
+  scope = {
+    postMessage: vi.fn(),
+    onmessage: null,
+    onerror: null,
+    onmessageerror: null,
+  };
 
-  beforeEach(() => {
-    // Clear all mocks before each test
-    vi.clearAllMocks();
-
-    // Mock Worker global
-    const mockPostMessage = vi.fn();
-    const listeners: Record<string, Function> = {};
-
-    // Create mock worker environment
-    (global as any).self = {
-      postMessage: mockPostMessage,
-      onmessage: null,
-      onerror: null,
-      onmessageerror: null,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    } as MockWorkerGlobalScope;
-
-    // Import the worker module (this will set up the message handlers)
-    // Note: In a real environment, the worker code would be loaded in a separate context
-    // For testing, we'll simulate the worker's message handling logic
-    const messageRegex = /^[a-zA-Z]{4,12}$/;
-    
-    messageHandler = function (e: MessageEvent<TwitchWorkerMessage>) {
-      try {
-        const { username, message, timestamp } = e.data;
-
-        if (messageRegex.test(message)) {
-          const result: TwitchWorkerResult = {
-            type: 'twitch_message',
-            username: username.toLowerCase(),
-            message: message.toLowerCase(),
-            timestamp
-          };
-
-          mockPostMessage(result);
-        }
-      } catch (error: any) {
-        mockPostMessage({
-          type: 'error',
-          error: error.message
-        });
-      }
-    };
-
-    errorHandler = function (error: ErrorEvent) {
-      console.error('Twitch Worker Error:', error);
-    };
-
-    messageErrorHandler = function (error: MessageEvent) {
-      console.error('Twitch Worker Message Error:', error);
-    };
+  Object.defineProperty(globalThis, 'self', {
+    value: scope,
+    configurable: true,
+    writable: true,
   });
 
+  vi.resetModules();
+  await import('@scripts/twitch-chat-worker');
+}
+
+/** Delivers a chat message to the worker exactly as the main thread would. */
+async function send(data: Partial<TwitchWorkerMessage> | null): Promise<void> {
+  await loadWorkerWithFreshScope();
+  scope.onmessage?.(new MessageEvent('message', { data }));
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('twitch-chat-worker', () => {
   describe('message filtering', () => {
-    it('should accept valid 4-letter word', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'test',
-        timestamp: Date.now()
-      };
+    it.each([
+      ['a 4-letter word (lower bound)', 'word'],
+      ['a 12-letter word (upper bound)', 'exactlytwelv'],
+      ['a mixed-case word', 'WoRdS'],
+    ])('forwards %s', async (_label, message) => {
+      await send({ username: 'TestUser', message, timestamp: 1000 });
 
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith({
+      expect(scope.postMessage).toHaveBeenCalledTimes(1);
+      expect(scope.postMessage).toHaveBeenCalledWith({
         type: 'twitch_message',
         username: 'testuser',
-        message: 'test',
-        timestamp: message.timestamp
+        message: message.toLowerCase(),
+        timestamp: 1000,
       });
     });
 
-    it('should accept valid 12-letter word', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'abcdefghijkl',
-        timestamp: Date.now()
-      };
+    it.each([
+      ['3 letters (below the lower bound)', 'cat'],
+      ['13 letters (above the upper bound)', 'thirteenlettr'],
+      ['digits', 'test123'],
+      ['punctuation', 'test!'],
+      ['an embedded space', 'test word'],
+      ['an empty string', ''],
+      ['leading whitespace', ' word'],
+      ['a non-ASCII letter', 'wörd'],
+    ])('drops %s', async (_label, message) => {
+      await send({ username: 'TestUser', message, timestamp: 1000 });
 
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith({
-        type: 'twitch_message',
-        username: 'testuser',
-        message: 'abcdefghijkl',
-        timestamp: message.timestamp
-      });
-    });
-
-    it('should accept mixed case letters', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'WoRdS',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith({
-        type: 'twitch_message',
-        username: 'testuser',
-        message: 'words',
-        timestamp: message.timestamp
-      });
-    });
-
-    it('should reject messages with less than 4 characters', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'cat',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).not.toHaveBeenCalled();
-    });
-
-    it('should reject messages with more than 12 characters', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'abcdefghijklm',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).not.toHaveBeenCalled();
-    });
-
-    it('should reject messages with numbers', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'test123',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).not.toHaveBeenCalled();
-    });
-
-    it('should reject messages with special characters', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'test!',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).not.toHaveBeenCalled();
-    });
-
-    it('should reject messages with spaces', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'test word',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).not.toHaveBeenCalled();
-    });
-
-    it('should reject empty messages', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: '',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).not.toHaveBeenCalled();
+      expect(scope.postMessage).not.toHaveBeenCalled();
     });
   });
 
   describe('data transformation', () => {
-    it('should convert username to lowercase', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'word',
-        timestamp: Date.now()
-      };
+    it('lower-cases the username so it matches WoS event usernames', async () => {
+      await send({ username: 'TestUser', message: 'word', timestamp: 1000 });
 
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          username: 'testuser'
-        })
+      expect(scope.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ username: 'testuser' }),
       );
     });
 
-    it('should convert message to lowercase', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'WORD',
-        timestamp: Date.now()
-      };
+    it('preserves the timestamp used to correlate guesses', async () => {
+      await send({ username: 'user', message: 'word', timestamp: 1234567890 });
 
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: 'word'
-        })
-      );
-    });
-
-    it('should preserve timestamp', () => {
-      const mockPostMessage = getMockPostMessage();
-      const timestamp = 1234567890;
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'word',
-        timestamp
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          timestamp: 1234567890
-        })
-      );
-    });
-
-    it('should include correct message type', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'TestUser',
-        message: 'word',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'twitch_message'
-        })
+      expect(scope.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ timestamp: 1234567890 }),
       );
     });
   });
 
-  describe('error handling', () => {
-    it('should handle malformed message data', () => {
-      const mockPostMessage = getMockPostMessage();
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      
-      // Simulate a message with missing fields (null data)
-      const malformedData = null;
+  describe('malformed input', () => {
+    it('reports an error instead of throwing when the payload is null', async () => {
+      await send(null);
 
-      messageHandler(new MessageEvent('message', { data: malformedData as unknown as TwitchWorkerMessage }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error'
-        })
-      );
-
-      consoleSpy.mockRestore();
-    });
-
-    it('should handle undefined username', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: Partial<TwitchWorkerMessage> = {
-        username: undefined,
-        message: 'word',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message as TwitchWorkerMessage }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error'
-        })
+      expect(scope.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'error' }),
       );
     });
 
-    it('should handle undefined message', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: Partial<TwitchWorkerMessage> = {
-        username: 'TestUser',
-        message: undefined,
-        timestamp: Date.now()
-      };
+    it('reports an error when the username is missing', async () => {
+      await send({ message: 'word', timestamp: 1000 });
 
-      messageHandler(new MessageEvent('message', { data: message as TwitchWorkerMessage }));
-
-      expect(mockPostMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error'
-        })
+      expect(scope.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'error' }),
       );
     });
 
-    it('should log errors via onerror handler', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const errorEvent = new ErrorEvent('error', {
-        message: 'Test error',
-        error: new Error('Test error')
-      });
+    it('reports an error when the message is missing', async () => {
+      // Note: `messageRegex.test(undefined)` coerces to the string "undefined",
+      // which is 9 ASCII letters and so passes the filter. The failure surfaces
+      // one line later on `message.toLowerCase()` and is caught. Asserting the
+      // error path here pins that behaviour.
+      await send({ username: 'user', timestamp: 1000 });
 
-      errorHandler(errorEvent);
-
-      expect(consoleSpy).toHaveBeenCalledWith('Twitch Worker Error:', errorEvent);
-      consoleSpy.mockRestore();
+      expect(scope.postMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'error' }),
+      );
     });
 
-    it('should log message errors via onmessageerror handler', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const messageEvent = new MessageEvent('messageerror', {
-        data: 'corrupted data'
-      });
-
-      messageErrorHandler(messageEvent);
-
-      expect(consoleSpy).toHaveBeenCalledWith('Twitch Worker Message Error:', messageEvent);
-      consoleSpy.mockRestore();
+    it('never lets an error escape the worker', async () => {
+      await expect(send(null)).resolves.toBeUndefined();
     });
   });
 
-  describe('edge cases', () => {
-    it('should handle exactly 4 characters', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'user',
-        message: 'word',
-        timestamp: Date.now()
-      };
+  describe('sequences', () => {
+    it('forwards only the valid messages in a mixed batch', async () => {
+      await loadWorkerWithFreshScope();
 
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledTimes(1);
-    });
-
-    it('should handle exactly 12 characters', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'user',
-        message: 'exactlytwelv',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).toHaveBeenCalledTimes(1);
-    });
-
-    it('should reject 3 characters', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'user',
-        message: 'cat',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).not.toHaveBeenCalled();
-    });
-
-    it('should reject 13 characters', () => {
-      const mockPostMessage = getMockPostMessage();
-      const message: TwitchWorkerMessage = {
-        username: 'user',
-        message: 'thirteenlettr',
-        timestamp: Date.now()
-      };
-
-      messageHandler(new MessageEvent('message', { data: message }));
-
-      expect(mockPostMessage).not.toHaveBeenCalled();
-    });
-
-    it('should handle multiple valid messages in sequence', () => {
-      const mockPostMessage = getMockPostMessage();
-      const messages: TwitchWorkerMessage[] = [
+      const batch: TwitchWorkerMessage[] = [
         { username: 'user1', message: 'word', timestamp: 1000 },
-        { username: 'user2', message: 'test', timestamp: 2000 },
-        { username: 'user3', message: 'game', timestamp: 3000 }
+        { username: 'user2', message: 'hi', timestamp: 2000 },
+        { username: 'user3', message: 'test123', timestamp: 3000 },
+        { username: 'user4', message: 'game', timestamp: 4000 },
       ];
+      for (const data of batch) {
+        scope.onmessage?.(new MessageEvent('message', { data }));
+      }
 
-      messages.forEach(msg => {
-        messageHandler(new MessageEvent('message', { data: msg }));
-      });
-
-      expect(mockPostMessage).toHaveBeenCalledTimes(3);
+      expect(scope.postMessage).toHaveBeenCalledTimes(2);
+      expect(scope.postMessage).toHaveBeenNthCalledWith(1,
+        expect.objectContaining({ message: 'word' }));
+      expect(scope.postMessage).toHaveBeenNthCalledWith(2,
+        expect.objectContaining({ message: 'game' }));
     });
+  });
 
-    it('should filter out invalid messages from sequence', () => {
-      const mockPostMessage = getMockPostMessage();
-      const messages: TwitchWorkerMessage[] = [
-        { username: 'user1', message: 'word', timestamp: 1000 },      // valid
-        { username: 'user2', message: 'hi', timestamp: 2000 },        // invalid (too short)
-        { username: 'user3', message: 'test123', timestamp: 3000 },   // invalid (numbers)
-        { username: 'user4', message: 'game', timestamp: 4000 }       // valid
-      ];
+  describe('worker-level handlers', () => {
+    it('installs onerror and onmessageerror handlers that log', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+      await loadWorkerWithFreshScope();
 
-      messages.forEach(msg => {
-        messageHandler(new MessageEvent('message', { data: msg }));
-      });
+      expect(scope.onerror).toBeTypeOf('function');
+      expect(scope.onmessageerror).toBeTypeOf('function');
 
-      expect(mockPostMessage).toHaveBeenCalledTimes(2);
+      scope.onerror?.('boom');
+      scope.onmessageerror?.('corrupt');
+
+      expect(consoleSpy).toHaveBeenCalledWith('Twitch Worker Error:', 'boom');
+      expect(consoleSpy).toHaveBeenCalledWith('Twitch Worker Message Error:', 'corrupt');
     });
   });
 });

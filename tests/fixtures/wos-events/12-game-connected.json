@@ -1,0 +1,14 @@
+{
+  "eventType": 12,
+  "data": {
+    "level": 7,
+    "record": 21,
+    "language": 2,
+    "letters": ["r", "e", "a", "l", "i", "t", "y"],
+    "slots": [
+      { "letters": ["t", "a", "l", "e"], "word": "tale", "user": "biocow", "hitMax": false, "index": 0, "length": 4 },
+      { "letters": [], "word": "", "hitMax": false, "index": 1, "length": 5 },
+      { "letters": [], "word": "", "hitMax": false, "index": 2, "length": 7 }
+    ]
+  }
+}
