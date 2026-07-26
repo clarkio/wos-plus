@@ -40,6 +40,8 @@ function looksLikeGameId(value: string): boolean {
   return segments.every(
     (segment, index) =>
       segment.length === GAME_ID_SEGMENT_LENGTHS[index] &&
+      // UUID segments are hex ASCII by construction; no surrogate pairs.
+      // eslint-disable-next-line @typescript-eslint/no-misused-spread
       [...segment].every((char) => HEX_DIGITS.includes(char))
   );
 }

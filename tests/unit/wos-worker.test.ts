@@ -110,7 +110,7 @@ const eventTable: EventRow[] = [
   {
     eventType: 1,
     fixture: '01-level-start.json',
-    message: levelStart as WosWorkerMessage,
+    message: levelStart,
     expectedName: 'Level Started',
     expected: {
       level: 3,
@@ -124,13 +124,13 @@ const eventTable: EventRow[] = [
   {
     eventType: 2,
     fixture: '02-unknown-unhandled.json',
-    message: unknown02 as WosWorkerMessage,
+    message: unknown02,
     expectedName: null, // no branch in wos-worker.ts; meaning unknown
   },
   {
     eventType: 3,
     fixture: '03-correct-guess.json',
-    message: correctGuess as WosWorkerMessage,
+    message: correctGuess,
     expectedName: 'Correct Guess',
     expected: {
       username: 'smc_may_i', // lowercased by the worker
@@ -142,7 +142,7 @@ const eventTable: EventRow[] = [
   {
     eventType: 3,
     fixture: '03-correct-guess-hidden.json',
-    message: correctGuessHidden as WosWorkerMessage,
+    message: correctGuessHidden,
     expectedName: 'Correct Guess',
     expected: {
       username: 'clarkio',
@@ -156,61 +156,61 @@ const eventTable: EventRow[] = [
   {
     eventType: 4,
     fixture: '04-level-results.json',
-    message: levelResults as WosWorkerMessage,
+    message: levelResults,
     expectedName: 'Level Results',
     expected: { stars: 5 },
   },
   {
     eventType: 5,
     fixture: '05-game-ended.json',
-    message: gameEnded as WosWorkerMessage,
+    message: gameEnded,
     expectedName: 'Game Ended',
     expected: { level: 12 },
   },
   {
     eventType: 6,
     fixture: '06-unknown-unhandled.json',
-    message: unknown06 as WosWorkerMessage,
+    message: unknown06,
     expectedName: null, // no branch in wos-worker.ts; meaning unknown
   },
   {
     eventType: 7,
     fixture: '07-letters-cycled.json',
-    message: lettersCycled as WosWorkerMessage,
+    message: lettersCycled,
     expectedName: 'Letters Cycled',
     expected: { letters: ['n', 'o', 'i', 't', 'u', 'a', 'c'] },
   },
   {
     eventType: 8,
     fixture: '08-level-ended.json',
-    message: levelEnded as WosWorkerMessage,
+    message: levelEnded,
     expectedName: 'Level Ended',
     expected: { level: 3 },
   },
   {
     eventType: 9,
     fixture: '09-unknown-unhandled.json',
-    message: unknown09 as WosWorkerMessage,
+    message: unknown09,
     expectedName: null, // no branch in wos-worker.ts; meaning unknown
   },
   {
     eventType: 10,
     fixture: '10-letters-revealed.json',
-    message: lettersRevealed as WosWorkerMessage,
+    message: lettersRevealed,
     expectedName: 'Hidden/Fake Letters Revealed',
     expected: { hiddenLetters: ['a'], falseLetters: ['x', 'z'] },
   },
   {
     eventType: 11,
     fixture: '11-guessing-unlocked.json',
-    message: guessingUnlocked as WosWorkerMessage,
+    message: guessingUnlocked,
     expectedName: 'Guessing Unlocked',
     expected: { letters: [], slots: [], level: 0 },
   },
   {
     eventType: 12,
     fixture: '12-game-connected.json',
-    message: gameConnected as WosWorkerMessage,
+    message: gameConnected,
     expectedName: 'Game Connected',
     expected: {
       level: 7,
@@ -252,7 +252,7 @@ describe('wos-worker', () => {
     it.each(unhandled)(
       'event $eventType ($fixture) is ignored without throwing',
       ({ message, eventType }) => {
-        expect(() => send(message)).not.toThrow();
+        expect(() => { send(message); }).not.toThrow();
 
         expect(scope.postMessage).not.toHaveBeenCalled();
         expect(consoleLogSpy).toHaveBeenCalledWith(
@@ -274,7 +274,7 @@ describe('wos-worker', () => {
 
   describe('posted payload shape', () => {
     it('posts the complete result for a level start', () => {
-      send(levelStart as WosWorkerMessage);
+      send(levelStart);
 
       expect(postedResult()).toEqual({
         type: 'wos_event',
@@ -295,7 +295,7 @@ describe('wos-worker', () => {
     });
 
     it('posts the complete result for a correct guess', () => {
-      send(correctGuess as WosWorkerMessage);
+      send(correctGuess);
 
       expect(postedResult()).toEqual({
         type: 'wos_event',
@@ -320,7 +320,7 @@ describe('wos-worker', () => {
     });
 
     it('posts the complete result for game connected, including record and language', () => {
-      send(gameConnected as WosWorkerMessage);
+      send(gameConnected);
 
       expect(postedResult()).toEqual({
         type: 'wos_event',
@@ -341,9 +341,12 @@ describe('wos-worker', () => {
     });
 
     it('drops the event 4 ranking data (it is not forwarded to the main thread)', () => {
-      send(levelResults as WosWorkerMessage);
+      send(levelResults);
 
-      const result = postedResult() as Record<string, unknown>;
+      // Via `unknown`: WosWorkerResult is a closed shape, so TS rejects the
+      // direct widening. The point of this test is to inspect keys the type
+      // says should not be there at all.
+      const result = postedResult() as unknown as Record<string, unknown>;
       expect(result.stars).toBe(5);
       expect(result).not.toHaveProperty('ranking');
       expect(result).not.toHaveProperty('rankingTurn');
@@ -352,7 +355,7 @@ describe('wos-worker', () => {
     it('only forwards `record` for event 12', () => {
       // Event 5 carries no record, and the worker leaves the field undefined
       // for every event other than Game Connected.
-      send(gameEnded as WosWorkerMessage);
+      send(gameEnded);
       expect(postedResult().record).toBeUndefined();
     });
 
@@ -371,18 +374,18 @@ describe('wos-worker', () => {
       // Documents current behavior: `currentLevel` is tracked inside the worker
       // but never written back into the posted result, so an event without a
       // level reports 0 even right after a level-start event.
-      send(levelStart as WosWorkerMessage);
+      send(levelStart);
       expect(postedResult().level).toBe(3);
 
       scope.postMessage.mockClear();
-      send(correctGuess as WosWorkerMessage);
+      send(correctGuess);
       expect(postedResult().level).toBe(0);
     });
 
     it('posts exactly one message per handled event', () => {
-      send(levelStart as WosWorkerMessage);
-      send(correctGuess as WosWorkerMessage);
-      send(lettersRevealed as WosWorkerMessage);
+      send(levelStart);
+      send(correctGuess);
+      send(lettersRevealed);
 
       expect(scope.postMessage).toHaveBeenCalledTimes(3);
     });
@@ -395,13 +398,13 @@ describe('wos-worker', () => {
     // subsequent game event.
 
     it('does not throw and reports an error when the message is null', () => {
-      expect(() => send(null)).not.toThrow();
+      expect(() => { send(null); }).not.toThrow();
 
       expect(postedResult()).toMatchObject({ type: 'error' });
     });
 
     it('does not throw and reports an error when `data` is missing', () => {
-      expect(() => send({ eventType: 3 })).not.toThrow();
+      expect(() => { send({ eventType: 3 }); }).not.toThrow();
 
       const result = postedResult() as unknown as { type: string; error: string };
       expect(result.type).toBe('error');
@@ -409,13 +412,13 @@ describe('wos-worker', () => {
     });
 
     it('does not throw and reports an error when `data` is null', () => {
-      expect(() => send({ eventType: 1, data: null })).not.toThrow();
+      expect(() => { send({ eventType: 1, data: null }); }).not.toThrow();
 
       expect(postedResult()).toMatchObject({ type: 'error' });
     });
 
     it('fills defaults for an empty payload', () => {
-      expect(() => send({ eventType: 1, data: {} })).not.toThrow();
+      expect(() => { send({ eventType: 1, data: {} }); }).not.toThrow();
 
       expect(postedResult()).toEqual({
         type: 'wos_event',
@@ -436,11 +439,11 @@ describe('wos-worker', () => {
     });
 
     it('fills defaults when nested user data is partial', () => {
-      expect(() => send({ eventType: 3, data: { user: {} } })).not.toThrow();
+      expect(() => { send({ eventType: 3, data: { user: {} } }); }).not.toThrow();
       expect(postedResult().username).toBe('');
 
       scope.postMessage.mockClear();
-      expect(() => send({ eventType: 3, data: { user: null } })).not.toThrow();
+      expect(() => { send({ eventType: 3, data: { user: null } }); }).not.toThrow();
       expect(postedResult().username).toBe('');
     });
 
@@ -450,7 +453,7 @@ describe('wos-worker', () => {
       // coerced or rejected. Asserted here so a future change to that contract
       // is a deliberate one.
       expect(() =>
-        send({
+        { send({
           eventType: 3,
           data: {
             user: { name: 'someone' },
@@ -459,7 +462,7 @@ describe('wos-worker', () => {
             hitMax: 'yes',
             stars: '5',
           },
-        })
+        }); }
       ).not.toThrow();
 
       expect(postedResult()).toMatchObject({
@@ -472,7 +475,7 @@ describe('wos-worker', () => {
     });
 
     it('does not throw when `data` is a primitive', () => {
-      expect(() => send({ eventType: 1, data: 42 })).not.toThrow();
+      expect(() => { send({ eventType: 1, data: 42 }); }).not.toThrow();
 
       expect(postedResult()).toMatchObject({
         type: 'wos_event',
@@ -486,7 +489,7 @@ describe('wos-worker', () => {
       // Socket.IO delivers the event type as a number today. Strict `===`
       // comparisons mean a stringified type would fall through to the
       // unhandled branch rather than being processed.
-      expect(() => send({ eventType: '3', data: { letters: ['c'] } })).not.toThrow();
+      expect(() => { send({ eventType: '3', data: { letters: ['c'] } }); }).not.toThrow();
 
       expect(scope.postMessage).not.toHaveBeenCalled();
       expect(consoleLogSpy).toHaveBeenCalledWith(
@@ -505,7 +508,7 @@ describe('wos-worker', () => {
       ['string message', 'not-a-message'],
       ['number message', 7],
     ])('survives %s', (_label, message) => {
-      expect(() => send(message)).not.toThrow();
+      expect(() => { send(message); }).not.toThrow();
 
       // Either it was ignored, or it reported an error — never a thrown
       // exception, and never a bogus wos_event.
@@ -517,7 +520,7 @@ describe('wos-worker', () => {
       send(null);
       scope.postMessage.mockClear();
 
-      send(correctGuess as WosWorkerMessage);
+      send(correctGuess);
 
       expect(postedResult()).toMatchObject({
         type: 'wos_event',
@@ -538,7 +541,7 @@ describe('wos-worker', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
       const error = new Error('boom');
 
-      expect(() => scope.onerror!(error)).not.toThrow();
+      expect(() => { scope.onerror!(error); }).not.toThrow();
       expect(consoleErrorSpy).toHaveBeenCalledWith('WOS Worker error:', error);
 
       consoleErrorSpy.mockRestore();
@@ -548,7 +551,7 @@ describe('wos-worker', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
       const event = { data: 'corrupted' };
 
-      expect(() => scope.onmessageerror!(event)).not.toThrow();
+      expect(() => { scope.onmessageerror!(event); }).not.toThrow();
       expect(consoleErrorSpy).toHaveBeenCalledWith('WOS Worker Message Error:', event);
 
       consoleErrorSpy.mockRestore();

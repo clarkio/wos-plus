@@ -64,12 +64,12 @@ const anyChannelInputArb = fc.oneof(
   { weight: 4, arbitrary: channelishArb },
   { weight: 2, arbitrary: hashPrefixedChannelArb },
   { weight: 2, arbitrary: boundaryLengthChannelArb },
-  { weight: 2, arbitrary: fc.string({ maxLength: 60 }) as fc.Arbitrary<unknown> },
+  { weight: 2, arbitrary: fc.string({ maxLength: 60 }) },
   { weight: 1, arbitrary: fc.anything() },
 );
 
 const anyLanguageInputArb = fc.oneof(
-  { weight: 3, arbitrary: fc.constantFrom('en', 'pt', 'fr') as fc.Arbitrary<unknown> },
+  { weight: 3, arbitrary: fc.constantFrom('en', 'pt', 'fr') },
   {
     weight: 3,
     arbitrary: fc.constantFrom(
@@ -82,31 +82,32 @@ const anyLanguageInputArb = fc.oneof(
       'eng',
       '',
       '  '
-    ) as fc.Arbitrary<unknown>,
+    ),
   },
-  { weight: 2, arbitrary: fc.string({ maxLength: 8 }) as fc.Arbitrary<unknown> },
+  { weight: 2, arbitrary: fc.string({ maxLength: 8 }) },
   { weight: 1, arbitrary: fc.anything() },
 );
 
 const slotLikeArb = fc.record(
   {
     word: fc.oneof(fc.string({ maxLength: 8 }), fc.constant(undefined), fc.integer()),
-    letters: fc.array(fc.char(), { maxLength: 6 }),
+    // fast-check 4 removed fc.char(); a length-1 string is the replacement.
+    letters: fc.array(fc.string({ minLength: 1, maxLength: 1 }), { maxLength: 6 }),
     hitMax: fc.boolean(),
   },
   { requiredKeys: [] }
 );
 
 const anySlotsInputArb = fc.oneof(
-  { weight: 3, arbitrary: fc.array(slotLikeArb, { maxLength: 6 }) as fc.Arbitrary<unknown> },
+  { weight: 3, arbitrary: fc.array(slotLikeArb, { maxLength: 6 }) },
   {
     weight: 3,
     arbitrary: fc
       .array(slotLikeArb, { maxLength: 6 })
-      .map((slots) => JSON.stringify(slots)) as fc.Arbitrary<unknown>,
+      .map((slots) => JSON.stringify(slots)),
   },
-  { weight: 2, arbitrary: fc.json() as fc.Arbitrary<unknown> },
-  { weight: 2, arbitrary: fc.string({ maxLength: 40 }) as fc.Arbitrary<unknown> },
+  { weight: 2, arbitrary: fc.json() },
+  { weight: 2, arbitrary: fc.string({ maxLength: 40 }) },
   { weight: 2, arbitrary: fc.anything() },
 );
 
