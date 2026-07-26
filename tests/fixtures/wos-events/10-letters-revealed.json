@@ -1,0 +1,7 @@
+{
+  "eventType": 10,
+  "data": {
+    "hiddenLetters": ["a"],
+    "falseLetters": ["x", "z"]
+  }
+}

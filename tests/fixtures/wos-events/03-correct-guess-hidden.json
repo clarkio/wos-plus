@@ -1,0 +1,9 @@
+{
+  "eventType": 3,
+  "data": {
+    "user": { "name": "Clarkio" },
+    "letters": ["c", "?", "u", "t", "i", "o", "n"],
+    "index": 3,
+    "hitMax": true
+  }
+}
