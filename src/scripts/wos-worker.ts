@@ -1,4 +1,4 @@
-declare var self: Worker;
+declare let self: Worker;
 
 export interface WosWorkerMessage {
   eventType: number;
@@ -46,7 +46,7 @@ self.onmessage = function (e: MessageEvent<WosWorkerMessage>) {
   try {
     const { eventType, data } = e.data;
     currentLevel = data.level || currentLevel;
-    let result: WosWorkerResult = {
+    const result: WosWorkerResult = {
       type: 'wos_event',
       wosEventType: eventType,
       wosEventName: 'unkown',

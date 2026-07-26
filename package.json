@@ -8,8 +8,10 @@
     "build": "astro build",
     "preview": "npm run build && wrangler dev",
     "astro": "astro",
+    "check": "astro check",
     "db:fix-board-ids": "node db-scripts/fix-board-ids.mjs",
     "db:insert-words-from-boards": "node db-scripts/insert-words-from-boards.mjs",
+    "lint": "eslint . --max-warnings 0",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
@@ -25,10 +27,16 @@
     "socket.io-client": "2.5.0"
   },
   "devDependencies": {
+    "@astrojs/check": "0.9.9",
+    "@eslint/js": "9.39.5",
     "@types/socket.io-client": "1.4.36",
     "@vitest/coverage-v8": "4.1.9",
     "@vitest/ui": "4.1.9",
+    "eslint": "9.39.5",
+    "eslint-plugin-astro": "1.3.1",
     "happy-dom": "^20.9.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.65.0",
     "vitest": "4.1.9",
     "wrangler": "4.110.0"
   }

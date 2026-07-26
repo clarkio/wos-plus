@@ -804,7 +804,7 @@ describe('GameSpectator class', () => {
     it('should handle null socket gracefully', () => {
       spectator.wosSocket = null;
 
-      expect(() => spectator.disconnect()).not.toThrow();
+      expect(() => { spectator.disconnect(); }).not.toThrow();
     });
   });
 
@@ -828,7 +828,7 @@ describe('GameSpectator class', () => {
     it('should handle undefined client gracefully', () => {
       spectator.twitchClient = undefined;
 
-      expect(() => spectator.disconnectTwitch()).not.toThrow();
+      expect(() => { spectator.disconnectTwitch(); }).not.toThrow();
     });
   });
 

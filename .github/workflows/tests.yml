@@ -27,6 +27,16 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
-    - run: pnpm install --frozen-lockfile
-    - run: pnpm run build --if-present
-    - run: pnpm test
+    # Gate order: install -> type-check -> lint -> tests + coverage -> build
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    - name: Type check
+      run: pnpm run check
+    # Runs at --max-warnings 0. Pre-existing findings are recorded in
+    # eslint-suppressions.json; a NEW violation is not suppressed and fails here.
+    - name: Lint
+      run: pnpm run lint
+    - name: Run tests with coverage
+      run: pnpm run test:run --coverage
+    - name: Build
+      run: pnpm run build

@@ -183,7 +183,7 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
   const url = '/api/boards';
   const isMissingWords: boolean = slots.some(slot => slot.letters.includes('.') || slot.letters.includes('?') || slot.word.length === 0);
 
-  if (isMissingWords === true) {
+  if (isMissingWords) {
     console.warn('Cannot save board: some words are incomplete.');
     return;
   }
