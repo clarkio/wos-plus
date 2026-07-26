@@ -1,0 +1,13 @@
+{
+  "eventType": 1,
+  "data": {
+    "level": 3,
+    "letters": ["c", "a", "u", "t", "i", "o", "n"],
+    "slots": [
+      { "letters": [], "word": "", "hitMax": false, "index": 0, "length": 4 },
+      { "letters": [], "word": "", "hitMax": false, "index": 1, "length": 4 },
+      { "letters": [], "word": "", "hitMax": false, "index": 2, "length": 5 },
+      { "letters": [], "word": "", "hitMax": false, "index": 3, "length": 7 }
+    ]
+  }
+}

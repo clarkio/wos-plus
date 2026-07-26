@@ -1,0 +1,15 @@
+{
+  "eventType": 4,
+  "data": {
+    "stars": 5,
+    "ranking": [
+      { "user": { "id": "smc_may_i", "name": "smc_may_i" }, "points": 77 },
+      { "user": { "id": "ruggmattbot", "name": "RuggMattBot" }, "points": 61 },
+      { "user": { "id": "clarkio", "name": "Clarkio" }, "points": 16 }
+    ],
+    "rankingTurn": [
+      { "user": { "id": "smc_may_i", "name": "smc_may_i" }, "points": 18 },
+      { "user": { "id": "ruggmattbot", "name": "RuggMattBot" }, "points": 13 }
+    ]
+  }
+}
