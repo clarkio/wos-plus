@@ -178,3 +178,41 @@ were passing in CI. Every agent that read it was steered away from the suite.
 
 If you change a command, a gate, or a convention and don't update these files,
 you have introduced a bug that no test will catch.
+
+---
+
+## 7. The acceptance stream (`tests/acceptance/`)
+
+The second test stream (AGENTIC-TESTING-PLAN.md Phase 3). Unit tests describe
+what the code does; acceptance tests encode the human-approved behavioural
+contract in [specs/](specs/). Both must be green.
+
+```bash
+pnpm run test:acceptance     # vitest run tests/acceptance
+```
+
+It is a **subset** of `pnpm run test:run` / `test:coverage`, not a separate
+suite — the script exists so the stream is independently visible. The §2.4 gate
+already covers it.
+
+Conventions, all enforced by the harness rather than by this prose:
+
+- One file per behaviour area, named `*.acceptance.test.ts`; each `describe`
+  cites the `specs/` section it implements.
+- Start every file with `// @vitest-environment node` — the repo default is
+  happy-dom, but these exercise server code.
+- **Invoke the route, don't serve it.** `invokeRoute(GET, { … })` from
+  [tests/acceptance/api-harness.ts](tests/acceptance/api-harness.ts) fabricates
+  Astro's `APIContext`, including route `params`, `locals.runtime.env`, and the
+  module-level `env` from `cloudflare:workers` that the routes actually read
+  their credentials from.
+- **Mock the network at the boundary, never the module.** Declare Supabase
+  responses with the helpers in
+  [tests/acceptance/network-mock.ts](tests/acceptance/network-mock.ts) so the
+  real `@supabase/supabase-js` query building and error mapping still run.
+  `vi.mock('@supabase/supabase-js')` in this tree defeats the point of it.
+- **Zero real network.** An unmatched request is answered locally and recorded,
+  and the recording is asserted empty after every test. Note that MSW's
+  `onUnhandledRequest: 'error'` alone does *not* achieve this — see the header
+  comment in `network-mock.ts` for why, and do not remove the catch-all handler
+  that does.
