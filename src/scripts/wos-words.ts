@@ -1,5 +1,9 @@
 // import localDictionary from './wos_dictionary.json';
-let wosDictionary: string[]; // = localDictionary as string[];
+// Starts empty rather than undefined: loadWordsFromDb() is fire-and-forget and
+// deliberately swallows failures, so every consumer here can run before (or
+// without) a successful load and must degrade to "no words known" instead of
+// throwing.
+let wosDictionary: string[] = []; // = localDictionary as string[];
 // Lower-cased lookup set kept in sync with wosDictionary so membership checks
 // (used to disambiguate Twitch chat messages, see isWosWord) are O(1).
 let wosDictionarySet: Set<string> = new Set();
@@ -64,7 +68,9 @@ export interface Slot {
 
 export async function updateWordsDb(word: string) {
   try {
-    if (wosDictionary && wosDictionary.includes(word)) {
+    // Membership is checked against the lower-cased mirror set so a word that
+    // only differs in case from a known one isn't re-sent to the API.
+    if (wosDictionarySet.has(word.toLowerCase())) {
       console.log(`Word "${word}" already exists in the WOS dictionary.`);
       return;
     }
@@ -167,8 +173,12 @@ export function findMissingWordsFromBoard(currentSlots: Slot[], boardSlots: Slot
  * @returns Array of words from dictionaryWords that are not in knownWords
  */
 function findMissingWordsFromList(knownWords: string[], dictionaryWords: string[]): string[] {
-  // Create a Set of knownWords for efficient lookup
-  const knownWordsSet = new Set(knownWords.map(word => word.toLowerCase()));
+  // Create a Set of knownWords for efficient lookup. Words the UI already
+  // reported as missed come back in this list carrying the trailing '*' marker
+  // it displays them with, so the marker is stripped before comparing —
+  // otherwise "beard*" wouldn't match "beard" and the same word would be
+  // reported missing again every time the level-end pipeline runs.
+  const knownWordsSet = new Set(knownWords.map(word => word.replace(/\*+$/, '').toLowerCase()));
 
   // Filter dictionaryWords to find words not in knownWordsSet
   return dictionaryWords.filter(word => !knownWordsSet.has(word.toLowerCase()));
@@ -190,7 +200,7 @@ function findWosWordsByLetters(letters: string, length?: number): string[] {
   }
 
   // Filter words that can be formed from the given letters
-  let possibleWords = (wosDictionary as string[]).filter((word) => {
+  let possibleWords = wosDictionary.filter((word) => {
     // Create a copy of the letter frequency map for each word check
     const availableLetters = { ...letterFrequency };
 
