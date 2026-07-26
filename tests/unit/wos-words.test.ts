@@ -448,14 +448,132 @@ describe('wos-words module', () => {
   });
 
   describe('loadWordsFromDb', () => {
-    it.todo('should load words from API endpoint');
-    it.todo('should handle API errors gracefully');
-    it.todo('should update dictionary after loading');
+    it('should load words from the API endpoint', async () => {
+      const wosWords = await importFreshModule();
+      fetchMock.mockResolvedValueOnce(okResponse(TEST_DICTIONARY));
+
+      await wosWords.loadWordsFromDb();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(WORDS_API_URL);
+    });
+
+    it('should populate the dictionary with the loaded words', async () => {
+      const wosWords = await importFreshModule();
+      fetchMock.mockResolvedValueOnce(okResponse(TEST_DICTIONARY));
+
+      await wosWords.loadWordsFromDb();
+
+      expect(wosWords.isWosWord('rate')).toBe(true);
+      expect(wosWords.isWosWord('notaword')).toBe(false);
+    });
+
+    it('should trim surrounding whitespace from loaded words', async () => {
+      const wosWords = await importFreshModule();
+      fetchMock.mockResolvedValueOnce(okResponse(['  rate  ', '\ttear\n']));
+
+      await wosWords.loadWordsFromDb();
+
+      expect(wosWords.isWosWord('rate')).toBe(true);
+      expect(wosWords.isWosWord('tear')).toBe(true);
+    });
+
+    it('should match loaded words case-insensitively', async () => {
+      const wosWords = await importFreshModule();
+      fetchMock.mockResolvedValueOnce(okResponse(['Rate']));
+
+      await wosWords.loadWordsFromDb();
+
+      expect(wosWords.isWosWord('rate')).toBe(true);
+      expect(wosWords.isWosWord('RATE')).toBe(true);
+    });
+
+    it('should swallow a non-ok API response rather than throwing', async () => {
+      const wosWords = await importFreshModule();
+      fetchMock.mockResolvedValueOnce(errorResponse(500, 'Internal Server Error'));
+
+      await expect(wosWords.loadWordsFromDb()).resolves.toBeUndefined();
+      expect(console.error).toHaveBeenCalled();
+    });
+
+    it('should swallow a network rejection rather than throwing', async () => {
+      const wosWords = await importFreshModule();
+      fetchMock.mockRejectedValueOnce(new Error('offline'));
+
+      await expect(wosWords.loadWordsFromDb()).resolves.toBeUndefined();
+      expect(console.error).toHaveBeenCalled();
+    });
+
+    it('should leave the dictionary usable after a failed load', async () => {
+      // Regression: loadWordsFromDb() deliberately swallows failures, so every
+      // consumer can run against a dictionary that was never populated. It used
+      // to be left `undefined`, which made findAllMissingWords throw outright.
+      const wosWords = await importFreshModule();
+      fetchMock.mockRejectedValueOnce(new Error('offline'));
+      await wosWords.loadWordsFromDb();
+
+      expect(wosWords.isWosWord('rate')).toBe(false);
+      expect(() => wosWords.findAllMissingWords([], 'ater', 4)).not.toThrow();
+      expect(wosWords.findAllMissingWords([], 'ater', 4)).toEqual([]);
+    });
   });
 
   describe('updateWordsDb', () => {
-    it.todo('should add new word to dictionary');
-    it.todo('should skip adding duplicate words');
-    it.todo('should handle PATCH request errors');
+    it('should PATCH an unknown word to the dictionary endpoint', async () => {
+      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
+      fetchMock.mockResolvedValueOnce(okResponse({ ok: true }));
+
+      await wosWords.updateWordsDb('stare');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(WOS_DICTIONARY_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word: 'stare' }),
+      });
+    });
+
+    it('should add the new word to the in-memory dictionary on success', async () => {
+      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
+      fetchMock.mockResolvedValueOnce(okResponse({ ok: true }));
+
+      await wosWords.updateWordsDb('stare');
+
+      expect(wosWords.isWosWord('stare')).toBe(true);
+    });
+
+    it('should skip a word already present in the dictionary', async () => {
+      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
+
+      await wosWords.updateWordsDb('rate');
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('should skip a known word that differs only in case', async () => {
+      // The dictionary is matched case-insensitively everywhere else, so an
+      // already-known word must not be re-sent just because its casing differs.
+      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
+
+      await wosWords.updateWordsDb('RATE');
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('should reject when the PATCH returns a non-ok response', async () => {
+      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
+      fetchMock.mockResolvedValueOnce(errorResponse(503, 'Service Unavailable'));
+
+      await expect(wosWords.updateWordsDb('stare')).rejects.toThrow('503');
+      expect(wosWords.isWosWord('stare')).toBe(false);
+    });
+
+    it('should reject when the PATCH request itself fails', async () => {
+      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
+      fetchMock.mockRejectedValueOnce(new Error('offline'));
+
+      await expect(wosWords.updateWordsDb('stare')).rejects.toThrow('offline');
+      expect(console.error).toHaveBeenCalled();
+    });
   });
 });
