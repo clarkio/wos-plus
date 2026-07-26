@@ -30,7 +30,7 @@ class MockWorker {
    */
   emitMessage(data: any) {
     if (!this.onmessage) return undefined;
-    return this.onmessage({ data } as MessageEvent);
+    this.onmessage({ data } as MessageEvent);
   }
 
   terminate() {

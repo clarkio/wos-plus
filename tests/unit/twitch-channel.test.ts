@@ -94,7 +94,7 @@ describe('twitchChannelExists', () => {
       (_url: string, init: RequestInit) =>
         new Promise((_resolve, reject) => {
           init.signal?.addEventListener('abort', () =>
-            reject(new DOMException('Aborted', 'AbortError')),
+            { reject(new DOMException('Aborted', 'AbortError')); },
           );
         }),
     );

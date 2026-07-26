@@ -1,0 +1,127 @@
+{
+  "db-scripts/fix-board-ids.mjs": {
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "db-scripts/load-dev-env.mjs": {
+    "no-undef": {
+      "count": 3
+    },
+    "no-unused-vars": {
+      "count": 2
+    }
+  },
+  "src/pages/api/boards/[id].ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 3
+    }
+  },
+  "src/pages/api/boards/index.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    }
+  },
+  "src/pages/api/channel-stats/[channel].ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 1
+    }
+  },
+  "src/pages/api/health.ts": {
+    "@typescript-eslint/require-await": {
+      "count": 1
+    }
+  },
+  "src/pages/api/words.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    },
+    "@typescript-eslint/require-await": {
+      "count": 1
+    }
+  },
+  "src/scripts/db-service.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 3
+    }
+  },
+  "src/scripts/twitch-channel.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 1
+    }
+  },
+  "src/scripts/wos-plus-main.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 15
+    },
+    "@typescript-eslint/no-invalid-void-type": {
+      "count": 1
+    },
+    "@typescript-eslint/require-await": {
+      "count": 1
+    },
+    "@typescript-eslint/restrict-plus-operands": {
+      "count": 1
+    },
+    "@typescript-eslint/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    }
+  },
+  "src/scripts/wos-widget.ts": {
+    "@typescript-eslint/require-await": {
+      "count": 1
+    }
+  },
+  "src/scripts/wos-words.ts": {
+    "@typescript-eslint/return-await": {
+      "count": 1
+    }
+  },
+  "src/scripts/wos-worker.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    }
+  },
+  "tests/integration/api-routes.test.ts": {
+    "@typescript-eslint/no-unused-vars": {
+      "count": 2
+    }
+  },
+  "tests/setup.ts": {
+    "@typescript-eslint/no-unused-vars": {
+      "count": 7
+    }
+  },
+  "tests/test-utils.ts": {
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 2
+    },
+    "@typescript-eslint/no-unsafe-function-type": {
+      "count": 4
+    }
+  },
+  "tests/unit/launch-menu.test.ts": {
+    "@typescript-eslint/ban-ts-comment": {
+      "count": 3
+    },
+    "@typescript-eslint/no-require-imports": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unused-expressions": {
+      "count": 2
+    }
+  },
+  "tests/unit/twitch-chat-worker.test.ts": {
+    "@typescript-eslint/no-unsafe-function-type": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unused-vars": {
+      "count": 2
+    }
+  },
+  "tests/unit/wos-plus-main.test.ts": {
+    "@typescript-eslint/restrict-plus-operands": {
+      "count": 1
+    }
+  }
+}

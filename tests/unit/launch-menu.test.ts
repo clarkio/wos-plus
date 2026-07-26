@@ -4,7 +4,7 @@ import initLaunchMenu from '../../src/lib/launch-menu';
 // Ensure a DOM exists for environments where the test runner didn't provide one
 if (typeof document === 'undefined') {
   // lazy-load happy-dom to create a DOM
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+   
   const { Window } = require('happy-dom');
   const win = new Window();
   // @ts-ignore

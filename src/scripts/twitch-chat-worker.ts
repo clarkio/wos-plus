@@ -1,5 +1,5 @@
 // Worker type definition
-declare var self: Worker;
+declare let self: Worker;
 
 export interface TwitchWorkerMessage {
   username: string;

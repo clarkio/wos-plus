@@ -98,8 +98,11 @@ export class GameSpectator {
   constructor() {
     this.twitchChatLog = new Map();
     this.wosSocket = null;
-    loadWordsFromDb();
-    this.startEventProcessors();
+    // Both are deliberately fire-and-forget: the constructor cannot await, and
+    // each handles its own failures internally. `void` marks that as intended
+    // rather than an accidentally dropped promise.
+    void loadWordsFromDb();
+    void this.startEventProcessors();
   }
 
   private async loadChannelRecords(channel: string) {
@@ -169,9 +172,11 @@ export class GameSpectator {
    * ever scales down, so short values render at full size.
    */
   private fitHud() {
-    const hud = document.querySelector(
+    // Generic form rather than an `as` assertion: it narrows the return type
+    // for the .style access below without tripping no-unnecessary-type-assertion.
+    const hud = document.querySelector<HTMLElement>(
       '.player-channel-data-container, .streamer-channel-data-container'
-    ) as HTMLElement | null;
+    );
     const overlay = hud?.querySelector('.overlay') as HTMLElement | null;
     if (!hud || !overlay) return;
 
@@ -197,7 +202,7 @@ export class GameSpectator {
 
     this.hudResizeObserver = new ResizeObserver(() => {
       cancelAnimationFrame(this.hudResizeRaf);
-      this.hudResizeRaf = requestAnimationFrame(() => this.fitHud());
+      this.hudResizeRaf = requestAnimationFrame(() => { this.fitHud(); });
     });
     this.hudResizeObserver.observe(hud);
   }
@@ -344,7 +349,7 @@ export class GameSpectator {
         console.log('[WOS Helper] Saving board data to database...');
         console.log('[WOS Helper] Board ID:', this.currentLevelBigWord);
         console.log('[WOS Helper] Board Slots:', this.currentLevelSlots);
-        let slots = this.currentLevelSlots;
+        const slots = this.currentLevelSlots;
         if (slots[slots.length - 1].word !== this.currentLevelBigWord) this.currentLevelBigWord = slots[slots.length - 1].word;
         await saveBoard(this.currentLevelBigWord, this.currentLevelSlots, this.currentChannel, this.currentLanguageCode);
       }
@@ -365,17 +370,17 @@ export class GameSpectator {
   }
   logEmptySlots() {
     // slots missed/empty will have user property set to null
-    let emptySlots = this.currentLevelSlots.filter(slot => !slot.user);
+    const emptySlots = this.currentLevelSlots.filter(slot => !slot.user);
     if (emptySlots.length > 0) {
       // sort empty slots by the length of the letters array
       emptySlots.sort((a, b) => a.letters.length - b.letters.length);
 
       // count the number of empty slots by the length of the letters array
-      this.currentLevelEmptySlotsCount = emptySlots.reduce((acc, slot) => {
+      this.currentLevelEmptySlotsCount = emptySlots.reduce<{ [key: number]: number; }>((acc, slot) => {
         const key = slot.letters.length;
         acc[key] = (acc[key] || 0) + 1;
         return acc;
-      }, {} as { [key: number]: number; });
+      }, {});
 
       this.log(`Total Empty Slots: ${emptySlots.length}`, this.wosGameLogId);
 
@@ -756,7 +761,7 @@ export class GameSpectator {
       return;
     }
 
-    (logEl as HTMLElement).innerHTML = '';
+    (logEl).innerHTML = '';
 
     // All word groups live inside a single track element. The track is what the
     // auto-scroll animation translates, so the log box (background, border and
@@ -808,9 +813,9 @@ export class GameSpectator {
    * allowed scale.
    */
   private fitWordLog() {
-    const logEl = document.getElementById('correct-words-log') as HTMLElement | null;
+    const logEl = document.getElementById('correct-words-log');
     if (!logEl) return;
-    const track = logEl.querySelector('.correct-words-track') as HTMLElement | null;
+    const track = logEl.querySelector<HTMLElement>('.correct-words-track');
     if (!track) return;
 
     // Nothing rendered yet — reset and bail so an empty log doesn't scale up.
@@ -877,7 +882,7 @@ export class GameSpectator {
 
     this.wordLogResizeObserver = new ResizeObserver(() => {
       cancelAnimationFrame(this.wordLogResizeRaf);
-      this.wordLogResizeRaf = requestAnimationFrame(() => this.fitWordLog());
+      this.wordLogResizeRaf = requestAnimationFrame(() => { this.fitWordLog(); });
     });
     this.wordLogResizeObserver.observe(logEl);
   }
@@ -1045,7 +1050,12 @@ export class GameSpectator {
     }
 
     this.currentChannel = channel.replace('#', '');
-    this.loadChannelRecords(this.currentChannel);
+    // Unlike the other fire-and-forget calls here, loadChannelRecords has no
+    // internal error handling, so a failed record fetch would surface as an
+    // unhandled rejection. Log it and carry on — records are non-essential.
+    this.loadChannelRecords(this.currentChannel).catch((error: unknown) => {
+      console.error('Failed to load channel records:', error);
+    });
 
     if (this.twitchClient) {
       this.disconnectTwitch();
@@ -1078,7 +1088,8 @@ export class GameSpectator {
       this.log(`Connected to Twitch chat for channel: ${channel}`, this.twitchChatLogId);
       // 'connect' fires on every (re)connect, so this also re-joins the channel
       // after an automatic reconnect.
-      this.joinTwitchChannel(channel, joinToken);
+      // Handles its own errors internally; `void` marks the fire-and-forget.
+      void this.joinTwitchChannel(channel, joinToken);
     });
 
     // Without an 'error' listener the library's emitted errors (notably the
@@ -1158,8 +1169,8 @@ export class GameSpectator {
       message = JSON.stringify(message, null, 2);
     }
     if (logDiv) {
-      logDiv!.innerText += `${message}\n`;
-      logDiv!.scrollTop = logDiv!.scrollHeight;
+      logDiv.innerText += `${message}\n`;
+      logDiv.scrollTop = logDiv.scrollHeight;
     }
     console.log(message);
   }

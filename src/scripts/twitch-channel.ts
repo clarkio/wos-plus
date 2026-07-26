@@ -46,13 +46,13 @@ export async function twitchChannelExists(
 ): Promise<boolean | null> {
   const timeoutController = new AbortController();
   const timeout = setTimeout(
-    () => timeoutController.abort(),
+    () => { timeoutController.abort(); },
     opts.timeoutMs ?? DEFAULT_TIMEOUT_MS
   );
 
   // Combine the caller's signal (if any) with our own timeout so either one
   // can abort the request.
-  opts.signal?.addEventListener('abort', () => timeoutController.abort());
+  opts.signal?.addEventListener('abort', () => { timeoutController.abort(); });
 
   try {
     const response = await fetch(TWITCH_GQL_ENDPOINT, {

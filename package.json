@@ -11,6 +11,7 @@
     "check": "astro check",
     "db:fix-board-ids": "node db-scripts/fix-board-ids.mjs",
     "db:insert-words-from-boards": "node db-scripts/insert-words-from-boards.mjs",
+    "lint": "eslint . --max-warnings 0",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",

@@ -75,7 +75,7 @@ so explicitly in the PR description — do not silently work around it.
 Run this before declaring any work done, and paste the real results in the PR:
 
 ```bash
-pnpm run check && pnpm run test:coverage && pnpm run build
+pnpm run check && pnpm run lint && pnpm run test:coverage && pnpm run build
 ```
 
 - `pnpm run check` — `astro check`, type-checks `.astro` + `.ts` (the Cloudflare
@@ -86,9 +86,10 @@ pnpm run check && pnpm run test:coverage && pnpm run build
 Note: `pnpm test` is **watch mode**. Never use it in CI or in an agent loop; use
 `pnpm run test:run`.
 
-> A `pnpm run lint` step joins this gate in a later phase. When it lands, the
-> gate becomes
-> `pnpm run check && pnpm run lint && pnpm run test:coverage && pnpm run build`.
+> `pnpm run lint` runs ESLint at `--max-warnings 0`. Pre-existing findings are
+> recorded in `eslint-suppressions.json` as a **ratchet baseline**: a new
+> violation is not suppressed and fails the build. Shrink that file; never
+> regenerate it wholesale to absorb a new violation.
 
 CI ([.github/workflows/tests.yml](.github/workflows/tests.yml)) runs the same
 sequence: install → check → test + coverage → build.
@@ -135,4 +136,9 @@ Prefer a failing build over a paragraph of good advice.
   coverage report with a "Failed to parse … Excluding it from coverage" warning,
   because that module specifier does not resolve under Vitest. Resolving it
   (alias/stub) is a prerequisite for real API-route coverage.
-- No linter yet.
+- ESLint 9 flat config (`eslint.config.js`), type-aware, enforced at
+  `--max-warnings 0`. 68 pre-existing violations are suppressed via
+  `eslint-suppressions.json` and should be burned down over time; the
+  `no-unsafe-*` family is downgraded repo-wide pending real payload types.
+  `no-explicit-any`, `no-floating-promises`, and `switch-exhaustiveness-check`
+  are hard errors on all new code.

@@ -104,13 +104,14 @@ npm run db:insert-words-from-boards -- --apply
 ```
 
 ### Code Quality
-- **No linter configured**: Follow existing code style in each file
+- **ESLint 9** (`pnpm run lint`, type-aware, `--max-warnings 0`): pre-existing
+  findings are suppressed in `eslint-suppressions.json`; new violations fail
 - **TypeScript strict mode**: Enabled via `astro/tsconfigs/strict`
 - **Type checking**: `pnpm run check` (`astro check`) type-checks `.astro` and
   `.ts` files. The Cloudflare build does *not* type-check, so run this too.
 - **Build validation**: Always run `npm run build` after code changes to ensure TypeScript compilation succeeds
 - **Full local gate** (see [CLAUDE.md](../CLAUDE.md)):
-  `pnpm run check && pnpm run test:coverage && pnpm run build`
+  `pnpm run check && pnpm run lint && pnpm run test:coverage && pnpm run build`
 
 ### Testing
 
