@@ -130,15 +130,51 @@ Prefer a failing build over a paragraph of good advice.
   (`wos-worker.ts`, `wos-widget.ts`, parts of `src/pages/api/**`, `cors.ts`)
   appear at 0% instead of being invisible. There are **no coverage thresholds
   yet** — do not let that absence justify lowering coverage.
-- Known coverage-tooling gap: the four API routes that `import { env } from
-  'cloudflare:workers'` (`api/words.ts`, `api/boards/index.ts`,
-  `api/boards/[id].ts`, `api/channel-stats/[channel].ts`) are dropped from the
-  coverage report with a "Failed to parse … Excluding it from coverage" warning,
-  because that module specifier does not resolve under Vitest. Resolving it
-  (alias/stub) is a prerequisite for real API-route coverage.
+- ~~Known coverage-tooling gap: the four API routes importing
+  `cloudflare:workers` are dropped from coverage.~~ **Fixed** — the specifier is
+  aliased to `tests/stubs/cloudflare-workers.ts` in `vitest.config.ts`. Those
+  routes now report (at 0%, pending the acceptance suite). The true baseline is
+  **63.45% statements**, not the 79.97% reported before untested files were
+  counted at all.
 - ESLint 9 flat config (`eslint.config.js`), type-aware, enforced at
   `--max-warnings 0`. 68 pre-existing violations are suppressed via
   `eslint-suppressions.json` and should be burned down over time; the
   `no-unsafe-*` family is downgraded repo-wide pending real payload types.
   `no-explicit-any`, `no-floating-promises`, and `switch-exhaustiveness-check`
   are hard errors on all new code.
+
+
+---
+
+## 5. Autonomy: who decides what
+
+Not every change carries the same risk, and the gates alone don't encode that.
+Three tiers:
+
+- **Bug fixes and refactors inside existing structure** — proceed
+  autonomously. The gates in §2.4 are the check.
+- **Behavior changes** — start with a spec diff in `specs/` that a human
+  approves *before* implementation. The spec is the contract; the acceptance
+  tests encode it; the implementation satisfies it. (Lands with the acceptance
+  stream — until then, describe the intended behavior change in the PR and get
+  agreement first.)
+- **Architecture changes** — new modules, new data flows, new dependencies,
+  changes to worker boundaries — require explicit maintainer sign-off before
+  implementation, regardless of how confident you are. Agent confidence is not
+  evidence.
+
+The human stays the architect. When a task is ambiguous about which tier it
+falls into, treat it as the higher one and ask.
+
+## 6. Keep these instructions load-bearing
+
+`CLAUDE.md` and `.github/copilot-instructions.md` must be updated **in the same
+PR** as any change to scripts, gates, or conventions.
+
+Stale agent instructions are their own defect class. The cautionary example is
+in this repository's own history: `copilot-instructions.md` told every agent
+"**No automated test suite exists**: Manual testing required" while 271 tests
+were passing in CI. Every agent that read it was steered away from the suite.
+
+If you change a command, a gate, or a convention and don't update these files,
+you have introduced a bug that no test will catch.
