@@ -117,29 +117,27 @@ let workerScope: WorkerScopeStub;
 let workerOutput: WosWorkerResult[] = [];
 
 /**
- * Runs `body` with the worker-scope stub installed as the global `self`.
+ * Installs the worker-scope stub as the global `self`; returns the undo.
  *
  * `wos-worker.ts` both *binds* its handler to `self` when the module evaluates
  * and *resolves* `self.postMessage` on every call, so the stub has to be in
  * place for the import and for every translation — but not in between, where
  * happy-dom's own `self` (the window) belongs.
  */
-async function inWorkerScope<T>(body: () => T | Promise<T>): Promise<T> {
+function installWorkerScope(): () => void {
   const originalSelf = Object.getOwnPropertyDescriptor(globalThis, 'self');
   Object.defineProperty(globalThis, 'self', {
     value: workerScope,
     configurable: true,
     writable: true,
   });
-  try {
-    return await body();
-  } finally {
+  return () => {
     if (originalSelf) {
       Object.defineProperty(globalThis, 'self', originalSelf);
     } else {
       delete (globalThis as { self?: unknown }).self;
     }
-  }
+  };
 }
 
 beforeAll(async () => {
@@ -149,16 +147,26 @@ beforeAll(async () => {
     onerror: null,
     onmessageerror: null,
   };
-  await inWorkerScope(() => import('@scripts/wos-worker'));
+  const restoreSelf = installWorkerScope();
+  try {
+    await import('@scripts/wos-worker');
+  } finally {
+    restoreSelf();
+  }
 });
 
 /**
  * Puts a raw socket payload through the real worker and returns what it posted,
  * or `null` for the event types the worker deliberately ignores.
  */
-async function translateThroughWorker(raw: WosWorkerMessage): Promise<WosWorkerResult | null> {
+function translateThroughWorker(raw: WosWorkerMessage): WosWorkerResult | null {
   workerOutput = [];
-  await inWorkerScope(() => { workerScope.onmessage!({ data: raw } as MessageEvent); });
+  const restoreSelf = installWorkerScope();
+  try {
+    workerScope.onmessage!({ data: raw } as MessageEvent);
+  } finally {
+    restoreSelf();
+  }
   const posted = workerOutput[0];
   if (posted && posted.type !== 'wos_event') {
     throw new Error(`wos-worker rejected the payload: ${JSON.stringify(posted)}`);
@@ -280,13 +288,22 @@ async function drain(pending: Promise<unknown>): Promise<void> {
   await tracked;
 }
 
-/** Play one WoS socket event all the way through to the page. */
-async function playWosEvent(raw: WosWorkerMessage): Promise<void> {
-  const translated = await translateThroughWorker(raw);
-  if (!translated) return; // an event type the worker ignores
+/**
+ * Hand one WoS socket event to the spectator without waiting for it. Used to
+ * put two events in flight at once, which is what the level-end grace period
+ * exists to survive.
+ */
+function startWosEvent(raw: WosWorkerMessage): Promise<unknown> {
+  const translated = translateThroughWorker(raw);
+  if (!translated) return Promise.resolve(); // an event type the worker ignores
   const handler = spectatorWosWorker.onmessage as unknown as
     (event: MessageEvent) => Promise<void> | void;
-  await drain(Promise.resolve(handler({ data: translated } as MessageEvent)));
+  return Promise.resolve(handler({ data: translated } as MessageEvent));
+}
+
+/** Play one WoS socket event all the way through to the page. */
+async function playWosEvent(raw: WosWorkerMessage): Promise<void> {
+  await drain(startWosEvent(raw));
 }
 
 /** Deliver a Twitch chat message the way the twitch worker does. */
@@ -405,6 +422,35 @@ const TRILBY_DICTIONARY = ['trilby', 'combat', 'limbs', 'brims', 'trims'];
 /** A board whose anagram-rich letters give several equally plausible guesses. */
 const BROOMED_LETTERS = ['b', 'r', 'o', 'o', 'd', 's', 'm', 'e'];
 const BROOMED_DICTIONARY = ['broods', 'brooms', 'somber', 'bedroom'];
+
+/** The archive has never seen this board. */
+function boardNotArchived() {
+  return http.get('*/api/boards/:id', () => HttpResponse.json({ error: 'Not found' }, { status: 404 }));
+}
+
+/** The archive holds a complete capture of this board. */
+function boardArchived(id: string, words: string[]) {
+  return http.get('*/api/boards/:id', () => HttpResponse.json({
+    id,
+    created_at: '2025-01-01T00:00:00.000Z',
+    slots: words.map((word, index) => ({
+      letters: word.split(''),
+      word,
+      user: 'someone',
+      hitMax: index === words.length - 1,
+    })),
+  }));
+}
+
+/** Accepts a board capture and records the body the app actually sent. */
+function boardCaptureRecorder(): { posted: Record<string, unknown>[]; handler: ReturnType<typeof http.post> } {
+  const posted: Record<string, unknown>[] = [];
+  const handler = http.post('*/api/boards', async ({ request }) => {
+    posted.push(await request.json() as Record<string, unknown>);
+    return HttpResponse.json({ id: 'saved' }, { status: 201 });
+  });
+  return { posted, handler };
+}
 
 /** Serve `/api/words` so the real dictionary loads over the real HTTP path. */
 function dictionaryContains(words: string[]) {
@@ -634,5 +680,315 @@ describe('specs/game-flow.md § A correct guess', () => {
 
     expect(foundWords()).toEqual(['COAT']);
     expect(spectator.currentLevelSlots.every((slot) => !slot.user)).toBe(true);
+  });
+});
+
+// ===========================================================================
+// specs/game-flow.md § Ending a level — the words nobody found
+// ===========================================================================
+
+describe('specs/game-flow.md § Ending a level (missed words)', () => {
+  beforeEach(async () => {
+    await useDictionary(CAUTION_DICTIONARY);
+    spectator.isSoundsEnabled = false;
+    await playWosEvent(levelStarted({
+      level: 3,
+      letters: CAUTION_LETTERS,
+      slotLengths: CAUTION_SLOT_LENGTHS,
+    }));
+  });
+
+  it('marks the words nobody found with a star and leaves the found ones plain', async () => {
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+
+    await playWosEvent(levelResults(2));
+
+    // COAT was found; everything else spellable from CAUTION was missed.
+    expect(missedWords()).toEqual(['TONIC*', 'ACTION*', 'AUCTION*', 'CAUTION*']);
+    expect(foundWords()).toEqual(['COAT', 'TONIC*', 'ACTION*', 'AUCTION*', 'CAUTION*']);
+    // ACT is a real word spellable from these letters, but no slot on this
+    // board is three letters long, so it was never a word anyone could find.
+    expect(foundWords().join(' ')).not.toContain('ACT*');
+  });
+
+  it('summarises the missed words by length, shortest first', async () => {
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+
+    await playWosEvent(levelResults(2));
+
+    const log = gameLog();
+    expect(log).toContain('Total Empty Slots: 3');
+    const positions = ['5', '6', '7'].map((length) => {
+      const line = `Missed 1: ${length} letter words`;
+      expect(log).toContain(line);
+      return log.indexOf(line);
+    });
+    // Shortest first.
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    // Nothing was missed at the four-letter length — COAT was found.
+    expect(log).not.toContain('4 letter words');
+  });
+
+  it('does not report a word a second time when the level-end run happens again', async () => {
+    // Regression: a word already displayed as missed carries a trailing '*'.
+    // Before the fix that marker made it fail to match itself, so every later
+    // run of the level-end pipeline reported it as missed all over again.
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+
+    await playWosEvent(levelResults(2));
+    const afterResults = foundWords();
+
+    // The game then ends, which runs the missed-word calculation a second time.
+    await playWosEvent(gameEndedFixture as WosWorkerMessage);
+
+    expect(foundWords()).toEqual(afterResults);
+    for (const word of ['TONIC*', 'ACTION*', 'AUCTION*', 'CAUTION*']) {
+      expect(foundWords().filter((rendered) => rendered === word)).toHaveLength(1);
+    }
+  });
+
+  it('uses the archived board to name the missed words when the board is known', async () => {
+    server.use(boardArchived('CAUTION', ['coat', 'tonic', 'action', 'caution']));
+
+    // The big word is guessed, so WoS+ knows which board this is.
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'caution', index: 3, hitMax: true }));
+
+    await playWosEvent(levelResults(2));
+
+    // Exactly the two slots nobody filled, taken from the archived board —
+    // not the wider dictionary sweep.
+    expect(missedWords()).toEqual(['TONIC*', 'ACTION*']);
+  });
+
+  it('reports the missed words and the level reached when the game ends', async () => {
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+
+    await playWosEvent(gameEndedFixture as WosWorkerMessage);
+
+    expect(gameLog()).toContain('Game Ended on Level 3');
+    expect(missedWords()).toEqual(['TONIC*', 'ACTION*', 'AUCTION*', 'CAUTION*']);
+  });
+
+  it.todo(
+    'sorts a missed word after an identical found word — not reachable from the ' +
+    'event stream, because the missed-word calculation excludes every word ' +
+    'already found; only a duplicate could show it, and duplicates are the bug',
+  );
+});
+
+// ===========================================================================
+// specs/game-flow.md § Ending a level — stars, clears and capture
+// ===========================================================================
+
+describe('specs/game-flow.md § Ending a level', () => {
+  beforeEach(async () => {
+    await useDictionary(CAUTION_DICTIONARY);
+  });
+
+  /** Fill every slot on the CAUTION board, big word last. */
+  async function clearTheBoard(): Promise<void> {
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'tonic', index: 1 }));
+    await playWosEvent(correctGuess({ user: 'smc_may_i', word: 'action', index: 2 }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'caution', index: 3, hitMax: true }));
+  }
+
+  it('advances the level shown by the stars earned', async () => {
+    spectator.isSoundsEnabled = false;
+    await playWosEvent(levelStarted({ level: 12, letters: CAUTION_LETTERS, slotLengths: [4] }));
+
+    await playWosEvent(levelResults(3));
+
+    expect(text('level-value')).toBe('15');
+    expect(text('level-title')).toBe('NEXT LEVEL');
+    expect(gameLog()).toContain('Level 12 ended with 3 stars');
+  });
+
+  it('captures the board and plays the clear sound when every slot was filled', async () => {
+    const capture = boardCaptureRecorder();
+    server.use(boardNotArchived(), capture.handler);
+
+    await playWosEvent(levelStarted({
+      level: 3,
+      letters: CAUTION_LETTERS,
+      slotLengths: CAUTION_SLOT_LENGTHS,
+    }));
+    await clearTheBoard();
+
+    // Two stars, but every slot has a player against it — that is a clear.
+    await playWosEvent(levelResults(2));
+
+    expect(capture.posted).toHaveLength(1);
+    expect(capture.posted[0]).toMatchObject({
+      id: 'CAUTION',
+      language_code: 'en',
+    });
+    expect(capture.posted[0].slots).toMatchObject([
+      { word: 'coat', user: 'clarkio' },
+      { word: 'tonic', user: 'biocow' },
+      { word: 'action', user: 'smc_may_i' },
+      { word: 'caution', user: 'clarkio', hitMax: true },
+    ]);
+    expect(soundsPlayed).toEqual(['/assets/clear.mp3']);
+    // A cleared board has nothing to report as missed.
+    expect(missedWords()).toEqual([]);
+  });
+
+  it('records the game language on the board it captures', async () => {
+    const capture = boardCaptureRecorder();
+    server.use(boardNotArchived(), capture.handler);
+
+    await playWosEvent(levelStarted({
+      level: 3,
+      letters: CAUTION_LETTERS,
+      slotLengths: CAUTION_SLOT_LENGTHS,
+      language: 4,
+    }));
+    await clearTheBoard();
+    await playWosEvent(levelResults(5));
+
+    expect(capture.posted[0]).toMatchObject({ language_code: 'fr' });
+  });
+
+  it('treats five stars as a clear even with a slot nobody filled', async () => {
+    server.use(boardNotArchived());
+
+    await playWosEvent(levelStarted({
+      level: 3,
+      letters: CAUTION_LETTERS,
+      slotLengths: CAUTION_SLOT_LENGTHS,
+    }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+
+    await playWosEvent(levelResults(5));
+
+    expect(soundsPlayed).toEqual(['/assets/clear.mp3']);
+    // Nothing is reported as missed on a clear, and no board is captured
+    // because the slots are incomplete (no POST handler is registered, so a
+    // capture attempt would fail this test).
+    expect(missedWords()).toEqual([]);
+  });
+
+  it('plays the near-miss sound for one star and the decent-effort sound for three', async () => {
+    await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [4] }));
+
+    await playWosEvent(levelResults(1));
+    expect(soundsPlayed).toEqual(['/assets/ooo_close_one.wav']);
+
+    soundsPlayed = [];
+    await playWosEvent(levelResults(3));
+    expect(soundsPlayed).toEqual(['/assets/not_too_shabby.wav']);
+  });
+
+  it('plays the end-of-game sound when the run comes to an end', async () => {
+    await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [4] }));
+
+    await playWosEvent(gameEndedFixture as WosWorkerMessage);
+
+    expect(soundsPlayed).toEqual(['/assets/loser.wav']);
+  });
+
+  it('counts a guess accepted in the final instant of the level', async () => {
+    const capture = boardCaptureRecorder();
+    server.use(boardNotArchived(), capture.handler);
+
+    await playWosEvent(levelStarted({
+      level: 3,
+      letters: CAUTION_LETTERS,
+      slotLengths: CAUTION_SLOT_LENGTHS,
+    }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'tonic', index: 1 }));
+    await playWosEvent(correctGuess({ user: 'smc_may_i', word: 'action', index: 2 }));
+
+    // The last guess and the level ending are in flight at the same time.
+    const buzzerBeater = startWosEvent(
+      correctGuess({ user: 'clarkio', word: 'caution', index: 3, hitMax: true }),
+    );
+    const ending = startWosEvent(levelResults(4));
+    await drain(Promise.all([buzzerBeater, ending]));
+
+    // The buzzer-beater completed the board, so the level counts as a clear
+    // and the board is captured with that last word in it.
+    expect(soundsPlayed).toEqual(['/assets/clear.mp3']);
+    expect(capture.posted).toHaveLength(1);
+    expect(capture.posted[0].slots).toMatchObject([
+      { word: 'coat' }, { word: 'tonic' }, { word: 'action' }, { word: 'caution' },
+    ]);
+  });
+
+  it('refreshes the channel records after a level, and never lowers a number', async () => {
+    server.use(http.get('*/api/channel-stats/:channel', () => HttpResponse.json({
+      allTimePersonalBest: 30,
+      dailyBest: 5,
+      dailyClears: 2,
+      chatbotEnabled: true,
+    })));
+
+    spectator.isSoundsEnabled = false;
+    // The channel WoS+ is following, as `connectToTwitch` would have set it.
+    spectator.currentChannel = 'clarkio';
+    // WoS+ has already seen a higher all-time best than the chatbot has written.
+    spectator.personalBest = 42;
+
+    await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [4] }));
+    await playWosEvent(levelResults(2));
+
+    expect(text('pb-value')).toBe('42');
+    expect(text('daily-pb-value')).toBe('5');
+    expect(text('daily-clear-value')).toBe('2');
+  });
+
+  it('plays nothing when the viewer has turned sounds off', async () => {
+    spectator.isSoundsEnabled = false;
+    await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [4] }));
+
+    await playWosEvent(levelResults(1));
+    await playWosEvent(gameEndedFixture as WosWorkerMessage);
+
+    expect(soundsPlayed).toEqual([]);
+  });
+
+  it('plays nothing, and queues nothing, while the view is in a background tab', async () => {
+    const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [4] }));
+
+    await playWosEvent(levelResults(1));
+    await playWosEvent(levelResults(3));
+    expect(soundsPlayed).toEqual([]);
+
+    // Coming back to the foreground must not release a backlog.
+    hidden.mockReturnValue(false);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(soundsPlayed).toEqual([]);
+    hidden.mockRestore();
+  });
+
+  it('reports missed words of length zero when a slot carries no letters (❓ unconfirmed)', async () => {
+    // ❓ Unconfirmed — `tests/fixtures/wos-events/README.md` marks the slot
+    // element shape as INFERRED. Everywhere else this file builds an unguessed
+    // slot as a '.'-placeholder of the slot's length, which is what
+    // `saveBoard`'s "letters.includes('.')" check implies WoS really sends.
+    //
+    // This test uses `01-level-start.json` verbatim, where unguessed slots have
+    // `letters: []`, and pins what that shape produces: the missed-word minimum
+    // length collapses to 0 (so words shorter than any slot are reported) and
+    // the end-of-level summary counts every missed word as "0 letter words".
+    //
+    // If WoS really does send empty letter arrays, both of those are defects in
+    // `logMissingWords`/`logEmptySlots`, which read `slot.letters.length` rather
+    // than the `slot.length` the payload also carries. Maintainer to confirm the
+    // wire shape before either is changed — this test is a description of
+    // current behaviour, not an endorsement of it.
+    spectator.isSoundsEnabled = false;
+    await playWosEvent(levelStartFixture as WosWorkerMessage);
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+
+    await playWosEvent(levelResults(2));
+
+    // ACT is three letters; no slot on this board is.
+    expect(missedWords()).toContain('ACT*');
+    expect(gameLog()).toContain('Missed 3: 0 letter words');
   });
 });
