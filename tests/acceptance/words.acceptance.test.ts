@@ -419,20 +419,23 @@ describe('/api/words — transport concerns (no spec section; see task owning sr
 
   it('still answers the word list when CORS is misconfigured, rather than failing the load', async () => {
     /**
-     * ⚠️ DEFECT, in `src/lib/cors.ts` — recorded, deliberately not fixed here.
+     * This test used to pin a defect in `src/lib/cors.ts` as *current behaviour
+     * under protest*: with `CORS_ALLOWED_ORIGINS` unset, `getCorsOrigin`
+     * returned `allowedOrigins[0]` — `undefined` — and the `Headers`
+     * constructor stringified it, so the response advertised the literal origin
+     * `"undefined"`.
      *
-     * With `CORS_ALLOWED_ORIGINS` unset, `getCorsOrigin` returns
-     * `allowedOrigins[0]`, which is `undefined`, and the `Headers` constructor
-     * stringifies that to the literal `"undefined"`. Every response from every
-     * route that uses the helper then advertises an origin named `undefined`.
+     * That defect is now fixed, and this expectation changed with it, as its
+     * note said it should. `getCorsOrigin` returns `undefined` when nothing is
+     * configured and `getCorsHeaders` omits the header entirely. Absence rather
+     * than `'*'` is the point: it leaves the browser's same-origin policy in
+     * force instead of granting every site read access because an environment
+     * variable is missing. `tests/acceptance/cors.acceptance.test.ts` owns the
+     * helper's own contract.
      *
-     * It is asserted here as *current behaviour under protest*, not as the
-     * contract: the fix belongs in `cors.ts`, which another task owns, and
-     * duplicating it here would collide with that work. When that fix lands,
-     * this expectation should change with it.
-     *
-     * What genuinely is this route's contract — and is asserted as such — is
-     * that a CORS misconfiguration must not cost the channel its word list.
+     * What genuinely is this route's contract — and was asserted as such all
+     * along — is that a CORS misconfiguration must not cost the channel its
+     * word list.
      */
     server.use(supabaseSuccess('words', rows(['caution', 'action'])));
 
@@ -445,7 +448,8 @@ describe('/api/words — transport concerns (no spec section; see task owning sr
     expect(response.status).toBe(200);
     expect(await readJson<string[]>(response)).toEqual(['caution', 'action']);
 
-    // The defect itself, pinned so the fix is a visible, deliberate change.
-    expect(responseHeaders(response)['access-control-allow-origin']).toBe('undefined');
+    // No origin is granted, and in particular no origin named "undefined".
+    expect(response.headers.has('access-control-allow-origin')).toBe(false);
+    expect(responseHeaders(response)['access-control-allow-origin']).toBeUndefined();
   });
 });
