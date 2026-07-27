@@ -26,10 +26,30 @@ export function parseAllowedOrigins(envValue: string | undefined): string[] {
 }
 
 /**
- * Gets the appropriate CORS origin header based on the request origin
- * Returns the origin if it's in the whitelist, otherwise returns the first allowed origin
+ * Gets the appropriate CORS origin header based on the request origin.
+ *
+ * Returns the caller's own origin when it is on the whitelist, otherwise the
+ * primary (first) allowed origin — and `undefined` when no origins are
+ * configured at all, meaning there is no origin to name and the caller should
+ * omit the header entirely.
+ *
+ * The `undefined` case is deliberate. This function used to be annotated
+ * `: string` while ending in `allowedOrigins[0]`, which is `undefined` on an
+ * empty list — a lie the compiler accepts only because
+ * `noUncheckedIndexedAccess` is off. The value flowed into the `Headers`
+ * constructor, which stringifies it, so with `CORS_ALLOWED_ORIGINS` unset every
+ * response advertised the literal origin `"undefined"`.
+ *
+ * Omitting the header is the conservative repair. With no header the browser
+ * applies its same-origin policy and blocks the cross-origin read, which is the
+ * right outcome for an allow-list nobody configured, and the response body is
+ * still served normally to same-origin and server-side callers. Returning `'*'`
+ * instead would be a genuine security decision — every site on the internet
+ * granted read access on the strength of a missing environment variable — and
+ * that belongs in configuration, not in a fallback. Returning `''` was rejected
+ * too: it still ships a header, one that matches nothing and explains nothing.
  */
-export function getCorsOrigin(request: Request, allowedOrigins: string[]): string {
+export function getCorsOrigin(request: Request, allowedOrigins: string[]): string | undefined {
   const origin = request.headers.get('origin');
 
   if (origin && allowedOrigins.includes(origin)) {
@@ -37,7 +57,8 @@ export function getCorsOrigin(request: Request, allowedOrigins: string[]): strin
   }
 
   // For requests without an origin header (same-origin requests),
-  // or requests from non-whitelisted origins, return the primary domain
+  // or requests from non-whitelisted origins, return the primary domain.
+  // Undefined when the whitelist is empty; see the note above.
   return allowedOrigins[0];
 }
 
@@ -49,8 +70,11 @@ export function getCorsOrigin(request: Request, allowedOrigins: string[]): strin
 export function getCorsHeaders(request: Request, env?: CorsEnv): Record<string, string> {
   const corsOrigins = typeof env?.CORS_ALLOWED_ORIGINS === 'string' ? env.CORS_ALLOWED_ORIGINS : undefined;
   const allowedOrigins = parseAllowedOrigins(corsOrigins);
+  const allowOrigin = getCorsOrigin(request, allowedOrigins);
   return {
-    'Access-Control-Allow-Origin': getCorsOrigin(request, allowedOrigins),
+    // Spread rather than assigned, so that with no configured origins the key
+    // is absent instead of carrying the string "undefined". See getCorsOrigin.
+    ...(allowOrigin === undefined ? {} : { 'Access-Control-Allow-Origin': allowOrigin }),
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400', // 24 hours
