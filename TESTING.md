@@ -6,6 +6,18 @@ This document provides comprehensive guidance for testing the WoS+ application.
 
 WoS+ uses [Vitest](https://vitest.dev/) as its testing framework. Vitest is a fast, modern testing framework that works seamlessly with Vite and TypeScript.
 
+There are **two test streams**, and both must be green:
+
+| Stream | Where | What it encodes |
+| --- | --- | --- |
+| **Unit / property** | `tests/unit/`, `tests/property/` | what the code *does* — module by module |
+| **Acceptance** | `tests/acceptance/` | what the code *should* do — the human-approved behavioural contract in [specs/](specs/) |
+
+The distinction matters. An agent can always write unit tests that agree with
+whatever it happened to build; it cannot satisfy the acceptance stream that way,
+because the acceptance stream is checked against a spec a human approved. See
+[The acceptance stream](#the-acceptance-stream) below, and `CLAUDE.md` §7.
+
 ## Test Setup
 
 The testing infrastructure includes:
@@ -19,16 +31,26 @@ The testing infrastructure includes:
 
 ```
 wos-plus/
+├── specs/                  # The behavioural contract, in game language (human-owned)
 ├── tests/
 │   ├── unit/               # Unit tests for individual modules
-│   ├── integration/        # Integration tests for API routes
-│   ├── setup.ts           # Global test setup
-│   ├── test-utils.ts      # Shared test utilities
-│   ├── smoke.test.ts      # Basic smoke tests
-│   └── README.md          # Test documentation
-├── vitest.config.ts       # Vitest configuration
-└── tsconfig.json          # TypeScript config (includes test files)
+│   ├── acceptance/         # Acceptance tests — one file per behaviour area
+│   │   ├── api-harness.ts  #   invokeRoute(): fabricates Astro's APIContext
+│   │   └── network-mock.ts #   MSW at the HTTP boundary; no module is mocked
+│   ├── property/           # fast-check invariants for the algorithmic core
+│   ├── fixtures/           # Recorded WoS event sequences
+│   ├── stubs/              # Module stubs aliased in vitest.config.ts
+│   ├── setup.ts            # Global test setup
+│   ├── test-utils.ts       # Shared test utilities
+│   ├── smoke.test.ts       # Basic smoke tests
+│   └── README.md           # Test documentation
+├── vitest.config.ts        # Vitest configuration
+└── tsconfig.json           # TypeScript config (includes test files)
 ```
+
+There is no `tests/integration/`. It held a single file of `it.todo`
+placeholders for the API routes; every one of them is now covered by a real
+acceptance test, and the file was deleted rather than left as a decoy.
 
 ## Running Tests
 
@@ -36,16 +58,33 @@ wos-plus/
 
 ```bash
 # Run tests in watch mode (recommended for development)
-npm test
+pnpm test
 
-# Run tests once (for CI/CD)
-npm run test:run
+# Run tests once (for CI/CD) — every stream
+pnpm run test:run
+
+# Just the acceptance stream
+pnpm run test:acceptance
+
+# Just the property-based stream
+pnpm run test:property
 
 # Run tests with visual UI
-npm run test:ui
+pnpm run test:ui
 
 # Run tests with coverage report
-npm run test:coverage
+pnpm run test:coverage
+```
+
+`test:acceptance` and `test:property` are **subsets** of `test:run`, not
+separate suites. They exist so each stream is independently visible — in CI a
+red "Run acceptance tests" line means the behavioural contract broke, which is a
+different kind of failure from a unit test breaking.
+
+The full local gate before declaring work done (`CLAUDE.md` §2.4):
+
+```bash
+pnpm run check && pnpm run lint && pnpm run test:coverage && pnpm run build
 ```
 
 ### Watch Mode Tips
@@ -57,6 +96,119 @@ In watch mode, Vitest will:
 
 Press `h` in watch mode to see all available commands.
 
+## The acceptance stream
+
+`tests/acceptance/` is the second test stream (AGENTIC-TESTING-PLAN.md Phase 3).
+Where a unit test says "this function returns that", an acceptance test says
+"a streamer who does this sees that" — and it says it in the words of
+[specs/](specs/), the human-approved contract.
+
+```bash
+pnpm run test:acceptance
+```
+
+### Traceability: every test cites its spec
+
+One file per behaviour area, named `*.acceptance.test.ts`. Each `describe`
+names the `specs/` section it implements, and each `it` mirrors the spec's
+Given/When/Then wording:
+
+```typescript
+// @vitest-environment node
+describe('specs/boards.md — Browsing the archive', () => {
+  describe('Scenario: an empty archive', () => {
+    // Given the archive holds no boards at all
+    // When the whole archive is requested
+    // Then an empty list comes back — this is a normal answer, not a failure
+    it('answers with an empty list, as an ordinary answer', async () => { /* … */ });
+  });
+});
+```
+
+That citation is the traceability link. A reader should be able to go from any
+spec scenario to the test that enforces it and back. **A behaviour change starts
+with a spec diff a human approves** — spec, then tests, then code. If you find
+yourself changing an acceptance test to match new code, stop: either the spec
+changes first, or the code is wrong.
+
+Scenarios the spec marks ❓ **Unconfirmed** are *not* part of the contract. They
+are pinned as current behaviour under protest, or left as an `it.todo` naming
+the question. See [specs/README.md § Open questions](specs/README.md) for the
+full index. Do not resolve one without a maintainer's answer.
+
+### `// @vitest-environment node` on every file
+
+The repo default is happy-dom. The API-route acceptance tests exercise server
+code, so every one of those files starts with that pragma. The one exception is
+`game-flow.acceptance.test.ts`, which drives `GameSpectator` and asserts on
+rendered DOM — it deliberately omits the pragma and keeps the happy-dom default.
+
+### Invoke the route, don't serve it
+
+`invokeRoute` from
+[tests/acceptance/api-harness.ts](tests/acceptance/api-harness.ts) fabricates
+Astro's `APIContext` — route `params`, `locals.runtime.env`, and the
+module-level `env` from `cloudflare:workers` that the routes actually read
+their credentials from. No dev server, no port, no `astro build`:
+
+```typescript
+import { GET } from '../../src/pages/api/boards/[id]';
+import { invokeRoute, readJson, responseHeaders } from './api-harness';
+
+const response = await invokeRoute(GET, {
+  url: '/api/boards/TRILBY',
+  params: { id: 'TRILBY' },
+});
+expect(response.status).toBe(200);
+```
+
+### Mock the network at the boundary, never the module
+
+Declare Supabase responses with the helpers in
+[tests/acceptance/network-mock.ts](tests/acceptance/network-mock.ts) —
+`supabaseSuccess`, `supabaseFailure`, `supabaseNoRows` — so the real
+`@supabase/supabase-js` client still does its query building, header handling
+and error mapping. Only HTTP is faked.
+
+```typescript
+setupNetworkMocking();                 // once per file, at the top level
+
+it('…', async () => {
+  server.use(supabaseSuccess('boards', [{ id: 'TRILBY' }]));
+  // …
+});
+```
+
+**`vi.mock('@supabase/supabase-js')` in this tree defeats the point of the
+tree.** If you reach for it, stop — you would be testing the mock.
+
+### ⚠️ What actually blocks the network — do not remove it
+
+> **MSW's `onUnhandledRequest: 'error'` does NOT block requests in msw 2.15.0.**
+> It logs. The throw from `print.error()` is swallowed inside MSW's async frame
+> listener and **the request proceeds to the real network** — verified against a
+> local HTTP server that received the unmatched request and whose response body
+> came back to the caller. Treat that option as a log line, not a guard.
+
+Two other mechanisms are what actually keep the suite offline, and **neither may
+be removed**:
+
+1. **The catch-all handler** (`blockUnmatchedRequests`) — registered as an
+   *initial* handler, so it survives `resetHandlers()` while anything added with
+   `server.use()` still takes precedence. It answers 501 locally. It is
+   deliberately not a simulated network error: a rejected `fetch` sends
+   `postgrest-js` into three retries with 1s/2s/4s backoff, blowing Vitest's 5s
+   timeout before any assertion can explain what went wrong.
+2. **The recorder plus its `afterEach` assertion** — because every route wraps
+   Supabase in `try/catch` and turns any failure into a 500. Without the
+   recorder, a test asserting "Supabase failed ⇒ 500" would pass while quietly
+   depending on a *missing* handler. The assertion fails loudly and names the
+   URL.
+
+Deleting either one does not fail any test. It silently turns a hermetic suite
+into one that talks to the internet. The reasoning is repeated in the header
+comment of `network-mock.ts`; read it before touching that file.
+
 ## Writing Tests
 
 ### Test File Structure
@@ -64,7 +216,8 @@ Press `h` in watch mode to see all available commands.
 Test files should follow this naming convention:
 - `*.test.ts` or `*.spec.ts` for test files
 - Place unit tests in `tests/unit/`
-- Place integration tests in `tests/integration/`
+- Place acceptance tests in `tests/acceptance/`, named `*.acceptance.test.ts`
+- Place property-based tests in `tests/property/`
 
 ### Basic Test Example
 
@@ -276,6 +429,11 @@ Aim for:
 - **Functions**: 80%+
 - **Lines**: 80%+
 
+Coverage is reported for **every** file under `src/**/*.ts`, including files no
+test imports yet, so an untested module shows up as `0%` rather than
+disappearing from the report. There are **no enforced thresholds** yet — that
+absence is not licence to lower coverage. Current numbers are in `CLAUDE.md` §4.
+
 ### What to Test
 
 Priority areas:
@@ -432,15 +590,37 @@ it('should inspect value', () => {
 
 ## CI/CD Integration
 
-For GitHub Actions or other CI systems:
+[.github/workflows/tests.yml](.github/workflows/tests.yml) runs the local gate,
+in order, in a single `build` job:
 
 ```yaml
-- name: Run tests
-  run: npm run test:run
-
-- name: Run tests with coverage
-  run: npm run test:coverage
+- name: Install dependencies
+  run: pnpm install --frozen-lockfile
+- name: Type check
+  run: pnpm run check
+- name: Lint
+  run: pnpm run lint
+- name: Run acceptance tests      # the behavioural contract, on its own line
+  run: pnpm run test:acceptance
+- name: Run tests with coverage   # every stream, including the above
+  run: pnpm run test:run --coverage
+- name: Build
+  run: pnpm run build
 ```
+
+Two things about that workflow are deliberate and easy to break:
+
+- **The acceptance step is a subset of the step after it.** The duplication is
+  the point: it buys a separate red line so a broken contract is distinguishable
+  from a broken unit test. Keeping it inside the `build` job is also deliberate
+  — `docs/BRANCH-PROTECTION.md` lists required check names by job, so a new job
+  would silently not be required.
+- **`pull_request` carries no `branches:` filter.** With one, a *stacked* PR —
+  one targeting another feature branch rather than `main` — gets no test run at
+  all and reads as green because only third-party checks report. That happened
+  on PR #159. The `push` trigger stays scoped to `main`.
+
+`pnpm test` is **watch mode**. Never use it in CI or in an agent loop.
 
 ## Troubleshooting
 

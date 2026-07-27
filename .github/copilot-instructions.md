@@ -7,7 +7,11 @@
 - **Player View** ([player.astro](../src/pages/player.astro)): Track words, letters, and personal records
 - **Streamer View** ([streamer.astro](../src/pages/streamer.astro)): OBS-ready layout with embedded game board and Twitch chat
 
-Built with **Astro 5 + TypeScript**, deployed to **Cloudflare Pages** with Workers for serverless API routes.
+Built with **Astro 7 + TypeScript**, deployed to **Cloudflare Pages** with Workers for serverless API routes.
+
+The authoritative versions are always in `package.json`, which **exact-pins**
+every dependency (`"astro": "7.0.9"`, not `"^7.0.9"`). Match that convention:
+`pnpm add --save-exact`.
 
 ### Suitable Tasks for AI Agent
 
@@ -27,22 +31,23 @@ Avoid tasks requiring:
 ## Setup Instructions
 
 ### Prerequisites
-- Node.js 20+
-- npm (comes with Node.js)
+- Node.js 22 (what CI runs — see `.github/workflows/tests.yml`)
+- **pnpm** — the `packageManager` field in `package.json` is authoritative.
+  Not npm; the lockfile is `pnpm-lock.yaml`.
 
 ### Getting Started
 ```bash
 # Install dependencies
-npm install
+pnpm install --frozen-lockfile
 
 # Start development server (runs on http://localhost:4321)
-npm run dev
+pnpm run dev
 
 # Build for production (outputs to ./dist)
-npm run build
+pnpm run build
 
 # Preview production build locally (requires wrangler)
-npm run preview
+pnpm run preview
 ```
 
 ### Environment Setup
@@ -71,7 +76,13 @@ npm run preview
    - Remote dictionary loaded from `https://clarkio.com/wos-dictionary`
    - `findWosWordsByLetters()`: Letter frequency matching algorithm
    - `findAllMissingWords()`: Identifies potentially missed words at level end
-   - Words auto-added to dictionary via PATCH when correctly guessed
+   - **Words are NOT auto-added to the dictionary.** This file used to claim
+     they were, on a correct guess, via PATCH. They are not: `updateWordsDb` —
+     the only add path — `PATCH`es `clarkio.com/wos-dictionary` directly and has
+     **no callers anywhere in `src/`**. `/api/words` exports `GET` and `OPTIONS`
+     only; its `POST` handler is commented out and there is no `PATCH`. Whether
+     adding should be wired up or retired is an open question for the maintainer
+     — see [specs/README.md § Open questions](../specs/README.md) (W1).
 
 4. **API Routes** ([src/pages/api/](../src/pages/api/)) - All require `prerender = false`
    - Access Cloudflare env via `locals.runtime.env` (e.g., `env.SUPABASE_URL`)
@@ -83,24 +94,38 @@ npm run preview
 WoS Event Flow:
 Socket.IO → wos-worker → GameSpectator.handleCorrectGuess() → updateCurrentLevelSlots[index] → UI
 
-Hidden Word Resolution (Level 20+):
+Masked Guess Resolution:
 WoS sends "????" → Match username + timestamp → Twitch chat log → Reveal actual word
 
 Missing Word Detection:
 Level ends → logMissingWords() → findAllMissingWords(knownLetters, minLength) → Display with * suffix
 ```
 
+> **WoS+ has no level threshold.** An earlier version of this file said "Level
+> 20+" and comments in `wos-plus-main.ts` / `wos-words.ts` say "level 19+". Both
+> describe *the game*, not this tool: `currentLevel` is only ever assigned and
+> displayed, never compared against anything, and `updateGameState` picks the
+> masked path purely on `word.includes('?')`. A masked event at level 3 is
+> resolved exactly like one at level 19 — pinned by a test in
+> `tests/acceptance/game-flow.acceptance.test.ts`.
+>
+> **Which level the game starts masking at is an open question for the
+> maintainer** — the code says 19, this file used to say 20, and nobody has
+> confirmed either. See `specs/game-flow.md § Masked guesses` and
+> [specs/README.md § Open questions](../specs/README.md) (G1). Do not "fix" the
+> discrepancy by adding a threshold to WoS+; there is nothing there to fix.
+
 ## Development Workflows
 
 ### Build and Development Commands
 ```bash
-npm run dev         # Astro dev server on http://localhost:4321
-npm run build       # Build for Cloudflare Pages (outputs to ./dist)
-npm run preview     # Build + Wrangler local preview (tests Workers)
+pnpm run dev         # Astro dev server on http://localhost:4321
+pnpm run build       # Build for Cloudflare Pages (outputs to ./dist)
+pnpm run preview     # Build + Wrangler local preview (tests Workers)
 
 # Database scripts (require SUPABASE_URL and SUPABASE_KEY env vars)
-npm run db:fix-board-ids
-npm run db:insert-words-from-boards -- --apply
+pnpm run db:fix-board-ids
+pnpm run db:insert-words-from-boards -- --apply
 ```
 
 ### Code Quality
@@ -109,7 +134,7 @@ npm run db:insert-words-from-boards -- --apply
 - **TypeScript strict mode**: Enabled via `astro/tsconfigs/strict`
 - **Type checking**: `pnpm run check` (`astro check`) type-checks `.astro` and
   `.ts` files. The Cloudflare build does *not* type-check, so run this too.
-- **Build validation**: Always run `npm run build` after code changes to ensure TypeScript compilation succeeds
+- **Build validation**: Always run `pnpm run build` after code changes to ensure TypeScript compilation succeeds
 - **Full local gate** (see [CLAUDE.md](../CLAUDE.md)):
   `pnpm run check && pnpm run lint && pnpm run test:coverage && pnpm run build`
 
@@ -118,33 +143,59 @@ npm run db:insert-words-from-boards -- --apply
 **An automated test suite exists and is the primary way to verify changes.** See
 [TESTING.md](../TESTING.md) for the full guide (conventions, patterns, examples).
 
-- **Stack**: [Vitest](https://vitest.dev/) 4 with `happy-dom` as the test
-  environment and `@vitest/coverage-v8` for coverage. Config lives in
-  [vitest.config.ts](../vitest.config.ts); `globals: true`, so `describe`/`it`/
-  `expect`/`vi` need no import.
+**Two streams, both required.** `tests/unit/` and `tests/property/` describe
+what the code does; `tests/acceptance/` encodes the human-approved behavioural
+contract in [specs/](../specs/). An agent can always write unit tests that agree
+with whatever it built — it cannot do that to the acceptance stream.
+
+- **Stack**: [Vitest](https://vitest.dev/) 4 with `happy-dom` as the default
+  test environment, `msw` at the HTTP boundary for the acceptance stream,
+  `fast-check` for the property stream, and `@vitest/coverage-v8` for coverage.
+  Config lives in [vitest.config.ts](../vitest.config.ts); `globals: true`, so
+  `describe`/`it`/`expect`/`vi` need no import.
 - **Layout**:
   - `tests/unit/` — unit tests for individual modules (`src/scripts/*`, `src/lib/*`)
-  - `tests/integration/` — API route tests (`src/pages/api/**`)
+  - `tests/acceptance/` — `*.acceptance.test.ts`, one file per behaviour area,
+    each `describe` citing its `specs/` section. API routes are invoked directly
+    through `invokeRoute` in `tests/acceptance/api-harness.ts`; Supabase is faked
+    at the HTTP boundary by `tests/acceptance/network-mock.ts`, never with
+    `vi.mock`. Most files need `// @vitest-environment node`.
+  - `tests/property/` — `fast-check` invariants for the dictionary and
+    normalizers
+  - `tests/fixtures/` — recorded WoS event sequences
+  - `tests/stubs/` — module stubs aliased in `vitest.config.ts` (notably
+    `cloudflare:workers`)
   - `tests/setup.ts` — global setup, loaded via `setupFiles`; mocks `Worker`,
     `WebSocket`, and env vars for every test
   - `tests/test-utils.ts` — shared helpers (`mockFetchResponse`,
     `createMockLocalStorage`, `createMockWebSocket`, `createMockWorker`, `wait`)
   - `tests/smoke.test.ts` — basic sanity checks
+  - There is **no** `tests/integration/`. It held `it.todo` placeholders for the
+    API routes; all are now real acceptance tests and the file was deleted.
 - **Path aliases** work in tests exactly as in source: `@/`, `@scripts/`,
   `@components/`, `@layouts/`, `@pages/`.
 - **Commands**:
   ```bash
-  pnpm test            # watch mode — local development only, never CI
-  pnpm run test:run    # single run — this is the CI/agent command
-  pnpm run test:ui     # Vitest visual UI
-  pnpm run test:coverage  # single run + v8 coverage report
+  pnpm test                 # watch mode — local development only, never CI
+  pnpm run test:run         # single run — this is the CI/agent command
+  pnpm run test:acceptance  # the acceptance stream alone (a subset of test:run)
+  pnpm run test:property    # the property stream alone (a subset of test:run)
+  pnpm run test:ui          # Vitest visual UI
+  pnpm run test:coverage    # single run + v8 coverage report
   ```
-- **Expectation for changes**: any behavior change should come with unit tests.
-  Add or update tests alongside (preferably before) the implementation, and
-  never delete or weaken an existing assertion to make a change pass.
+- **Expectation for changes**: any behavior change should come with tests. Add
+  or update tests alongside (preferably before) the implementation, and never
+  delete or weaken an existing assertion to make a change pass. A change to
+  observable behaviour also needs a **spec diff in `specs/` that a human
+  approves first** — spec, then acceptance tests, then code.
+- **Open questions**: scenarios marked ❓ Unconfirmed in `specs/`, and the
+  `it.todo`s that name them, are questions for the maintainer, not chores.
+  They are indexed in [specs/README.md § Open questions](../specs/README.md).
+  Do not resolve one, and do not delete a deliberate `it.todo`.
 - **Coverage** is reported for every file under `src/**/*.ts`, including files
   no test imports yet — so untested modules show up as `0%` rather than
-  disappearing from the report.
+  disappearing from the report. Current figures are in
+  [CLAUDE.md](../CLAUDE.md) §4.
 
 #### Manual verification (supplement, not substitute)
 
@@ -235,9 +286,14 @@ const groupedWords = sortedWords.reduce((map, word) => {
 See [LIST.todo](../LIST.todo) for active bugs. Critical scenarios:
 
 - Multiple `?` hidden letters revealed at different times
-- Chat message timing mismatches for hidden word resolution
+- Chat message timing mismatches for masked guess resolution
 - Big word detection when fake letters still present
-- Slot-based missed word detection not yet implemented (see [plan-slotBasedMissedWordsDetection.prompt.md](../plan-slotBasedMissedWordsDetection.prompt.md))
+- Slot-based missed word detection **is implemented** —
+  `findMissingWordsFromBoard` in `wos-words.ts`, used by `logMissingWords` when
+  the level's board is in the archive. (This file previously said it was not,
+  and pointed at a planning document that no longer exists.) It matches by slot
+  *position*, which is an open question — see
+  [specs/README.md § Open questions](../specs/README.md) (W3).
 
 ## Common Pitfalls and Important Warnings
 

@@ -6,8 +6,11 @@ name: Tests
 on:
   push:
     branches: [ "main" ]
+  # Deliberately unfiltered by base branch. A `branches: [ "main" ]` filter here
+  # means a stacked PR — one targeting another feature branch rather than main —
+  # gets no test run at all, and reads as green because only third-party checks
+  # report. That happened on PR #159. Every PR runs the suite.
   pull_request:
-    branches: [ "main" ]
 
 jobs:
   build:
@@ -27,7 +30,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
-    # Gate order: install -> type-check -> lint -> tests + coverage -> build
+    # Gate order: install -> type-check -> lint -> acceptance -> tests + coverage -> build
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
     - name: Type check
@@ -36,6 +39,13 @@ jobs:
     # eslint-suppressions.json; a NEW violation is not suppressed and fails here.
     - name: Lint
       run: pnpm run lint
+    # The acceptance stream (tests/acceptance), run on its own so the two test
+    # streams are independently visible in CI output — a red line here means the
+    # human-approved behavioural contract in specs/ was broken, which is a
+    # different failure from a unit test breaking. It is a SUBSET of the next
+    # step, not extra coverage; the duplication buys the separate signal.
+    - name: Run acceptance tests
+      run: pnpm run test:acceptance
     - name: Run tests with coverage
       run: pnpm run test:run --coverage
     - name: Build
