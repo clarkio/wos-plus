@@ -94,7 +94,7 @@ import { loadWordsFromDb } from '@scripts/wos-words';
 import { server, setupNetworkMocking } from './network-mock';
 
 import levelStartFixture from '../fixtures/wos-events/01-level-start.json';
-import correctGuessFixture from '../fixtures/wos-events/03-correct-guess.json';
+import correctGuessHiddenFixture from '../fixtures/wos-events/03-correct-guess-hidden.json';
 import gameEndedFixture from '../fixtures/wos-events/05-game-ended.json';
 import lettersRevealedFixture from '../fixtures/wos-events/10-letters-revealed.json';
 import gameConnectedFixture from '../fixtures/wos-events/12-game-connected.json';
@@ -352,7 +352,11 @@ function levelStarted(options: {
     eventType: 1,
     data: {
       level: options.level,
-      letters: options.letters,
+      // A fresh array per event, as a socket payload always is. This matters:
+      // `handleGameInitialization` keeps the array it is handed by reference and
+      // the hidden-letter deduction writes into it, so sharing one array between
+      // events would let one level's discoveries leak into the next.
+      letters: [...options.letters],
       slots: emptySlots(options.slotLengths),
       ...(options.language === undefined ? {} : { language: options.language }),
     },
@@ -681,6 +685,355 @@ describe('specs/game-flow.md § A correct guess', () => {
     expect(foundWords()).toEqual(['COAT']);
     expect(spectator.currentLevelSlots.every((slot) => !slot.user)).toBe(true);
   });
+});
+
+// ===========================================================================
+// specs/game-flow.md § Hidden and fake letters
+// ===========================================================================
+
+describe('specs/game-flow.md § Hidden and fake letters', () => {
+  beforeEach(async () => {
+    await useDictionary(TRILBY_DICTIONARY);
+    spectator.isSoundsEnabled = false;
+  });
+
+  it('deduces a hidden letter from a guess and puts it where the mask was', async () => {
+    // The spec's own example: letters T L R I S M ? B, and someone guesses TRILBY.
+    await playWosEvent(levelStarted({ level: 5, letters: TRILBY_LETTERS, slotLengths: [6, 5] }));
+
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'trilby', index: 0 }));
+
+    expect(text('hidden-letter')).toBe('Y');
+    expect(text('letters')).toBe('T L R I S M Y B');
+  });
+
+  it('shows a hidden letter once even when a later guess implies it again', async () => {
+    await playWosEvent(levelStarted({ level: 5, letters: TRILBY_LETTERS, slotLengths: [6, 5] }));
+
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'trilby', index: 0 }));
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'misty', index: 1 }));
+
+    expect(text('hidden-letter')).toBe('Y');
+    expect(text('letters')).toBe('T L R I S M Y B');
+  });
+
+  it('adds a second hidden letter found later rather than replacing the first', async () => {
+    // As the spec's board, but with a second masked tile.
+    await playWosEvent(levelStarted({
+      level: 5,
+      letters: ['t', 'l', 'r', 'i', 's', 'm', '?', 'b', '?'],
+      slotLengths: [6, 5],
+    }));
+
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'trilby', index: 0 }));
+    expect(text('hidden-letter')).toBe('Y');
+
+    // MISTS needs a second S, which the board only has behind the other mask.
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'mists', index: 1 }));
+
+    expect(text('hidden-letter')).toBe('Y S');
+    expect(text('letters')).toBe('T L R I S M Y B S');
+  });
+
+  it('works out the hidden and fake letters when the big word is guessed', async () => {
+    await playWosEvent(levelStarted({
+      level: 5,
+      letters: ['b', 'r', 'o', 'o', 'd', 'm', '?', 'x'],
+      slotLengths: [7],
+    }));
+
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'broomed', index: 0, hitMax: true }));
+
+    expect(text('letters-label')).toBe('Big Word:');
+    expect(text('letters')).toBe('B R O O M E D');
+    expect(text('hidden-letter')).toBe('E');
+    expect(text('fake-letter')).toBe('X');
+  });
+
+  it('works the hidden letters out once across a level with several big words', async () => {
+    // BROOMED, BEDROOM and BOREDOM are anagrams; each one fires the big-word
+    // path, and re-running the deduction must not add duplicates.
+    await playWosEvent(levelStarted({
+      level: 5,
+      letters: ['b', 'r', 'o', 'o', 'd', 'm', '?'],
+      slotLengths: [7, 7, 7],
+    }));
+
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'broomed', index: 0, hitMax: true }));
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'bedroom', index: 1, hitMax: true }));
+    await playWosEvent(correctGuess({ user: 'smc_may_i', word: 'boredom', index: 2, hitMax: true }));
+
+    expect(text('hidden-letter')).toBe('E');
+    expect(spectator.currentLevelHiddenLetters).toEqual(['e']);
+  });
+
+  it('drops the fake letters and fills each mask once when the game reveals them', async () => {
+    // `10-letters-revealed.json` reveals hidden A and fake X and Z. The board
+    // below has two masks but only one letter to fill them with — the spare
+    // mask is dropped rather than left to stand for a tile that never existed
+    // (issue #85).
+    await playWosEvent(levelStarted({
+      level: 5,
+      letters: ['t', 'r', '?', 'x', 'z', '?'],
+      slotLengths: [4],
+    }));
+
+    await playWosEvent(lettersRevealedFixture as WosWorkerMessage);
+
+    expect(text('hidden-letter')).toBe('A');
+    expect(text('fake-letter')).toBe('X Z');
+    expect(text('letters')).toBe('T R A');
+    expect(spectator.currentLevelLetters).toEqual(['t', 'r', 'a']);
+  });
+
+  it('leaves the letters alone when the reveal arrives after the big word', async () => {
+    await playWosEvent(levelStarted({
+      level: 5,
+      letters: ['t', 'r', 'a', 'x', 'z', 'p'],
+      slotLengths: [4],
+    }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'trap', index: 0, hitMax: true }));
+
+    await playWosEvent(lettersRevealedFixture as WosWorkerMessage);
+
+    // The revealed letters are shown…
+    expect(text('hidden-letter')).toBe('A');
+    expect(text('fake-letter')).toBe('X Z');
+    // …but the board's letters are already known from the big word.
+    expect(text('letters')).toBe('T R A P');
+    expect(spectator.currentLevelLetters).toEqual(['t', 'r', 'a', 'x', 'z', 'p']);
+  });
+});
+
+// ===========================================================================
+// specs/game-flow.md § Masked guesses
+// ===========================================================================
+//
+// The most bug-prone path in the codebase. From level 19 the game stops saying
+// which word was guessed and reports only the player and the length, and WoS+
+// reconstructs the word from that player's recent chat.
+
+describe('specs/game-flow.md § Masked guesses', () => {
+  /** Start the TRILBY board from the spec, whose seventh tile is still masked. */
+  async function startTrilbyLevel(slotLengths = [6, 5]): Promise<void> {
+    await playWosEvent(levelStarted({ level: 19, letters: TRILBY_LETTERS, slotLengths }));
+  }
+
+  beforeEach(async () => {
+    await useDictionary(TRILBY_DICTIONARY);
+    spectator.isSoundsEnabled = false;
+  });
+
+  it('recovers the word from what the player typed in chat', async () => {
+    await startTrilbyLevel();
+    playChatMessage('clarkio', 'trilby', 1_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+
+    expect(foundWords()).toEqual(['TRILBY']);
+    expect(spectator.currentLevelSlots[0]).toMatchObject({
+      word: 'trilby',
+      user: 'clarkio',
+    });
+    expect(gameLog()).toContain('clarkio correctly guessed: trilby');
+    // The message is shown in the chat log as it arrives, too.
+    expect(text('twitch-chat-log')).toContain('[Twitch Chat] clarkio: trilby');
+  });
+
+  it('prefers a real word over a same-length string that is not one', async () => {
+    await startTrilbyLevel();
+    playChatMessage('clarkio', 'trilby', 1_000);
+    // Typed later, and exactly the right length, but not a word.
+    playChatMessage('clarkio', 'zzzzzz', 2_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+
+    expect(foundWords()).toEqual(['TRILBY']);
+  });
+
+  it('lets a still-masked tile stand for whichever letter the word needs', async () => {
+    await startTrilbyLevel();
+    // TRILBY needs a Y, which the board only has behind the '?' tile.
+    playChatMessage('clarkio', 'trilby', 1_000);
+    // COMBAT is a real word of the same length typed more recently, but it
+    // cannot be built from these tiles even with the mask standing in.
+    playChatMessage('clarkio', 'combat', 2_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+
+    expect(foundWords()).toEqual(['TRILBY']);
+  });
+
+  it('chooses the most recently typed of several words that all fit', async () => {
+    await useDictionary(BROOMED_DICTIONARY);
+    await playWosEvent(levelStarted({ level: 19, letters: BROOMED_LETTERS, slotLengths: [6, 6] }));
+    playChatMessage('clarkio', 'broods', 1_000);
+    playChatMessage('clarkio', 'brooms', 2_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+
+    expect(foundWords()).toEqual(['BROOMS']);
+  });
+
+  it('resolves two masked guesses from one player to two different words', async () => {
+    await useDictionary(BROOMED_DICTIONARY);
+    await playWosEvent(levelStarted({ level: 19, letters: BROOMED_LETTERS, slotLengths: [6, 6] }));
+    playChatMessage('clarkio', 'broods', 1_000);
+    playChatMessage('clarkio', 'brooms', 2_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 1 }));
+
+    // A message used for one guess is never reused for another.
+    expect(foundWords().sort()).toEqual(['BROODS', 'BROOMS']);
+    const words = spectator.currentLevelSlots.map((slot) => slot.word);
+    expect([...words].sort()).toEqual(['broods', 'brooms']);
+  });
+
+  it('resolves two masked guesses that arrive at the same moment', async () => {
+    // Issue #96: rapid or near-simultaneous guesses used to knock each other
+    // out, because resolution read a single "latest message" that the second
+    // guess had already overwritten by the time the first (delayed) handler ran.
+    await useDictionary(BROOMED_DICTIONARY);
+    await playWosEvent(levelStarted({ level: 19, letters: BROOMED_LETTERS, slotLengths: [6, 6] }));
+    playChatMessage('clarkio', 'broods', 1_000);
+    playChatMessage('clarkio', 'brooms', 2_000);
+
+    // Both events are in flight before either has been applied.
+    const first = startWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+    const second = startWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 1 }));
+    await drain(Promise.all([first, second]));
+
+    expect([...foundWords()].sort()).toEqual(['BROODS', 'BROOMS']);
+    expect(spectator.currentLevelSlots.map((slot) => slot.word).sort())
+      .toEqual(['broods', 'brooms']);
+  });
+
+  it('recovers a masked big word from chat', async () => {
+    // `03-correct-guess-hidden.json` is a hidden correct guess with hitMax set:
+    // every letter is masked, so only the length and the player are known.
+    await useDictionary(CAUTION_DICTIONARY);
+    await playWosEvent(levelStarted({
+      level: 19,
+      letters: CAUTION_LETTERS,
+      slotLengths: CAUTION_SLOT_LENGTHS,
+    }));
+    playChatMessage('clarkio', 'caution', 1_000);
+
+    await playWosEvent(correctGuessHiddenFixture as WosWorkerMessage);
+
+    expect(foundWords()).toEqual(['CAUTION']);
+    expect(text('letters-label')).toBe('Big Word:');
+    expect(text('letters')).toBe('C A U T I O N');
+    expect(spectator.currentLevelSlots[3]).toMatchObject({
+      word: 'caution',
+      user: 'clarkio',
+      hitMax: true,
+    });
+  });
+
+  it('does not choose a word that is already on the board', async () => {
+    await useDictionary(CAUTION_DICTIONARY);
+    await playWosEvent(levelStarted({
+      level: 19,
+      letters: CAUTION_LETTERS,
+      slotLengths: [6, 6, 7],
+    }));
+    // ACTION is already in a slot, reported plainly by the game.
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'action', index: 0 }));
+    // …and clarkio types it again.
+    playChatMessage('clarkio', 'action', 2_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 1 }));
+
+    // The game does not accept a word already on the board, so this is not it.
+    expect(foundWords()).toEqual(['ACTION']);
+    expect(spectator.currentLevelSlots[1].user).toBeUndefined();
+    expect(spectator.currentLevelSlots[1].word).toBe('');
+  });
+
+  it('leaves the slot empty and says so when no chat message can be the word', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => { });
+    await startTrilbyLevel();
+    // Nothing of the right length.
+    playChatMessage('clarkio', 'brims', 1_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+
+    expect(foundWords()).toEqual([]);
+    expect(spectator.currentLevelSlots[0].user).toBeUndefined();
+    expect(warn.mock.calls.flat().join(' ')).toContain(
+      'Could not find matching message for clarkio',
+    );
+    warn.mockRestore();
+  });
+
+  it('considers only the 25 most recent messages a player typed', async () => {
+    await startTrilbyLevel();
+    // The word actually guessed, then 25 newer same-length messages that push
+    // it out of the history.
+    playChatMessage('clarkio', 'trilby', 1_000);
+    for (let index = 0; index < 25; index++) {
+      playChatMessage('clarkio', `qqqqq${String.fromCharCode(97 + index)}`, 2_000 + index);
+    }
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+
+    expect(spectator.twitchChatLog.get('clarkio')).toHaveLength(25);
+    expect(foundWords()).not.toContain('TRILBY');
+    // Falls back to the most recent same-length message it still has.
+    expect(spectator.currentLevelSlots[0].word).toBe('qqqqqy');
+  });
+
+  it('resolves a masked guess at any level — no level threshold is enforced', async () => {
+    // ❓ Unconfirmed — `specs/game-flow.md § Masked guesses` flags that the code
+    // comments say masking begins at level 19 while `copilot-instructions.md`
+    // says level 20. Neither number is in the code: `updateGameState` branches
+    // only on the word containing '?', and never reads `currentLevel`. So a
+    // masked event at level 3 is resolved from chat exactly like one at level
+    // 19. This test pins that, and is the honest answer while the two documents
+    // disagree — it is not a vote for either threshold.
+    await useDictionary(CAUTION_DICTIONARY);
+    await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [6] }));
+    playChatMessage('clarkio', 'action', 1_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+
+    expect(spectator.currentLevel).toBe(3);
+    expect(foundWords()).toEqual(['ACTION']);
+  });
+
+  it('treats a slot filled by an unrecoverable masked guess as never filled (❓ unconfirmed)', async () => {
+    // ❓ Unconfirmed — `specs/game-flow.md § Open questions for the maintainer`
+    // records this as current behaviour awaiting a decision: a player really did
+    // find that word, but WoS+ cannot name it, so the level does not count as a
+    // clear. Recording the slot as filled with an unknown word would keep clear
+    // detection honest but would mean capturing a board with a blank word, which
+    // is refused elsewhere. Pinned, not endorsed.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => { });
+    spectator.isSoundsEnabled = true;
+    await startTrilbyLevel([6, 5]);
+    playChatMessage('clarkio', 'trilby', 1_000);
+
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
+    // A second player's guess arrives masked with nothing in chat to match.
+    await playWosEvent(maskedGuess({ user: 'biocow', length: 5, index: 1 }));
+
+    await playWosEvent(levelResults(2));
+
+    // Both slots were genuinely filled by players, but the level is not a clear
+    // and no board is captured (no POST handler is registered, so an attempted
+    // capture would fail this test).
+    expect(soundsPlayed).not.toContain('/assets/clear.mp3');
+    expect(spectator.currentLevelSlots[1].user).toBeUndefined();
+    warn.mockRestore();
+  });
+
+  it.todo(
+    'a masked guess of 13+ letters can never be recovered — ❓ unconfirmed, and ' +
+    'the 4-to-12-letter chat filter that causes it lives in twitch-chat-worker.ts, ' +
+    'so it belongs with that module rather than with GameSpectator',
+  );
 });
 
 // ===========================================================================
