@@ -34,7 +34,21 @@ export const GET: APIRoute = async () => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
-  const body = await request.json();
+  // An unreadable body must be answered, not thrown: an uncaught parse error
+  // escapes the handler and becomes an Astro error page with no CORS headers,
+  // which a browser caller can only see as an opaque network failure. The
+  // sibling PUT in ./[id].ts already answers this case the same way.
+  // Declared without an annotation so it keeps the same inferred type the
+  // original `const body = await request.json()` had.
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   // Guard (issue #119): reject boards whose slots contain the same word more
   // than once — that data is corrupted and would need manual cleanup later.
