@@ -43,6 +43,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as boardByIdRoute from '../../src/pages/api/boards/[id]';
 import { GET as GET_BOARD, PUT } from '../../src/pages/api/boards/[id]';
+import * as boardsRoute from '../../src/pages/api/boards/index';
+import { GET as GET_BOARDS, POST } from '../../src/pages/api/boards/index';
 import { invokeRoute, readJson, responseHeaders } from './api-harness';
 import {
   server,
@@ -61,7 +63,7 @@ setupNetworkMocking();
 
 /** A slot as the views capture it: the letters on the tile, and the word. */
 function slot(word: string): { letters: string[]; word: string } {
-  return { letters: [...word], word };
+  return { letters: Array.from(word), word };
 }
 
 /** A sound board: every slot a different word, last slot the big word. */
@@ -518,6 +520,26 @@ describe('specs/boards.md — Repairing a board that was stored with repeated wo
 
       expect(response.status).toBe(200);
     });
+
+    it('answers with an empty list when the archive reports back no rows', async () => {
+      // `.select()` after an update can come back empty even though the write
+      // succeeded. The route answers `[]` rather than `null`, so the caller
+      // always gets a list it can read.
+      server.use(
+        supabaseSuccess('boards', storedBoard({ slots: REDUNDANT_SLOTS }), { once: true }),
+        supabaseSuccess('boards', null, { method: 'patch', once: true }),
+      );
+
+      const response = await invokeRoute(PUT, {
+        method: 'PUT',
+        url: '/api/boards/CAUTION',
+        params: { id: 'CAUTION' },
+        json: { slots: CLEAN_SLOTS },
+      });
+
+      expect(response.status).toBe(200);
+      expect(await readJson(response)).toEqual([]);
+    });
   });
 
   describe('Scenario: a repair also fills in a missing channel and language', () => {
@@ -738,7 +760,7 @@ describe('specs/boards.md — Repairing a board that was stored with repeated wo
         method: 'PUT',
         url: '/api/boards/CAUTION',
         params: { id: 'CAUTION' },
-        json: { slots: [slot('ACTION'), { letters: [...'action'], word: 'action' }, slot('CAUTION')] },
+        json: { slots: [slot('ACTION'), { letters: Array.from('action'), word: 'action' }, slot('CAUTION')] },
       });
 
       expect(response.status).toBe(400);
@@ -781,9 +803,9 @@ describe('specs/boards.md — Repairing a board that was stored with repeated wo
     it.each([
       ['a slot with no letters', [{ word: 'ACTION' }, slot('CAUTION')]],
       ['a slot whose letters are not a list', [{ letters: 'ACTION', word: 'ACTION' }, slot('CAUTION')]],
-      ['a slot with no word', [{ letters: [...'ACTION'] }, slot('CAUTION')]],
-      ['a slot with an empty word', [{ letters: [...'ACTION'], word: '' }, slot('CAUTION')]],
-      ['a slot whose word is not text', [{ letters: [...'ACTION'], word: 42 }, slot('CAUTION')]],
+      ['a slot with no word', [{ letters: Array.from('ACTION') }, slot('CAUTION')]],
+      ['a slot with an empty word', [{ letters: Array.from('ACTION'), word: '' }, slot('CAUTION')]],
+      ['a slot whose word is not text', [{ letters: Array.from('ACTION'), word: 42 }, slot('CAUTION')]],
       ['a slot that is null', [null, slot('CAUTION')]],
       ['a slot that is not an object', ['ACTION', slot('CAUTION')]],
     ])('rejects a repair containing %s', async (_label, slots) => {
@@ -974,5 +996,926 @@ describe('/api/boards/[id] — transport concerns (no spec section)', () => {
       .sort();
 
     expect(exportedHandlers).toEqual(['GET', 'PUT']);
+  });
+});
+
+// ===========================================================================
+// specs/boards.md § Capturing a board
+// ===========================================================================
+
+describe('specs/boards.md — Capturing a board', () => {
+  /**
+   * A board is only ever captured from a level WoS+ believes is complete. The
+   * *when* — which level state triggers a capture — lives in
+   * `specs/game-flow.md` and in `src/scripts/wos-plus-main.ts`; this route only
+   * sees the finished capture. So these tests assert what the archive is asked
+   * to store, and never that a capture happened at the right moment.
+   */
+
+  describe('Scenario: a completed board is captured', () => {
+    // Given a level ended with every slot filled by a player
+    // And the big word is known
+    // When WoS+ captures the board
+    // Then the board is filed under its big word, with every slot's word, and
+    //      with the Twitch channel and the game's word language recorded
+    //      alongside it
+
+    it('files the board under its big word with every slot, channel and language', async () => {
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: {
+          id: 'CAUTION',
+          slots: CLEAN_SLOTS,
+          twitch_channel: 'clarkio',
+          language_code: 'en',
+        },
+      });
+
+      expect(response.status).toBe(200);
+      expect(responseHeaders(response)['content-type']).toBe('application/json');
+      expect(insert.captured.body).toEqual({
+        id: 'CAUTION',
+        slots: CLEAN_SLOTS,
+        twitch_channel: 'clarkio',
+        language_code: 'en',
+      });
+    });
+
+    it('hands back the stored row so the caller knows what was filed', async () => {
+      server.use(supabaseSuccess('boards', [storedBoard()], { method: 'post' }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+      });
+
+      expect(await readJson(response)).toEqual([storedBoard()]);
+    });
+  });
+
+  describe('Scenario: the board was already captured', () => {
+    // Given the board `CAUTION` is already in the archive, and its stored copy
+    //       is sound
+    // When WoS+ captures `CAUTION` again
+    // Then nothing is saved, the stored board is left exactly as it was, and
+    //      WoS+ reports that the board has already been saved
+
+    it('reports the board as already saved when the archive rejects the duplicate', async () => {
+      silenceRouteLogging();
+      server.use(supabaseFailure('boards', {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "boards_pkey"',
+      }, { method: 'post', status: 409, once: true }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+      });
+
+      // Not a 500: "already saved" is an expected outcome of a re-capture, and
+      // the caller must be able to tell it apart from a broken archive.
+      expect(response.status).toBe(409);
+      expect(await readJson(response)).toEqual({
+        error: 'Board already exists',
+        message: 'Board CAUTION has already been saved.',
+        code: 'BOARD_EXISTS',
+      });
+    });
+
+    it('recognises the duplicate from the message when no error code is given', async () => {
+      // The uniqueness violation is the archive's own answer, and not every
+      // deployment surfaces the SQLSTATE. The route falls back to the message.
+      silenceRouteLogging();
+      server.use(supabaseFailure('boards', {
+        message: 'duplicate key value violates unique constraint "boards_pkey"',
+      }, { method: 'post', status: 409, once: true }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+      });
+
+      expect(response.status).toBe(409);
+      expect(await readJson<{ code: string }>(response)).toMatchObject({ code: 'BOARD_EXISTS' });
+    });
+
+    it('names the board even when the capture carried no id', async () => {
+      silenceRouteLogging();
+      server.use(supabaseFailure('boards', {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint',
+      }, { method: 'post', status: 409, once: true }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { slots: CLEAN_SLOTS },
+      });
+
+      expect(await readJson<{ message: string }>(response)).toMatchObject({
+        message: 'Board ID has already been saved.',
+      });
+    });
+
+    it('does not mistake a nameless, codeless failure for an already-saved board', async () => {
+      // The duplicate check reads a code *or* a message. When the archive gives
+      // neither, the capture must be reported as a failure — answering 409
+      // would tell the caller its board is safely stored when it is not.
+      silenceRouteLogging();
+      server.use(supabaseFailure('boards', { message: '' }, {
+        method: 'post',
+        status: 400,
+        once: true,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+      });
+
+      expect(response.status).toBe(500);
+    });
+  });
+
+  describe('Scenario: a capture where the same word fills two slots', () => {
+    // Given a capture of board `CAUTION` in which the word `ACTION` appears in
+    //       two different slots
+    // When WoS+ tries to save it
+    // Then the board is rejected, nothing is saved, and the reason names the
+    //      word or words that were repeated
+
+    it('rejects the capture, names the repeated word, and saves nothing', async () => {
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: REDUNDANT_SLOTS },
+      });
+
+      expect(response.status).toBe(400);
+      expect(await readJson(response)).toEqual({
+        error: 'Redundant words in board slots',
+        message: 'Board CAUTION contains redundant words: action.',
+        code: 'REDUNDANT_WORDS',
+      });
+      // "nothing is saved": no insert handler is registered, so any call the
+      // route made would be recorded by the catch-all and fail this test.
+      expect(unhandledNetworkRequests()).toEqual([]);
+    });
+
+    it('names every repeated word when several are repeated', async () => {
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: {
+          id: 'CAUTION',
+          slots: [slot('ACTION'), slot('ACTION'), slot('COAT'), slot('COAT'), slot('CAUTION')],
+        },
+      });
+
+      expect(response.status).toBe(400);
+      const body = await readJson<{ message: string }>(response);
+      expect(body.message).toContain('action');
+      expect(body.message).toContain('coat');
+      expect(unhandledNetworkRequests()).toEqual([]);
+    });
+
+    it('still explains itself when the capture carried no board name', async () => {
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { slots: REDUNDANT_SLOTS },
+      });
+
+      expect(response.status).toBe(400);
+      expect(await readJson<{ message: string }>(response)).toMatchObject({
+        message: 'Board ID contains redundant words: action.',
+      });
+      expect(unhandledNetworkRequests()).toEqual([]);
+    });
+
+    it('spots the repeat regardless of how the capture cased the word', async () => {
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: {
+          id: 'CAUTION',
+          slots: [slot('ACTION'), { letters: Array.from('action'), word: 'action' }, slot('CAUTION')],
+        },
+      });
+
+      expect(response.status).toBe(400);
+      expect(await readJson<{ code: string }>(response)).toMatchObject({
+        code: 'REDUNDANT_WORDS',
+      });
+      expect(unhandledNetworkRequests()).toEqual([]);
+    });
+  });
+
+  describe('Scenario: a capture where a word was never fully worked out', () => {
+    // Given a capture in which at least one slot still has masked letters or an
+    //       empty word
+    // When WoS+ tries to save it
+    // Then nothing is saved — an incomplete board is worse than no board
+    //
+    // This scenario is NOT enforced by this route. The route's only slot check
+    // is the repeated-word guard; a slot with an empty word is simply ignored
+    // by `findRedundantWords` and the board is saved as-is. The spec records
+    // that gap under "Open questions" as "a board saved with malformed slots",
+    // and it is pinned there rather than asserted as contract here.
+    //
+    // What *does* enforce it today is the capture side in
+    // `src/scripts/wos-plus-main.ts`, which only offers a board once every slot
+    // is solved. That is out of this task's scope (game flow is task 6), so
+    // this describe deliberately asserts nothing and points at both halves.
+
+    it.todo(
+      'incomplete captures are refused by the archive itself — ' +
+      'open question: the route does not check slot completeness, only repeated words; ' +
+      'see the "a board saved with malformed slots" open question below',
+    );
+  });
+});
+
+// ===========================================================================
+// specs/boards.md § Channel and language on a captured board
+// ===========================================================================
+
+describe('specs/boards.md — Channel and language on a captured board', () => {
+  /**
+   * Both are informational: recorded when they make sense, quietly dropped when
+   * they do not, and neither may ever stop a good board from being saved. Every
+   * test below therefore asserts the save still succeeded as well as what was
+   * written.
+   */
+
+  describe('Scenario: a channel name is tidied before it is recorded', () => {
+    // Given a capture from the channel `#ClarkIO`
+    // When the board is saved
+    // Then the board records the channel as `clarkio`
+
+    it.each([
+      ['a leading hash', '#ClarkIO'],
+      ['upper case', 'CLARKIO'],
+      ['surrounding spaces', '  clarkio  '],
+      ['all three at once', '  #ClarkIO  '],
+    ])('records the channel as clarkio when the capture carries %s', async (_label, channel) => {
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: channel },
+      });
+
+      expect(response.status).toBe(200);
+      expect(insert.captured.body).toMatchObject({ twitch_channel: 'clarkio' });
+    });
+
+    it('keeps a channel name that is already tidy', async () => {
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: 'wos_player_1' },
+      });
+
+      expect(insert.captured.body).toMatchObject({ twitch_channel: 'wos_player_1' });
+    });
+  });
+
+  describe('Scenario: a channel name that is not a real Twitch name', () => {
+    // Given a capture whose channel name contains spaces, punctuation, or is
+    //       longer than 50 characters
+    // When the board is saved
+    // Then the board is saved without any channel recorded, rather than being
+    //      rejected
+
+    it.each([
+      ['spaces', 'not a channel'],
+      ['punctuation', 'clark.io!'],
+      ['more than fifty characters', 'c'.repeat(51)],
+      ['nothing at all', ''],
+      ['a value that is not text', 12345],
+      ['a null', null],
+    ])('saves the board with no channel when the capture carries %s', async (_label, channel) => {
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: channel },
+      });
+
+      // "rather than being rejected" is the load-bearing half: a bad channel
+      // name must cost the archive a channel, never a board.
+      expect(response.status).toBe(200);
+      expect(insert.captured.body).not.toHaveProperty('twitch_channel');
+      expect(insert.captured.body).toMatchObject({ id: 'CAUTION', slots: CLEAN_SLOTS });
+    });
+
+    it('accepts a channel name of exactly fifty characters', async () => {
+      // The boundary itself, so the rejection above is about length and not
+      // about long names in general.
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: 'c'.repeat(50) },
+      });
+
+      expect(insert.captured.body).toMatchObject({ twitch_channel: 'c'.repeat(50) });
+    });
+  });
+
+  describe('Scenario: the games word language is recorded', () => {
+    // Given a capture from a game playing in Portuguese
+    // When the board is saved
+    // Then the board records Portuguese as its word language
+
+    it.each([
+      ['Portuguese', 'pt'],
+      ['English', 'en'],
+      ['French', 'fr'],
+    ])('records %s on the saved board', async (_label, code) => {
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: code },
+      });
+
+      expect(response.status).toBe(200);
+      expect(insert.captured.body).toMatchObject({ language_code: code });
+    });
+
+    it('tidies the language code before recording it', async () => {
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: '  PT  ' },
+      });
+
+      expect(insert.captured.body).toMatchObject({ language_code: 'pt' });
+    });
+  });
+
+  describe('Scenario: an unrecognised word language', () => {
+    // Given a capture whose word language is not one Words on Stream plays in
+    // When the board is saved
+    // Then the board is saved with English as its language, rather than being
+    //      rejected
+
+    it.each([
+      ['a language WoS does not play in', 'de'],
+      ['a locale rather than a language', 'en-GB'],
+      ['nothing at all', ''],
+      ['a value that is not text', 2],
+      ['a null', null],
+    ])('saves the board and lets English apply when the capture carries %s', async (_label, code) => {
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: code },
+      });
+
+      expect(response.status).toBe(200);
+      /**
+       * "saved with English as its language" is delivered by *omission*, not by
+       * the route writing `'en'`: the column is
+       * `language_code TEXT NOT NULL DEFAULT 'en'`
+       * (db-scripts/add-language-code-to-boards.sql), so dropping the field is
+       * what makes the stored language English. Sending the unrecognised code
+       * instead would violate that column's CHECK constraint and lose the
+       * board, which is what this guards against.
+       */
+      expect(insert.captured.body).not.toHaveProperty('language_code');
+      expect(insert.captured.body).toMatchObject({ id: 'CAUTION', slots: CLEAN_SLOTS });
+    });
+  });
+
+  describe('neither field is invented when the capture omits it', () => {
+    it('sends no channel or language keys at all when the capture carried none', async () => {
+      // The route only touches a field that is present, so a capture from a
+      // client that predates either feature is stored untouched and the column
+      // defaults apply.
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+      });
+
+      expect(insert.captured.body).toEqual({ id: 'CAUTION', slots: CLEAN_SLOTS });
+    });
+  });
+});
+
+// ===========================================================================
+// specs/boards.md § Browsing the archive
+// ===========================================================================
+
+describe('specs/boards.md — Browsing the archive', () => {
+  describe('Scenario: listing every captured board', () => {
+    // Given the archive holds several boards
+    // When the whole archive is requested
+    // Then every stored board comes back, each with its slots
+
+    it('returns every stored board with its slots', async () => {
+      const archive = [
+        storedBoard(),
+        storedBoard({ id: 'TRILBY', slots: [slot('TRILBY')] }),
+        storedBoard({ id: 'COAT', slots: [slot('COAT')] }),
+      ];
+      server.use(supabaseSuccess('boards', archive));
+
+      const response = await invokeRoute(GET_BOARDS, { url: '/api/boards' });
+
+      expect(response.status).toBe(200);
+      expect(responseHeaders(response)['content-type']).toBe('application/json');
+      expect(await readJson(response)).toEqual(archive);
+    });
+
+    it('asks the archive for whole boards, once', async () => {
+      const recorder = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        once: true,
+        onRequest: recorder.onRequest,
+      }));
+
+      await invokeRoute(GET_BOARDS, { url: '/api/boards' });
+
+      const url = new URL(recorder.captured.url ?? '');
+      expect(url.searchParams.get('select')).toBe('*');
+      // No filter: the whole archive, not a slice of it.
+      expect(url.searchParams.get('id')).toBeNull();
+    });
+  });
+
+  describe('Scenario: an empty archive', () => {
+    // Given the archive holds no boards at all
+    // When the whole archive is requested
+    // Then an empty list comes back — this is a normal answer, not a failure
+
+    it('answers with an empty list, as an ordinary answer', async () => {
+      server.use(supabaseSuccess('boards', []));
+
+      const response = await invokeRoute(GET_BOARDS, { url: '/api/boards' });
+
+      expect(response.status).toBe(200);
+      expect(await readJson(response)).toEqual([]);
+    });
+  });
+
+  describe('Scenario: the archive cannot be reached while listing', () => {
+    // Given the board archive is unavailable
+    // When the whole archive is requested
+    // Then WoS+ is told the listing failed, and no boards come back
+
+    it('reports the failure instead of passing an empty archive off as the answer', async () => {
+      silenceRouteLogging();
+      server.use(supabaseFailure('boards', {
+        code: '42P01',
+        message: 'relation "boards" does not exist',
+      }));
+
+      const response = await invokeRoute(GET_BOARDS, { url: '/api/boards' });
+
+      expect(response.status).toBe(500);
+      const body = await readJson<{ error?: string }>(response);
+      expect(body.error).toContain('relation "boards" does not exist');
+      // A failure must never be mistakable for "the archive is empty".
+      expect(body).not.toEqual([]);
+    });
+
+    it('reports a failure when the archive credentials are missing, without reaching out', async () => {
+      silenceRouteLogging();
+
+      const response = await invokeRoute(GET_BOARDS, {
+        url: '/api/boards',
+        workerEnv: { SUPABASE_URL: undefined, SUPABASE_KEY: undefined },
+      });
+
+      expect(response.status).toBe(500);
+      expect(unhandledNetworkRequests()).toEqual([]);
+    });
+  });
+});
+
+// ===========================================================================
+// specs/boards.md § Capturing a board — a capture that cannot be stored
+// ===========================================================================
+
+describe('specs/boards.md — a capture that cannot be stored', () => {
+  /**
+   * Not its own spec scenario, but the counterpart to "the archive cannot be
+   * reached" on every other path: a capture that fails for a reason other than
+   * the board already existing must be reported as a failure, and must not be
+   * confused with the 409 that means "already saved".
+   */
+
+  it('reports a storage failure as a failure, not as an already-saved board', async () => {
+    silenceRouteLogging();
+    server.use(supabaseFailure('boards', {
+      code: '42501',
+      message: 'permission denied for table boards',
+    }, { method: 'post', status: 403, once: true }));
+
+    const response = await invokeRoute(POST, {
+      method: 'POST',
+      url: '/api/boards',
+      json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+    });
+
+    expect(response.status).toBe(500);
+    expect(await readJson<{ error?: string }>(response)).toMatchObject({
+      error: expect.stringContaining('permission denied for table boards'),
+    });
+  });
+
+  it('reports a failure when the archive credentials are missing, without reaching out', async () => {
+    silenceRouteLogging();
+
+    const response = await invokeRoute(POST, {
+      method: 'POST',
+      url: '/api/boards',
+      json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+      workerEnv: { SUPABASE_URL: undefined, SUPABASE_KEY: undefined },
+    });
+
+    expect(response.status).toBe(500);
+    expect(unhandledNetworkRequests()).toEqual([]);
+  });
+
+  it('does not crash on a capture whose body is JSON null', async () => {
+    // `null` parses cleanly, so it gets past the body guard and reaches the
+    // channel/language handling, which is written `'twitch_channel' in (body ??
+    // {})` precisely so a null body cannot throw there. The archive gets the
+    // final word.
+    silenceRouteLogging();
+    server.use(supabaseFailure('boards', {
+      code: '23502',
+      message: 'null value in column "id" violates not-null constraint',
+    }, { method: 'post', status: 400, once: true }));
+
+    const response = await invokeRoute(POST, {
+      method: 'POST',
+      url: '/api/boards',
+      json: null,
+    });
+
+    expect(response.status).toBe(500);
+    expect(await readJson<{ error?: string }>(response)).toMatchObject({
+      error: expect.stringContaining('not-null constraint'),
+    });
+  });
+
+  it.each([
+    ['text that is not JSON', 'not json'],
+    ['an empty body', ''],
+    ['truncated JSON', '{"slots": ['],
+  ])('rejects a capture sent as %s', async (_label, body) => {
+    /**
+     * BUG FOUND AND FIXED by this test.
+     *
+     * `POST /api/boards` called `await request.json()` outside its `try`, so an
+     * unreadable body threw out of the handler instead of being answered. Astro
+     * turns that into a 500 error page with **no CORS headers**, so a browser
+     * caller sees an opaque network error rather than a reason — and the
+     * sibling `PUT /api/boards/[id]` already answered the identical case with a
+     * 400 `Invalid JSON body`. The two paths disagreed about the same input.
+     *
+     * The fix makes `POST` match `PUT` exactly. This test asserts the correct
+     * behaviour, not the behaviour that shipped.
+     */
+    const response = await invokeRoute(POST, {
+      method: 'POST',
+      url: '/api/boards',
+      headers: { 'content-type': 'application/json' },
+      body,
+    });
+
+    expect(response.status).toBe(400);
+    expect(await readJson(response)).toEqual({ error: 'Invalid JSON body' });
+    // The CORS headers are the point of answering rather than throwing: without
+    // them a browser cannot read the reason it was rejected.
+    expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
+    expect(unhandledNetworkRequests()).toEqual([]);
+  });
+});
+
+// ===========================================================================
+// Transport concerns for /api/boards (no spec section)
+// ===========================================================================
+
+describe('/api/boards — transport concerns (no spec section)', () => {
+  it('allows any origin on every answer it gives', async () => {
+    server.use(supabaseSuccess('boards', [storedBoard()]));
+
+    const response = await invokeRoute(GET_BOARDS, {
+      url: '/api/boards',
+      headers: { origin: 'https://wosplus.com' },
+    });
+
+    expect(responseHeaders(response)).toMatchObject({
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+    });
+  });
+
+  it('sends CORS headers on rejections too, so a browser can read the reason', async () => {
+    const response = await invokeRoute(POST, {
+      method: 'POST',
+      url: '/api/boards',
+      json: { id: 'CAUTION', slots: REDUNDANT_SLOTS },
+    });
+
+    expect(response.status).toBe(400);
+    expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
+  });
+
+  it('advertises OPTIONS but exports no handler for it', async () => {
+    /**
+     * GAP, recorded not fixed — same as on `/api/boards/[id]`, and out of scope
+     * for this task. `Access-Control-Allow-Methods` promises
+     * `GET, POST, OPTIONS` while no `OPTIONS` handler exists, so a real
+     * preflight — which a JSON `POST` from a browser does trigger — falls
+     * through to Astro's 404.
+     *
+     * Pinned as a canary so adding a handler forces this note to be resolved.
+     */
+    const exportedHandlers = Object.keys(boardsRoute)
+      .filter((name) => /^[A-Z]+$/.test(name))
+      .sort();
+
+    expect(exportedHandlers).toEqual(['GET', 'POST']);
+  });
+});
+
+// ===========================================================================
+// specs/boards.md § Open questions for the maintainer
+// ===========================================================================
+
+describe('specs/boards.md — Open questions for the maintainer (Unconfirmed — not a contract)', () => {
+  /**
+   * `specs/boards.md` marks each scenario below ❓ Unconfirmed: it describes
+   * what WoS+ does today, but not whether that is a decision or an accident.
+   * Per `specs/README.md` an unconfirmed scenario is not yet part of the
+   * contract, so **nothing here is asserted as approved behaviour**.
+   *
+   * Where the behaviour is reachable from these two routes it is pinned as
+   * *current behaviour under protest*, with the open question stated inline, so
+   * that a maintainer's decision either way shows up as a deliberate, visible
+   * change to this file. Where it is not reachable, it is an `it.todo`.
+   */
+
+  describe('Scenario: a board saved directly, without going through a level', () => {
+    // Given a board is offered for saving with a name that is not 4–20 letters
+    //       — for example `CAT` or `CAUT10N`
+    // When the save is attempted
+    // Then the name is not checked, and the board is saved under that name
+
+    it.each([
+      ['a name that is too short', 'CAT'],
+      ['a name with a digit in it', 'CAUT10N'],
+      ['a name that is too long', 'A'.repeat(21)],
+      ['a name that is not letters at all', '!!!'],
+    ])('Unconfirmed: stores a board named with %s', async (_label, id) => {
+      /**
+       * UNCONFIRMED — current behaviour, pending a maintainer decision.
+       *
+       * Open question: should the save path apply the same name rules as the
+       * lookup and repair paths? `validateBoardId` lives in `[id].ts` and is
+       * never called by `index.ts`, so a board can be filed under a name that
+       * the lookup rules will then always reject — see the companion test
+       * below, which shows the board becoming unreachable.
+       *
+       * Asserted only to make the asymmetry visible and to fail loudly if it
+       * changes. NOT a statement that saving such a board is right.
+       */
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard({ id })], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id, slots: CLEAN_SLOTS },
+      });
+
+      expect(response.status).toBe(200);
+      expect(insert.captured.body).toMatchObject({ id });
+    });
+
+    it('Unconfirmed: a board saved under a bad name can then never be looked up', async () => {
+      /**
+       * UNCONFIRMED — the consequence of the asymmetry above, spelled out.
+       *
+       * The save succeeds; the lookup of the very same name is rejected before
+       * the archive is consulted. The board is in the archive and unreachable
+       * through the normal path — which is why the spec flags this for a
+       * decision rather than leaving it as trivia.
+       */
+      server.use(supabaseSuccess('boards', [storedBoard({ id: 'CAUT10N' })], {
+        method: 'post',
+        once: true,
+      }));
+
+      const saved = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUT10N', slots: CLEAN_SLOTS },
+      });
+      expect(saved.status).toBe(200);
+
+      const lookup = await invokeRoute(GET_BOARD, {
+        url: '/api/boards/CAUT10N',
+        params: { id: 'CAUT10N' },
+      });
+
+      expect(lookup.status).toBe(400);
+      expect(await readJson<{ error: string }>(lookup)).toMatchObject({
+        error: 'Invalid board ID format. Only letters are allowed.',
+      });
+    });
+  });
+
+  describe('Scenario: a board saved with malformed slots', () => {
+    // Given a board is offered for saving whose slots have no letters, or no
+    //       words
+    // When the save is attempted
+    // Then only the repeated-word rule is applied; the slots' shape is not
+    //      checked, and the board is saved
+
+    it.each([
+      ['a slot with no letters', [{ word: 'ACTION' }, slot('CAUTION')]],
+      ['a slot with no word', [{ letters: Array.from('ACTION') }, slot('CAUTION')]],
+      ['a slot with an empty word', [{ letters: Array.from('ACTION'), word: '' }, slot('CAUTION')]],
+      ['a slot that is null', [null, slot('CAUTION')]],
+      ['no slots at all', []],
+    ])('Unconfirmed: stores a board containing %s', async (_label, slots) => {
+      /**
+       * UNCONFIRMED — current behaviour, pending a maintainer decision.
+       *
+       * Open question: should the save path apply the same slot-shape rules as
+       * the repair path? `PUT /api/boards/[id]` rejects every one of these with
+       * `Invalid slot structure detected` (see the "a repair with a malformed
+       * slot" describe above), while `POST` stores them. The two paths disagree
+       * about what a valid slot is.
+       *
+       * This is also what leaves `specs/boards.md § a capture where a word was
+       * never fully worked out` unenforced at the archive: a slot with an empty
+       * word is exactly an unsolved slot.
+       */
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots },
+      });
+
+      expect(response.status).toBe(200);
+      expect(insert.captured.body).toMatchObject({ slots });
+    });
+  });
+
+  describe('Scenario: the big word disagrees with the last slot', () => {
+    // Given a level is being captured
+    // And the big word WoS+ tracked during the level is not the word in the
+    //     board's last slot
+    // When the board is captured
+    // Then the board is filed under the *last slot's* word instead of the
+    //      tracked big word
+
+    it.todo(
+      'Unconfirmed: a capture is filed under the last slot word rather than the tracked big word — ' +
+      'open question: is the last slot really always the big word? ' +
+      'Not reachable from /api/boards: the substitution happens in the capture path in ' +
+      'src/scripts/wos-plus-main.ts before the route is called, and the route stores the id it is ' +
+      'given. Belongs with the game-flow work (specs/game-flow.md)',
+    );
+  });
+
+  describe('Scenario: a very large archive', () => {
+    // Given the archive holds many thousands of boards
+    // When the whole archive is requested
+    // Then every board is returned at once, with no way to ask for a page at a
+    //      time
+
+    it('Unconfirmed: asks for the whole archive in one go, with no paging', async () => {
+      /**
+       * UNCONFIRMED — current behaviour, pending a maintainer decision.
+       *
+       * Open question: should listing the archive be paged? Nothing in WoS+
+       * asks for the whole archive today, so this may be an unused capability
+       * that has simply not needed paging yet. `/api/words` — which *is* used
+       * at start-up — does page, in 1000-row batches, so both the machinery and
+       * the precedent already exist.
+       *
+       * Pinned by asserting the request carries none of the paging parameters
+       * `.range()` would add, and that the route makes exactly one call (a
+       * single `once` handler). If paging is added, this fails and the question
+       * must be answered.
+       */
+      const recorder = requestRecorder();
+      const archive = Array.from({ length: 2500 }, (_, index) => storedBoard({ id: `BOARD${index}` }));
+      server.use(supabaseSuccess('boards', archive, { once: true, onRequest: recorder.onRequest }));
+
+      const response = await invokeRoute(GET_BOARDS, { url: '/api/boards' });
+
+      expect(response.status).toBe(200);
+      expect(await readJson<unknown[]>(response)).toHaveLength(2500);
+
+      const params = new URL(recorder.captured.url ?? '').searchParams;
+      expect(params.get('offset')).toBeNull();
+      expect(params.get('limit')).toBeNull();
+    });
+
+    it('Unconfirmed: offers no way for a caller to ask for a page', async () => {
+      /**
+       * UNCONFIRMED — the other half: the route ignores paging hints a caller
+       * might send, so there is no undocumented paging to discover.
+       */
+      const recorder = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        once: true,
+        onRequest: recorder.onRequest,
+      }));
+
+      await invokeRoute(GET_BOARDS, { url: '/api/boards?offset=100&limit=10&page=3' });
+
+      const params = new URL(recorder.captured.url ?? '').searchParams;
+      expect(params.get('offset')).toBeNull();
+      expect(params.get('limit')).toBeNull();
+      expect(params.get('page')).toBeNull();
+    });
   });
 });
