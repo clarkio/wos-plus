@@ -497,6 +497,28 @@ afterEach(() => {
 });
 
 // ===========================================================================
+// specs/game-flow.md § Connecting
+// ===========================================================================
+
+describe('specs/game-flow.md § Connecting', () => {
+  it('refuses a link that does not point at a Words on Stream game room', () => {
+    spectator.connectToWosGame('https://example.com/not-a-mirror');
+
+    expect(gameLog()).toContain('Invalid mirror URL');
+    // Nothing was connected to, so nothing can drive the board.
+    expect(spectator.wosSocket).toBeNull();
+  });
+
+  it.todo(
+    'connecting to a game, connecting to a Twitch channel, the join-retry backoff ' +
+    'and switching channels mid-stream — each needs a socket.io / tmi boundary ' +
+    'the acceptance harness does not have yet; mocking those modules is what this ' +
+    'stream exists to avoid, so they stay with the unit tests until a fake ' +
+    'transport lands',
+  );
+});
+
+// ===========================================================================
 // specs/game-flow.md § Starting a level
 // ===========================================================================
 
@@ -560,7 +582,7 @@ describe('specs/game-flow.md § Starting a level', () => {
     await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
 
     // `12-game-connected.json` is the "joined a game in progress" event.
-    await playWosEvent(gameConnectedFixture as WosWorkerMessage);
+    await playWosEvent(gameConnectedFixture);
 
     expect(text('level-value')).toBe('7');
     expect(gameLog()).toContain('Level 7 In Progress');
@@ -778,7 +800,7 @@ describe('specs/game-flow.md § Hidden and fake letters', () => {
       slotLengths: [4],
     }));
 
-    await playWosEvent(lettersRevealedFixture as WosWorkerMessage);
+    await playWosEvent(lettersRevealedFixture);
 
     expect(text('hidden-letter')).toBe('A');
     expect(text('fake-letter')).toBe('X Z');
@@ -794,7 +816,7 @@ describe('specs/game-flow.md § Hidden and fake letters', () => {
     }));
     await playWosEvent(correctGuess({ user: 'clarkio', word: 'trap', index: 0, hitMax: true }));
 
-    await playWosEvent(lettersRevealedFixture as WosWorkerMessage);
+    await playWosEvent(lettersRevealedFixture);
 
     // The revealed letters are shown…
     expect(text('hidden-letter')).toBe('A');
@@ -920,7 +942,7 @@ describe('specs/game-flow.md § Masked guesses', () => {
     }));
     playChatMessage('clarkio', 'caution', 1_000);
 
-    await playWosEvent(correctGuessHiddenFixture as WosWorkerMessage);
+    await playWosEvent(correctGuessHiddenFixture);
 
     expect(foundWords()).toEqual(['CAUTION']);
     expect(text('letters-label')).toBe('Big Word:');
@@ -1092,7 +1114,7 @@ describe('specs/game-flow.md § Ending a level (missed words)', () => {
     const afterResults = foundWords();
 
     // The game then ends, which runs the missed-word calculation a second time.
-    await playWosEvent(gameEndedFixture as WosWorkerMessage);
+    await playWosEvent(gameEndedFixture);
 
     expect(foundWords()).toEqual(afterResults);
     for (const word of ['TONIC*', 'ACTION*', 'AUCTION*', 'CAUTION*']) {
@@ -1117,7 +1139,7 @@ describe('specs/game-flow.md § Ending a level (missed words)', () => {
   it('reports the missed words and the level reached when the game ends', async () => {
     await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
 
-    await playWosEvent(gameEndedFixture as WosWorkerMessage);
+    await playWosEvent(gameEndedFixture);
 
     expect(gameLog()).toContain('Game Ended on Level 3');
     expect(missedWords()).toEqual(['TONIC*', 'ACTION*', 'AUCTION*', 'CAUTION*']);
@@ -1237,7 +1259,7 @@ describe('specs/game-flow.md § Ending a level', () => {
   it('plays the end-of-game sound when the run comes to an end', async () => {
     await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [4] }));
 
-    await playWosEvent(gameEndedFixture as WosWorkerMessage);
+    await playWosEvent(gameEndedFixture);
 
     expect(soundsPlayed).toEqual(['/assets/loser.wav']);
   });
@@ -1298,7 +1320,7 @@ describe('specs/game-flow.md § Ending a level', () => {
     await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [4] }));
 
     await playWosEvent(levelResults(1));
-    await playWosEvent(gameEndedFixture as WosWorkerMessage);
+    await playWosEvent(gameEndedFixture);
 
     expect(soundsPlayed).toEqual([]);
   });
@@ -1335,7 +1357,7 @@ describe('specs/game-flow.md § Ending a level', () => {
     // wire shape before either is changed — this test is a description of
     // current behaviour, not an endorsement of it.
     spectator.isSoundsEnabled = false;
-    await playWosEvent(levelStartFixture as WosWorkerMessage);
+    await playWosEvent(levelStartFixture);
     await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
 
     await playWosEvent(levelResults(2));
