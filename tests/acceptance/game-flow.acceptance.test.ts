@@ -699,9 +699,12 @@ describe('specs/game-flow.md § A correct guess', () => {
   });
 
   it('shows a guess for a slot the board does not have, but fills no slot', async () => {
-    // ❓ Unconfirmed — `specs/game-flow.md § Open questions for the maintainer`
-    // flags that the found-words list and the board disagree here. This pins
-    // current behaviour; it is not an endorsement of it.
+    // ✅ Confirmed intended (#160 review). The maintainer ruled this should never
+    // happen: the game is the source of truth about its own board, so a guess for
+    // a slot the board lacks means WoS+ already took up the wrong board data
+    // earlier. The found-words/board disagreement is the SYMPTOM, and tidying it
+    // here would hide the only signal that something upstream went wrong.
+    // See `specs/game-flow.md § Known limitations`.
     await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 99 }));
 
     expect(foundWords()).toEqual(['COAT']);
@@ -1025,13 +1028,17 @@ describe('specs/game-flow.md § Masked guesses', () => {
     expect(foundWords()).toEqual(['ACTION']);
   });
 
-  it('treats a slot filled by an unrecoverable masked guess as never filled (❓ unconfirmed)', async () => {
-    // ❓ Unconfirmed — `specs/game-flow.md § Open questions for the maintainer`
-    // records this as current behaviour awaiting a decision: a player really did
-    // find that word, but WoS+ cannot name it, so the level does not count as a
-    // clear. Recording the slot as filled with an unknown word would keep clear
-    // detection honest but would mean capturing a board with a blank word, which
-    // is refused elsewhere. Pinned, not endorsed.
+  it('known gap (#167): treats a slot filled by an unrecoverable masked guess as never filled', async () => {
+    // APPROVED (#167): the slot COUNTS as filled, so the level counts as a clear
+    //                  and the word is not reported as missed — but the board is
+    //                  NOT saved, because one of its words is not known. The
+    //                  maintainer deliberately decoupled those two outcomes.
+    // TODAY:           the slot is treated as never filled, losing the clear AND
+    //                  reporting the word as missed.
+    //
+    // The assertions below pin TODAY. Invert them when #167 lands — and note the
+    // board-capture half must stay blocked, which is the part easiest to miss.
+    // See `specs/game-flow.md § Approved, not yet implemented`.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => { });
     spectator.isSoundsEnabled = true;
     await startTrilbyLevel([6, 5]);
@@ -1052,9 +1059,10 @@ describe('specs/game-flow.md § Masked guesses', () => {
   });
 
   it.todo(
-    'a masked guess of 13+ letters can never be recovered — ❓ unconfirmed, and ' +
-    'the 4-to-12-letter chat filter that causes it lives in twitch-chat-worker.ts, ' +
-    'so it belongs with that module rather than with GameSpectator',
+    'known gap (#168): a masked guess of 13+ letters can never be recovered — the ' +
+    'maintainer ruled the chat filter must keep messages long enough to be big words. ' +
+    'The 4-to-12-letter filter that causes it lives in twitch-chat-worker.ts, so the ' +
+    'assertion belongs in tests/unit/twitch-chat-worker.test.ts rather than here',
   );
 });
 

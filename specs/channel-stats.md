@@ -121,9 +121,14 @@ case it is typed in.
 ### Scenario: the numbers appear when a channel is connected
 
 - **Given** a player or streamer connects WoS+ to the channel `clarkio`
+- **And** that channel has the chatbot enabled for it
 - **When** the connection is made
 - **Then** the all-time best, daily best and daily clears for that channel are
   shown
+
+  All three numbers together are only meaningful for a channel with the chatbot;
+  the daily pair comes from the chatbot, so the scenario below covers what a
+  channel without it sees.
 
 ### Scenario: the daily badges are hidden for channels without the chatbot
 
@@ -169,19 +174,60 @@ case it is typed in.
 
 ---
 
-## Open questions for the maintainer
+## When the numbers change
+
+### Scenario: the numbers are brought up to date
+
+- **Given** WoS+ is connected to a channel
+- **When** a refresh happens, or an event from the game changes one of the
+  numbers
+- **Then** the numbers on screen are brought up to date, subject to the rule
+  above that a refresh may never lower them
+
+  Those are the only two things that move these numbers: a refresh, and the
+  game telling WoS+ something changed.
+
+---
+
+## Approved, not yet implemented
 
 ### Scenario: a channel name written the way a streamer would type it
 
 - **Given** stats are requested for `#clarkio`
 - **When** WoS+ handles the request
-- **Then** it is rejected as an invalid channel name
+- **Then** the leading `#` is stripped and the stats for `clarkio` come back
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. When a channel name is recorded on a captured board, a leading
-> `#` is stripped and the name is accepted (see [boards.md](boards.md)); when
-> stats are read, the same name is rejected. Streamers write channel names both
-> ways, so the two paths probably should agree.
+> ⚠️ **Approved, not yet implemented** — WoS+ today *rejects* this as an invalid
+> channel name, while the board path accepts the same input and strips the `#`.
+> The leading `#` should always be stripped, in either case. Tracked by
+> [#164](https://github.com/clarkio/wos-plus/issues/164).
+
+### Scenario: the all-time best the game itself reports
+
+- **Given** WoS+ connects to a running game that reports the channel's record
+  level
+- **When** the connection is made
+- **Then** that number is taken as the truth for the all-time best, and the
+  stored channel record is brought up to date to match it
+
+  The game holds the real history; WoS+'s copy is a cache of it. This applies to
+  the **all-time best only** — daily best and daily clears still come from the
+  chatbot and are not touched.
+
+> ⚠️ **Approved, not yet implemented** — WoS+ today ignores the record the game
+> sends on connect and shows only the stored value. Tracked by
+> [#166](https://github.com/clarkio/wos-plus/issues/166).
+>
+> Note this sits deliberately alongside the chatbot-lag rule in
+> [game-flow.md](game-flow.md): **on connect** the game reports a historical
+> record and wins; **during play** a level just reached waits for the chatbot
+> rather than being applied optimistically. That reading joins two separate
+> maintainer answers and is flagged for confirmation in
+> [#166](https://github.com/clarkio/wos-plus/issues/166).
+
+---
+
+## Open questions for the maintainer
 
 ### Scenario: a temporary failure hides the daily badges
 
@@ -196,16 +242,9 @@ case it is typed in.
 > is intended. The numbers themselves are deliberately protected from a failed
 > refresh, but whether the channel has the chatbot is not, so badges can flicker
 > away mid-stream on a blip.
-
-### Scenario: the all-time best the game itself reports
-
-- **Given** WoS+ connects to a running game that reports the channel's record
-  level
-- **When** the connection is made
-- **Then** that number is ignored, and the all-time best shown comes only from
-  the stored channel records
-
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. The game does send a record with its connection, and a note in
-> the code says the all-time best comes from the game, but nothing reads it.
-> Either the note is stale or the number should be used.
+>
+> **Still open after the #160 review.** The maintainer confirmed *when* these
+> numbers may change — on a refresh, or on a game event — which is now recorded
+> above under § When the numbers change. That answers what moves the numbers,
+> but not whether the **badges** should vanish when a refresh fails. The
+> question here is only about the badges.

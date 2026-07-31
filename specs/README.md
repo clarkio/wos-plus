@@ -59,6 +59,20 @@ addressed to the maintainer. Do not treat it as approved, and do not remove the
 marker without a maintainer's answer. A spec that quietly presents a bug as
 intended behaviour is worse than one full of open questions.
 
+Once a maintainer answers, the scenario is rewritten to say what *should*
+happen, and takes one of two other markers:
+
+> ⚠️ **Approved, not yet implemented** — the maintainer has decided; WoS+ does
+> not do this yet. Always names the issue tracking the change.
+
+> ✅ **Confirmed (maintainer)** — the current behaviour was deliberate, and the
+> reasoning is recorded so it is not re-litigated later.
+
+The distinction matters when reading a test that fails. A ⚠️ scenario is a
+known gap with a ticket; the acceptance test beside it still pins **current**
+behaviour, so that implementing the change forces the test to be updated
+deliberately rather than the spec quietly drifting from the code.
+
 ## Vocabulary
 
 These words mean the same thing everywhere in this directory.
@@ -92,6 +106,42 @@ These words mean the same thing everywhere in this directory.
 
 ---
 
+## Decisions from the #160 review
+
+The maintainer worked through this index in review of PR #160 and answered ten
+of the thirteen questions. Recorded here so the reasoning stays findable.
+
+**Approved — WoS+ does not do these yet.** Each is a ⚠️ scenario in the spec,
+with an issue tracking the change. The acceptance tests still pin current
+behaviour, so implementing one forces its test to be inverted deliberately.
+
+| Was | Decision | Issue |
+| --- | --- | --- |
+| B1, B2 | The board **save** path must apply the same name, slot and completeness guards as lookup and repair. Today it applies only the repeated-word rule. | [#162](https://github.com/clarkio/wos-plus/issues/162) |
+| B3 | A board is filed under the **longest** word on it, alphabetically last among ties — not the last slot's word. | [#165](https://github.com/clarkio/wos-plus/issues/165) |
+| C1 | A leading `#` is **always** stripped, on the stats path as well as the board path. | [#164](https://github.com/clarkio/wos-plus/issues/164) |
+| C3 | The record level the game reports **on connect** wins over the stored value, and the stored record is updated. All-time best only. | [#166](https://github.com/clarkio/wos-plus/issues/166) |
+| G2 | An unrecoverable masked guess **counts as a clear**, but **blocks the board save**. Two outcomes, deliberately decoupled. | [#167](https://github.com/clarkio/wos-plus/issues/167) |
+| G3 | The chat filter keeps messages long enough to be big words, so long guesses can be recovered. | [#168](https://github.com/clarkio/wos-plus/issues/168) |
+| *new* | A board's words must all be spellable from its big word's letters; one that is not makes the board **broken and repairable**. | [#163](https://github.com/clarkio/wos-plus/issues/163) |
+| *new* | A board is saved only with a **supplied, supported** word language — no more substituting English. | [#161](https://github.com/clarkio/wos-plus/issues/161) |
+
+**Confirmed — current behaviour is intended.** No work; the reasoning is
+recorded in the spec so these are not raised again.
+
+| Was | Decision |
+| --- | --- |
+| B4 | No paging is fine at ~1,600 boards. Revisit with the stored slot shape if the game ever ships thousands. |
+| G4 | A guess for a slot the board lacks **should never happen** — it means WoS+ took up the wrong board data earlier. The display disagreement is a symptom, and tidying it would hide the signal. |
+| G5 | The all-time best waits for the chatbot **during play**; the chatbot is the source of truth there. This does not conflict with C3, which is about connect time. |
+
+Two answers cross-check each other and are worth reading together: **C3** (the
+game wins on connect) and **G5** (the chatbot wins during play). The joining
+inference — that the distinction is *when*, not *what* — is flagged for
+confirmation in [#166](https://github.com/clarkio/wos-plus/issues/166).
+
+---
+
 ## Open questions
 
 Every ❓ **Unconfirmed** scenario across these specs, in one list, so a
@@ -109,22 +159,11 @@ Where the behaviour is not reachable from the code the acceptance stream can
 drive, it is an `it.todo` naming the question instead. Both kinds are marked
 below.
 
-### Boards — [boards.md § Open questions](boards.md)
-
-| # | Question | Pinned by |
-| --- | --- | --- |
-| B1 | A board can be **saved** under a name the lookup rules will always reject (`CAT`, `CAUT10N`) — the save path applies no name rules, the lookup and repair paths do. The board lands in the archive and is then unreachable. | `boards.acceptance.test.ts` — "Unconfirmed: stores a board named with …" and "… can then never be looked up" |
-| B2 | A board can be **saved** with malformed slots (no letters, no word, empty word, `null`) that a **repair** of the same board would reject. The two paths disagree about what a valid slot is. | `boards.acceptance.test.ts` — "Unconfirmed: stores a board containing …" |
-| B3 | A capture is filed under the **last slot's** word rather than the big word WoS+ tracked, silently changing the board's identity. | `boards.acceptance.test.ts` — `it.todo` (happens in the capture path in `wos-plus-main.ts`, before the route sees it) |
-| B4 | Listing the whole archive has **no paging**, and ignores paging hints. `/api/words` does page, so the machinery exists. | `boards.acceptance.test.ts` — "Unconfirmed: asks for the whole archive in one go" and "offers no way for a caller to ask for a page" |
-
 ### Channel stats — [channel-stats.md § Open questions](channel-stats.md)
 
 | # | Question | Pinned by |
 | --- | --- | --- |
-| C1 | `#clarkio` is **rejected** when stats are read, but **accepted** (with the `#` stripped) when a channel is recorded on a captured board. Two normalisers, two answers. | `channel-stats.acceptance.test.ts` — "rejects a leading hash — unconfirmed, pending maintainer decision" |
-| C2 | A brief failure reading the channel records **hides the daily badges**: the three numbers are protected from a failed refresh, but `chatbotEnabled` is not, so badges flicker away on a blip. | route half: `channel-stats.acceptance.test.ts` — "reports the chatbot as disabled on a blip …"; view half: `it.todo` (lives in `wos-plus-main.ts`) |
-| C3 | The **record level the game sends on connect is ignored**, although a code comment says the all-time best comes from the game. Either the comment is stale or the number should be used. | `channel-stats.acceptance.test.ts` — `it.todo` |
+| C2 | A brief failure reading the channel records **hides the daily badges**: the three numbers are protected from a failed refresh, but `chatbotEnabled` is not, so badges flicker away on a blip. Still open after the #160 review — the answer there settled *when* the numbers may change, not whether the badges should vanish. | route half: `channel-stats.acceptance.test.ts` — "reports the chatbot as disabled on a blip …"; view half: `it.todo` (lives in `wos-plus-main.ts`) |
 
 ### Words — [words.md](words.md)
 
@@ -139,10 +178,7 @@ below.
 | # | Question | Pinned by |
 | --- | --- | --- |
 | G1 | **Which level the game starts masking guesses at.** The code comments say 19, the architecture notes said 20. Note that **WoS+ itself has no level threshold**: `currentLevel` is only ever assigned, never compared, and the masked path is chosen purely by whether the word arrives with `?` in it. The question is about the *game*, not about WoS+. | `game-flow.acceptance.test.ts` — a masked event at level 3 resolves exactly as one at level 19 would |
-| G2 | A masked guess that **cannot be recovered** from chat leaves the slot counted as never filled: it can stop a level counting as a clear, and its word can be reported as missed even though a player found it. Recording it as filled-with-unknown-word would mean capturing a blank word, which is refused elsewhere. | `game-flow.acceptance.test.ts` — "treats a slot filled by an unrecoverable masked guess as never filled (❓ unconfirmed)" |
-| G3 | A masked guess of **13 or more letters can never be recovered**, because the chat filter keeps only 4–12 letter messages. Big words can be longer, and board names allow 20. | `game-flow.acceptance.test.ts` — `it.todo` (the filter lives in `twitch-chat-worker.ts`) |
-| G4 | A guess for a **slot the board does not have** is shown in the found-words list but fills no slot, so the list and the board disagree. | `game-flow.acceptance.test.ts` — "shows a guess for a slot the board does not have, but fills no slot" |
-| G5 | The all-time best **does not rise to a level just reached** while the chatbot lags behind; WoS+ knows the number but waits for the chatbot. | partially — `game-flow.acceptance.test.ts` "refreshes the channel records after a level, and never lowers a number" pins the never-lowers half |
+| G6 | On **reconnecting** mid-level, the slots come back correct because the game re-reports them, but the **found-words list does not** — guesses made during the outage were never seen, so the list can be missing words the slots beside it show. Should WoS+ rebuild the list from the re-reported slots, or leave the gap? WoS+ does not currently tell a reconnect apart from joining a game in progress. | spec only — no acceptance pin; raised by the maintainer during the #160 review |
 
 ### Gaps recorded, not fixed
 
@@ -154,7 +190,7 @@ stale. Each needs a maintainer decision because fixing it is new behaviour.
 | --- | --- | --- |
 | X1 | All three Supabase-backed routes advertise `OPTIONS` in `Access-Control-Allow-Methods` while exporting **no `OPTIONS` handler**, so a real CORS preflight falls through to a 404. Reachable in practice for `PUT /api/boards/[id]`, which does preflight from a browser. | "advertises OPTIONS but exports no handler for it" in `boards.acceptance.test.ts` (×2) and `channel-stats.acceptance.test.ts` |
 | X2 | `/api/channel-stats/[channel]` never inspects the all-time or daily read errors, so an **unreachable archive answers 200 with three zeros** — indistinguishable from a channel that has never played, and worse on screen than an error, because a "successful" zero is news. | `channel-stats.acceptance.test.ts` — the canary under § "A failed refresh leaves the numbers alone" |
-| X3 | `POST /api/boards` **does not enforce slot completeness** — a slot with an empty word is stored. What keeps incomplete boards out today is the capture side in `wos-plus-main.ts`, which only offers a board once every slot is solved. Same root cause as B2. | `boards.acceptance.test.ts` — `it.todo` under § "a capture where a word was never fully worked out" |
+| X3 | `POST /api/boards` **does not enforce slot completeness** — a slot with an empty word is stored. What keeps incomplete boards out today is the capture side in `wos-plus-main.ts`, which only offers a board once every slot is solved. **Answered in the #160 review** and now tracked by [#162](https://github.com/clarkio/wos-plus/issues/162) along with B1 and B2. | `boards.acceptance.test.ts` — `it.todo` under § "a capture where a word was never fully worked out" |
 
 Two further `it.todo`s are **neither open questions nor gaps** — they are
 coverage the acceptance stream cannot reach, recorded so they are not mistaken

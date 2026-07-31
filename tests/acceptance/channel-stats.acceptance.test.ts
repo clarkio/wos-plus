@@ -683,24 +683,27 @@ describe("specs/channel-stats.md — Reading a channel's records", () => {
 // specs/channel-stats.md § Open questions for the maintainer
 // ===========================================================================
 
-describe('specs/channel-stats.md — Open questions for the maintainer', () => {
+describe('specs/channel-stats.md — approved changes not yet implemented, and one still-open question', () => {
   /**
-   * The spec marks these ❓ Unconfirmed: they record what the code does today
-   * and ask the maintainer whether that is what it should do. Nothing here is
-   * asserted as contract. Where current behaviour can be pinned it is, so the
-   * answer — whichever way it goes — arrives as a visible, deliberate change to
-   * a test rather than as a silent drift.
+   * Mixed block, deliberately. Two of these were answered by the maintainer in
+   * review of PR #160 and are now **known gaps** with issues; one is still an
+   * open question.
+   *
+   * Every assertion pins what the code does **today**. None is approved
+   * contract, and none may be deleted to make an implementation pass — per
+   * `CLAUDE.md` §2.2 the fix is to invert the assertion in the PR that changes
+   * the behaviour, so the change cannot happen silently.
    */
 
   describe('Scenario: a channel name written the way a streamer would type it', () => {
-    // Given stats are requested for `#clarkio`
-    // When WoS+ handles the request
-    // Then it is rejected as an invalid channel name
+    // APPROVED (#164): the leading `#` is stripped and the stats for `clarkio`
+    //                  come back. The maintainer's ruling is that `#` is always
+    //                  stripped, on this path as well as the board path.
+    // TODAY:           it is rejected as an invalid channel name.
     //
-    // ❓ Unconfirmed — pinned as current behaviour, pending a maintainer
-    // decision. Do not read the assertions below as approved contract.
+    // The assertion below pins TODAY. Invert it when #164 lands.
 
-    it('rejects a leading hash — unconfirmed, pending maintainer decision', async () => {
+    it('known gap (#164): rejects a leading hash the board path would accept', async () => {
       const response = await invokeRoute(GET, {
         url: '/api/channel-stats/%23clarkio',
         params: { channel: '#clarkio' },
@@ -791,10 +794,11 @@ describe('specs/channel-stats.md — Open questions for the maintainer', () => {
     // this spec file.
 
     it.todo(
-      '❓ Unconfirmed: the record level on the game connection payload is ignored — ' +
-      'open question: is the code comment saying the all-time best comes from the game ' +
-      'stale, or should that number be used? Lives in src/scripts/wos-plus-main.ts ' +
-      '(specs/channel-stats.md § Open questions)',
+      'known gap (#166): the record level on the game connection payload is ignored — ' +
+      'the maintainer ruled the game is the source of truth for the all-time best on ' +
+      'connect, and the stored record should be updated to match. The code comment ' +
+      'saying so was right; nothing read the value. Lives in src/scripts/wos-plus-main.ts ' +
+      '(specs/channel-stats.md § Approved, not yet implemented)',
     );
   });
 });

@@ -259,3 +259,23 @@ it is an `it.todo` naming the question. Every one of them is indexed in
   todos are listed in that index; none is an unwritten test.
 - If your change makes a pinned test fail, that is the mechanism working: the
   question now has to be answered in the same PR, not silently settled.
+
+### The other two markers
+
+Once a maintainer answers, the scenario is rewritten to say what *should* happen
+and takes one of two further markers. Both are decisions; neither is an
+invitation to re-open the discussion.
+
+| Marker | Meaning | What the test beside it does |
+| --- | --- | --- |
+| ⚠️ **Approved, not yet implemented** | Decided; WoS+ does not do it yet. Always names a tracking issue. | Still pins **current** behaviour, named `known gap (#N)` |
+| ✅ **Confirmed (maintainer)** | Current behaviour was deliberate; the reasoning is recorded | Pins it as intended |
+
+A ⚠️ test is the one to understand before you touch it. It asserts behaviour the
+maintainer has already ruled **wrong**, on purpose, so that implementing the fix
+cannot happen quietly. When you land the change, **invert the assertion in that
+same PR** — never delete it first to get green, which §2.2 forbids outright. A
+red ⚠️ test is the system working exactly as designed.
+
+The decisions taken so far, with their issues, are tabulated in
+[specs/README.md § Decisions from the #160 review](specs/README.md).

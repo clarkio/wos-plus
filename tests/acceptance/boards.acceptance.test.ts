@@ -1712,38 +1712,46 @@ describe('/api/boards — transport concerns (no spec section)', () => {
 });
 
 // ===========================================================================
-// specs/boards.md § Open questions for the maintainer
+// specs/boards.md § Saving a board directly, § Known limitations
+//
+// ANSWERED by the maintainer in review of PR #160. These were open questions;
+// they are now decisions, and the spec has been rewritten to state the approved
+// behaviour rather than the current behaviour.
 // ===========================================================================
 
-describe('specs/boards.md — Open questions for the maintainer (Unconfirmed — not a contract)', () => {
+describe('specs/boards.md — approved changes not yet implemented (current behaviour under protest)', () => {
   /**
-   * `specs/boards.md` marks each scenario below ❓ Unconfirmed: it describes
-   * what WoS+ does today, but not whether that is a decision or an accident.
-   * Per `specs/README.md` an unconfirmed scenario is not yet part of the
-   * contract, so **nothing here is asserted as approved behaviour**.
+   * Every test in this block asserts what WoS+ does **today**, which the
+   * maintainer has now ruled is **wrong**. They are kept, not deleted, and this
+   * is deliberate — per `CLAUDE.md` §2.2 an existing assertion is never removed
+   * to make a change pass.
    *
-   * Where the behaviour is reachable from these two routes it is pinned as
-   * *current behaviour under protest*, with the open question stated inline, so
-   * that a maintainer's decision either way shows up as a deliberate, visible
-   * change to this file. Where it is not reachable, it is an `it.todo`.
+   * Their job has changed. They no longer ask a question; they hold the current
+   * behaviour still so that implementing the approved change cannot happen
+   * silently. Landing #162 or #165 *must* turn these red, and the fix is to
+   * invert each assertion in that same PR — not to delete it here first.
+   *
+   * If you are reading this because one of them just failed: that is the
+   * mechanism working. Check the issue named on the test, and invert it.
    */
 
-  describe('Scenario: a board saved directly, without going through a level', () => {
-    // Given a board is offered for saving with a name that is not 4–20 letters
-    //       — for example `CAT` or `CAUT10N`
-    // When the save is attempted
-    // Then the name is not checked, and the board is saved under that name
+  describe('Scenario: a board offered for saving under a name that is not a big word', () => {
+    // APPROVED (#162): the board is rejected as an invalid board name, and
+    //                  nothing is saved.
+    // TODAY:           the name is not checked, and the board is saved.
+    //
+    // The assertions below pin TODAY. Invert them when #162 lands.
 
     it.each([
       ['a name that is too short', 'CAT'],
       ['a name with a digit in it', 'CAUT10N'],
       ['a name that is too long', 'A'.repeat(21)],
       ['a name that is not letters at all', '!!!'],
-    ])('Unconfirmed: stores a board named with %s', async (_label, id) => {
+    ])('known gap (#162): stores a board named with %s', async (_label, id) => {
       /**
-       * UNCONFIRMED — current behaviour, pending a maintainer decision.
+       * KNOWN GAP (#162) — pins current behaviour; the maintainer has ruled it wrong.
        *
-       * Open question: should the save path apply the same name rules as the
+       * Approved: the save path applies the same name rules as the
        * lookup and repair paths? `validateBoardId` lives in `[id].ts` and is
        * never called by `index.ts`, so a board can be filed under a name that
        * the lookup rules will then always reject — see the companion test
@@ -1769,14 +1777,14 @@ describe('specs/boards.md — Open questions for the maintainer (Unconfirmed —
       expect(insert.captured.body).toMatchObject({ id });
     });
 
-    it('Unconfirmed: a board saved under a bad name can then never be looked up', async () => {
+    it('known gap (#162): a board saved under a bad name can then never be looked up', async () => {
       /**
-       * UNCONFIRMED — the consequence of the asymmetry above, spelled out.
+       * KNOWN GAP (#162) — the consequence of the asymmetry above, spelled out.
        *
        * The save succeeds; the lookup of the very same name is rejected before
        * the archive is consulted. The board is in the archive and unreachable
-       * through the normal path — which is why the spec flags this for a
-       * decision rather than leaving it as trivia.
+       * through the normal path. The maintainer has ruled the save path must
+       * apply the same name rules, so this test inverts when #162 lands.
        */
       server.use(supabaseSuccess('boards', [storedBoard({ id: 'CAUT10N' })], {
         method: 'post',
@@ -1802,7 +1810,7 @@ describe('specs/boards.md — Open questions for the maintainer (Unconfirmed —
     });
   });
 
-  describe('Scenario: a board saved with malformed slots', () => {
+  describe('Scenario: a board offered for saving with malformed slots', () => {
     // Given a board is offered for saving whose slots have no letters, or no
     //       words
     // When the save is attempted
@@ -1815,11 +1823,11 @@ describe('specs/boards.md — Open questions for the maintainer (Unconfirmed —
       ['a slot with an empty word', [{ letters: Array.from('ACTION'), word: '' }, slot('CAUTION')]],
       ['a slot that is null', [null, slot('CAUTION')]],
       ['no slots at all', []],
-    ])('Unconfirmed: stores a board containing %s', async (_label, slots) => {
+    ])('known gap (#162): stores a board containing %s', async (_label, slots) => {
       /**
-       * UNCONFIRMED — current behaviour, pending a maintainer decision.
+       * KNOWN GAP (#162) — pins current behaviour; the maintainer has ruled it wrong.
        *
-       * Open question: should the save path apply the same slot-shape rules as
+       * Approved: the save path applies the same slot-shape rules as
        * the repair path? `PUT /api/boards/[id]` rejects every one of these with
        * `Invalid slot structure detected` (see the "a repair with a malformed
        * slot" describe above), while `POST` stores them. The two paths disagree
@@ -1856,8 +1864,8 @@ describe('specs/boards.md — Open questions for the maintainer (Unconfirmed —
     //      tracked big word
 
     it.todo(
-      'Unconfirmed: a capture is filed under the last slot word rather than the tracked big word — ' +
-      'open question: is the last slot really always the big word? ' +
+      'known gap (#165): a capture is filed under the last slot word rather than the longest, ' +
+      'alphabetically-last word the maintainer approved as the board identity. ' +
       'Not reachable from /api/boards: the substitution happens in the capture path in ' +
       'src/scripts/wos-plus-main.ts before the route is called, and the route stores the id it is ' +
       'given. Belongs with the game-flow work (specs/game-flow.md)',
@@ -1870,11 +1878,14 @@ describe('specs/boards.md — Open questions for the maintainer (Unconfirmed —
     // Then every board is returned at once, with no way to ask for a page at a
     //      time
 
-    it('Unconfirmed: asks for the whole archive in one go, with no paging', async () => {
+    it('confirmed intended (#160 review): asks for the whole archive in one go, with no paging', async () => {
       /**
-       * UNCONFIRMED — current behaviour, pending a maintainer decision.
+       * CONFIRMED INTENDED (#160 review) — the maintainer confirmed no paging is
+       * fine for now: playing the game has turned up ~1,600 boards in total and
+       * that is not expected to grow quickly. Revisit alongside the stored slot
+       * shape if Words on Stream ever ships thousands.
        *
-       * Open question: should listing the archive be paged? Nothing in WoS+
+       * Background: should listing the archive be paged? Nothing in WoS+
        * asks for the whole archive today, so this may be an unused capability
        * that has simply not needed paging yet. `/api/words` — which *is* used
        * at start-up — does page, in 1000-row batches, so both the machinery and
@@ -1899,10 +1910,11 @@ describe('specs/boards.md — Open questions for the maintainer (Unconfirmed —
       expect(params.get('limit')).toBeNull();
     });
 
-    it('Unconfirmed: offers no way for a caller to ask for a page', async () => {
+    it('confirmed intended (#160 review): offers no way for a caller to ask for a page', async () => {
       /**
-       * UNCONFIRMED — the other half: the route ignores paging hints a caller
-       * might send, so there is no undocumented paging to discover.
+       * CONFIRMED INTENDED — the other half: the route ignores paging hints a
+       * caller might send, so there is no undocumented paging to discover.
+       * The maintainer confirmed no-paging is fine at today's ~1,600 boards.
        */
       const recorder = requestRecorder();
       server.use(supabaseSuccess('boards', [storedBoard()], {

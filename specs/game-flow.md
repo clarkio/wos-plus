@@ -89,6 +89,26 @@ Related: [boards.md](boards.md) covers what happens to a captured board;
   log notes the level is in progress rather than started, and nothing already on
   screen is cleared
 
+### Scenario: reconnecting to a game after losing the connection
+
+- **Given** WoS+ was following a level and lost its connection to the game
+- **And** players kept guessing while WoS+ was away
+- **When** the connection comes back and WoS+ picks the level up again
+- **Then** the level number and the board's slots are adopted afresh from the
+  game — so the slots show the words found during the outage — and nothing
+  already on screen is cleared
+
+  WoS+ does not tell a reconnection apart from joining a game in progress; both
+  arrive as the same "level in progress" event and are handled identically.
+
+> ❓ **Unconfirmed** — the slots come back correct, because the game re-reports
+> them. The **found-words list** does not: it is built up from guesses as they
+> arrive, and guesses made during the outage were never seen, so words the game
+> now shows in slots can be missing from the list beside them. Whether WoS+
+> should rebuild the found-words list from the re-reported slots on a
+> reconnect — or leave the gap — needs a maintainer's decision. Raised by the
+> maintainer's own question during the review of #160.
+
 ### Scenario: the game's word language is noticed
 
 - **Given** the game is being played in French
@@ -102,6 +122,11 @@ Related: [boards.md](boards.md) covers what happens to a captured board;
 - **When** a later event carries a language WoS+ does not recognise, or none at
   all
 - **Then** the language WoS+ already knows is kept
+
+  Only the three languages Words on Stream plays in — English, Portuguese and
+  French — are ever accepted as the game's language. Nothing outside that set is
+  taken up, and a board captured without a known language is not saved at all;
+  see [boards.md](boards.md).
 
 ---
 
@@ -379,33 +404,44 @@ word from what that player typed in chat.
 
 ---
 
-## Open questions for the maintainer
+## Approved, not yet implemented
 
-### Scenario: a masked guess that cannot be recovered is lost entirely
+### Scenario: a masked guess that cannot be recovered
 
 - **Given** a masked guess arrives that WoS+ cannot match to any chat message
+- **And** it was the last slot on the board to be filled
 - **When** the level ends
-- **Then** the slot that guess filled is treated as never filled: it can stop
-  the level counting as a clear, and its word can be reported as missed even
-  though a player actually found it
+- **Then** the slot counts as filled, so the level counts as a clear, and the
+  word is not reported as missed
+- **And** the board is **not** saved or updated, because one of its words is not
+  known
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. Recording the slot as filled by that player, with an unknown
-> word, would keep the clear detection honest, but it would also mean capturing
-> a board with a blank word — which is refused elsewhere. This is a real
-> trade-off and needs a decision rather than an inference.
+  These two outcomes are deliberately decoupled. A player really did fill that
+  slot, so the clear is real and must be credited. But WoS+ cannot say *which*
+  word filled it, and a board with a blank word must never enter the archive —
+  every future level would read that blank back as truth.
 
-### Scenario: a masked guess longer than 12 letters
+> ⚠️ **Approved, not yet implemented** — WoS+ today treats the slot as never
+> filled, which loses the clear *and* reports the word as missed. Tracked by
+> [#167](https://github.com/clarkio/wos-plus/issues/167); open PR #144 may
+> already cover part of it.
+
+### Scenario: a masked guess as long as a big word
 
 - **Given** a masked guess of 13 or more letters arrives
 - **When** WoS+ tries to recover it from chat
-- **Then** it can never be recovered, because messages that long are not kept
-  from chat at all
+- **Then** it can be recovered, because chat messages long enough to be a big
+  word are kept for matching
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. Big words can be longer than 12 letters, and board names are
-> allowed up to 20, so the chat filter and the board rules disagree about how
-> long a guess can be.
+> ⚠️ **Approved, not yet implemented** — WoS+ today keeps only 4–12 letter
+> messages from chat, so a longer guess is discarded before matching is ever
+> attempted and can never be recovered. Board names are allowed up to 20
+> letters, so the chat filter and the board rules disagree. Tracked by
+> [#168](https://github.com/clarkio/wos-plus/issues/168).
+
+---
+
+## Known limitations
 
 ### Scenario: a guess for a slot that is not on the board
 
@@ -415,9 +451,15 @@ word from what that player typed in chat.
 - **Then** a warning is logged and no slot is filled, but the word is still
   shown in the found-words list
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. The found-words list and the board then disagree with each other,
-> and it is not clear which one a viewer should believe.
+> ✅ **Confirmed (maintainer)** — this should never happen. What the game
+> reports about its own board is the source of truth, so a guess for a slot the
+> board does not have means something already went wrong earlier in WoS+ —
+> most likely that it took up the wrong board data at the start of the game or
+> level. The disagreement between the found-words list and the board is a
+> *symptom*; the defect is upstream of it.
+>
+> Left as described rather than "fixed" at the point of the symptom: tidying the
+> display here would hide the only signal that the board data is wrong.
 
 ### Scenario: the streamer's own personal best while the chatbot lags
 
@@ -426,6 +468,12 @@ word from what that player typed in chat.
 - **Then** the number on screen stays at whatever WoS+ last showed, rather than
   rising to the level just reached
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. WoS+ knows the level the channel just reached, so it could raise
-> the all-time best itself and let the chatbot catch up, but it does not.
+> ✅ **Confirmed (maintainer)** — intended. What the chatbot captures is the
+> source of truth, and the screen catches up once that data is written. Raising
+> the number optimistically from what WoS+ believes just happened would risk
+> races and mismatched data between the two, which is worse than a number that
+> arrives a moment late.
+>
+> This is about a level reached **during play**. It does not conflict with the
+> all-time best the game reports **on connect**, which does win over the stored
+> value — see [channel-stats.md](channel-stats.md).

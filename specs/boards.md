@@ -74,7 +74,8 @@ board.
 - **When** WoS+ looks up `CAUTION`
 - **Then** WoS+ is told the board is not found — this is a normal answer, not a
   failure, and the level simply falls back to working the missed words out from
-  the shared word list
+  the shared word list, based on all of the known valid letters for that level
+  and board
 
 ### Scenario: the archive cannot be reached during a lookup
 
@@ -129,9 +130,14 @@ A board is only ever captured from a level WoS+ believes is complete — see
 
 ## Channel and language on a captured board
 
-The Twitch channel and the word language are informational: they are recorded
-when they make sense and quietly dropped when they do not. Neither may ever stop
-a good board from being saved.
+The Twitch channel is informational: it is recorded when it makes sense and
+quietly dropped when it does not, and it may never stop a good board from being
+saved.
+
+The word language is **not** informational. A board's words only mean anything
+alongside the language they were played in, so the language must be supplied and
+must be one Words on Stream actually plays in. A board with no language, or an
+unrecognised one, is not saved.
 
 ### Scenario: a channel name is tidied before it is recorded
 
@@ -159,16 +165,57 @@ a good board from being saved.
 
 - **Given** a capture whose word language is not one Words on Stream plays in
 - **When** the board is saved
-- **Then** the board is saved with English as its language, rather than being
-  rejected
+- **Then** the board is rejected and nothing is saved
+
+> ⚠️ **Approved, not yet implemented** — WoS+ today saves the board with English
+> as its language. Recording a Portuguese board as English quietly corrupts the
+> archive for every future level on that board, which is worse than refusing the
+> capture. Tracked by [#161](https://github.com/clarkio/wos-plus/issues/161).
+
+### Scenario: a capture with no word language at all
+
+- **Given** a capture that carries no word language
+- **When** the board is saved
+- **Then** the board is rejected and nothing is saved
+
+> ⚠️ **Approved, not yet implemented** — see
+> [#161](https://github.com/clarkio/wos-plus/issues/161).
 
 ---
 
-## Repairing a board that was stored with repeated words
+## Repairing a board that was stored badly
 
-Boards captured before the repeated-word guard existed are still in the archive,
-and they mislead every future level that reads them. When WoS+ later sees a
-clean capture of the same board, it repairs the stored copy.
+Boards captured before the current guards existed are still in the archive, and
+they mislead every future level that reads them. When WoS+ later sees a clean
+capture of the same board, it repairs the stored copy.
+
+A stored board is **broken** — and so eligible for repair — if either of these is
+true of it:
+
+- the same word fills two or more slots, or
+- any slot's word uses a letter that is not on the board.
+
+**Valid letters for a board are exactly the letters of its big word.** The big
+word uses every real letter on the board, so a word containing a letter that the
+big word does not have could not have been played on that board, and its
+presence means the stored copy is wrong.
+
+### Scenario: a stored board containing a word with letters that are not on the board
+
+- **Given** the board `CAUTION` is in the archive
+- **And** one of its slots holds the word `ACTOR`, which uses an `R` that
+  `CAUTION` does not have
+- **When** WoS+ examines the stored board
+- **Then** the board is treated as broken and needs to be repaired, in the same
+  way as a board with a repeated word
+
+  A word that cannot be spelled from the big word's letters was never really on
+  this board. Left in the archive it is reported to players as a word they
+  missed, sending them to type something the game will refuse.
+
+> ⚠️ **Approved, not yet implemented** — WoS+ today only recognises repeated
+> words as a reason to repair. Tracked by
+> [#163](https://github.com/clarkio/wos-plus/issues/163).
 
 ### Scenario: a corrupted stored board is replaced by a clean capture
 
@@ -196,10 +243,11 @@ clean capture of the same board, it repairs the stored copy.
 
 ### Scenario: a sound stored board is never overwritten
 
-- **Given** the stored board `CAUTION` has no repeated words
+- **Given** the stored board `CAUTION` has no repeated words, and no words using
+  letters that are not on the board
 - **When** a repair is offered for it
 - **Then** the repair is refused, the stored board is untouched, and the reason
-  says the board has no repeated words
+  says the board is already sound
 
   This is the safety catch on the whole repair path: repair can only ever make a
   broken board good, never make a good board broken.
@@ -268,50 +316,57 @@ clean capture of the same board, it repairs the stored copy.
 
 ---
 
-## Open questions for the maintainer
+## Saving a board directly
 
-The following describe how WoS+ behaves today, but it is not clear from the code
-whether each is a decision or an accident.
+A board can be offered to the archive without going through a level. That path
+must hold to the same rules as every other.
 
-### Scenario: a board saved directly, without going through a level
+### Scenario: a board offered for saving under a name that is not a big word
 
 - **Given** a board is offered for saving with a name that is not 4–20 letters —
   for example `CAT` or `CAUT10N`
 - **When** the save is attempted
-- **Then** the name is not checked, and the board is saved under that name
+- **Then** the board is rejected as an invalid board name, and nothing is saved
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. The name rules described at the top of this file are applied when
-> WoS+ *looks up* or *repairs* a board, and by the views before they offer a
-> capture, but not by the archive when a board is saved for the first time. That
-> asymmetry means a badly named board could reach the archive and then never be
-> findable again through the normal lookup rules.
+> ⚠️ **Approved, not yet implemented** — WoS+ today does not check the name on
+> save, so such a board reaches the archive and is then unreachable: the lookup
+> rules that would find it reject the very name it was stored under. Tracked by
+> [#162](https://github.com/clarkio/wos-plus/issues/162).
 
-### Scenario: a board saved with malformed slots
+### Scenario: a board offered for saving with malformed slots
 
 - **Given** a board is offered for saving whose slots have no letters, or no
   words
 - **When** the save is attempted
-- **Then** only the repeated-word rule is applied; the slots' shape is not
-  checked, and the board is saved
+- **Then** the board is rejected, and nothing is saved
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. A repair of the same board *would* be rejected for the same
-> malformed slots, so the two paths disagree about what a valid slot is.
+> ⚠️ **Approved, not yet implemented** — WoS+ today applies only the
+> repeated-word rule here, so a *repair* of the same board is rejected while the
+> *save* succeeds. Tracked by
+> [#162](https://github.com/clarkio/wos-plus/issues/162).
 
-### Scenario: the big word disagrees with the last slot
+### Scenario: which word a board is filed under
 
 - **Given** a level is being captured
-- **And** the big word WoS+ tracked during the level is not the word in the
-  board's last slot
 - **When** the board is captured
-- **Then** the board is filed under the *last slot's* word instead of the
-  tracked big word
+- **Then** it is filed under the longest word on the board, and where several
+  words tie for longest, the alphabetically last of them
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. It looks like a correction for levels with several anagram big
-> words, but it silently changes the identity of the board being saved, so a
-> maintainer should confirm the last slot really is always the big word.
+  Anagram big words (`LISTEN` / `SILENT`) tie on length, so without a
+  deterministic tie-break the same board would be filed under a different name
+  on different nights, splitting one board into two half-true archive entries.
+
+> ⚠️ **Approved, not yet implemented** — WoS+ today files the capture under the
+> word in the board's *last slot*, which is a positional guess at the same
+> thing. Tracked by [#165](https://github.com/clarkio/wos-plus/issues/165); open
+> PR #142 may already cover part of it.
+
+---
+
+## Known limitations
+
+Behaviour the maintainer has confirmed is deliberate for now, recorded so it is
+not mistaken for an oversight and re-litigated later.
 
 ### Scenario: a very large archive
 
@@ -320,6 +375,11 @@ whether each is a decision or an accident.
 - **Then** every board is returned at once, with no way to ask for a page at a
   time
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. Nothing in WoS+ currently asks for the whole archive, so this may
-> simply be an unused capability that has not needed paging yet.
+> ✅ **Confirmed (maintainer)** — intended for now. Playing the game has turned
+> up roughly 1,600 boards in total, and that is not expected to grow quickly.
+> Paging will be needed if Words on Stream ever ships thousands of boards.
+>
+> Recorded alongside it: a board currently stores the slot data exactly as the
+> game reports it, which is more than WoS+ needs — the minimum is each slot's
+> index and word. Storing the game's shape verbatim keeps the capture path
+> simple, and is a deliberate trade to revisit at the same time as paging.
