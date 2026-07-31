@@ -122,7 +122,7 @@ behaviour, so implementing one forces its test to be inverted deliberately.
 | C1 | A leading `#` is **always** stripped, on the stats path as well as the board path. | [#164](https://github.com/clarkio/wos-plus/issues/164) |
 | C3 | The record level the game reports **on connect** wins over the stored value, and the stored record is updated. All-time best only. | [#166](https://github.com/clarkio/wos-plus/issues/166) |
 | G2 | An unrecoverable masked guess **counts as a clear**, but **blocks the board save**. Two outcomes, deliberately decoupled. | [#167](https://github.com/clarkio/wos-plus/issues/167) |
-| G3 | The chat filter keeps messages long enough to be big words, so long guesses can be recovered. | [#168](https://github.com/clarkio/wos-plus/issues/168) |
+| G3 | The 12-letter chat filter is correct and stays; the **board name rule comes down** from 20 to 12 to match it. Longest word in the shared list is 8, so 12 is the cushion. | [#168](https://github.com/clarkio/wos-plus/issues/168) |
 | *new* | A board's words must all be spellable from its big word's letters; one that is not makes the board **broken and repairable**. | [#163](https://github.com/clarkio/wos-plus/issues/163) |
 | *new* | A board is saved only with a **supplied, supported** word language — no more substituting English. | [#161](https://github.com/clarkio/wos-plus/issues/161) |
 

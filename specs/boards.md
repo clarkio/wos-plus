@@ -6,7 +6,13 @@ boards it has seen so that the next time the same board comes up it can tell
 players exactly which words were missed.
 
 A board is filed under its big word. Big words are made of letters only, and
-are between 4 and 20 letters long.
+are between 4 and 12 letters long.
+
+Twelve is a deliberate cushion, not a measurement: the longest word in the
+shared word list is 8 letters, and 12 leaves room for Words on Stream to add
+longer words without the rule needing to move. The same 12 applies to the chat
+messages kept for matching a masked guess (see [game-flow.md](game-flow.md)),
+so the two limits agree.
 
 Related: [game-flow.md](game-flow.md) covers *when* during a level a board is
 captured; [words.md](words.md) covers how missed words are worked out.
@@ -47,10 +53,20 @@ board.
 
 ### Scenario: a board name that is too long to be a big word
 
-- **Given** a lookup for a board named with 21 or more letters
+- **Given** a lookup for a board named with 13 or more letters
 - **When** WoS+ tries to find it
 - **Then** the lookup is rejected as an invalid board name length, and the
   archive is never consulted
+
+> ⚠️ **Approved, not yet implemented** — WoS+ today allows up to 20 letters
+> here. Tracked by [#168](https://github.com/clarkio/wos-plus/issues/168).
+>
+> **This one needs a check against the live archive before it lands.** Lowering
+> the limit makes any already-stored board with a 13–20 letter name permanently
+> unreachable through lookup — the same trap as
+> [#162](https://github.com/clarkio/wos-plus/issues/162), arrived at from the
+> other side. If any such board exists it must be dealt with in the same change,
+> not discovered afterwards.
 
 ### Scenario: no board name at all
 

@@ -439,18 +439,24 @@ word from what that player typed in chat.
 > [#167](https://github.com/clarkio/wos-plus/issues/167); open PR #144 may
 > already cover part of it.
 
-### Scenario: a masked guess as long as a big word
+### Scenario: a masked guess longer than a word can be
 
 - **Given** a masked guess of 13 or more letters arrives
 - **When** WoS+ tries to recover it from chat
-- **Then** it can be recovered, because chat messages long enough to be a big
-  word are kept for matching
+- **Then** it is not recovered, because a guess that long is longer than any
+  word the game plays
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today keeps only 4–12 letter
-> messages from chat, so a longer guess is discarded before matching is ever
-> attempted and can never be recovered. Board names are allowed up to 20
-> letters, so the chat filter and the board rules disagree. Tracked by
-> [#168](https://github.com/clarkio/wos-plus/issues/168).
+  Chat messages of 4 to 12 letters are kept for matching. Twelve is a cushion
+  over the longest word in the shared word list, which is 8 letters, so a
+  13-letter guess is not a word being missed — it is a sign something else is
+  wrong.
+
+> ✅ **Confirmed (maintainer)** — the 12-letter chat filter is right and stays.
+> The **board name rule** is what moves: it allows up to 20 today, and comes
+> down to 12 to match. Tracked by
+> [#168](https://github.com/clarkio/wos-plus/issues/168) — see the migration
+> warning in [boards.md](boards.md), since lowering it can strand an
+> already-stored board.
 
 ---
 

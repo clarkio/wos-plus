@@ -272,7 +272,15 @@ describe('specs/boards.md — Naming a board', () => {
       expect(unhandledNetworkRequests()).toEqual([]);
     });
 
-    it('accepts the longest name that is still a big word', async () => {
+    it('known gap (#168): accepts a twenty-letter name, above the approved twelve', async () => {
+      // APPROVED (#168): board names run 4–12 letters, matching the chat filter.
+      //                  The longest word in the shared list is 8; 12 is the
+      //                  cushion. A 20-letter name is rejected.
+      // TODAY:           4–20 is enforced, so this is accepted.
+      //
+      // Invert when #168 lands — and read the migration warning in
+      // `specs/boards.md` first: lowering the limit strands any already-stored
+      // board with a 13–20 letter name, which is #162's trap in reverse.
       server.use(supabaseSuccess('boards', storedBoard({ id: 'A'.repeat(20) })));
 
       const response = await invokeRoute(GET_BOARD, {
