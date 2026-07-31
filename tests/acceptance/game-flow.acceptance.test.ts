@@ -1199,7 +1199,10 @@ describe('specs/game-flow.md § Ending a level', () => {
     }));
     await clearTheBoard();
 
-    // Two stars, but every slot has a player against it — that is a clear.
+    // Two stars, but every slot is filled with a word — that is a clear. Note
+    // `clearTheBoard` spreads the guesses across three different players, which
+    // is the normal case: a clear is a property of the board, not of any one
+    // player finishing it.
     await playWosEvent(levelResults(2));
 
     expect(capture.posted).toHaveLength(1);
@@ -1215,6 +1218,31 @@ describe('specs/game-flow.md § Ending a level', () => {
     ]);
     expect(soundsPlayed).toEqual(['/assets/clear.mp3']);
     // A cleared board has nothing to report as missed.
+    expect(missedWords()).toEqual([]);
+  });
+
+  it('still clears and captures the board when the clear sound is switched off', async () => {
+    // The clear sound is a user setting (`clearSound` in both views, which sets
+    // `isSoundsEnabled`). Switching it off must silence the sound and change
+    // nothing else — the level is still a clear and the board is still
+    // captured. Guarding this because the sound is the most visible sign of a
+    // clear, which makes it the easiest thing to accidentally gate the capture
+    // on. See `specs/game-flow.md § a cleared board is captured`.
+    const capture = boardCaptureRecorder();
+    server.use(boardNotArchived(), capture.handler);
+    spectator.isSoundsEnabled = false;
+
+    await playWosEvent(levelStarted({
+      level: 3,
+      letters: CAUTION_LETTERS,
+      slotLengths: CAUTION_SLOT_LENGTHS,
+    }));
+    await clearTheBoard();
+    await playWosEvent(levelResults(2));
+
+    expect(soundsPlayed).toEqual([]);
+    expect(capture.posted).toHaveLength(1);
+    expect(capture.posted[0]).toMatchObject({ id: 'CAUTION' });
     expect(missedWords()).toEqual([]);
   });
 

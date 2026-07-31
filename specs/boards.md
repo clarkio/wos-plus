@@ -93,7 +93,7 @@ A board is only ever captured from a level WoS+ believes is complete — see
 
 ### Scenario: a completed board is captured
 
-- **Given** a level ended with every slot filled by a player
+- **Given** a level ended with every slot filled with a word
 - **And** the big word is known
 - **When** WoS+ captures the board
 - **Then** the board is filed under its big word, with every slot's word, and

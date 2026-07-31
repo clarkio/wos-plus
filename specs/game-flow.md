@@ -325,10 +325,19 @@ word from what that player typed in chat.
 
 ### Scenario: a cleared board is captured
 
-- **Given** a level ends with every slot filled by a player
+- **Given** a level ends with every slot filled with a word
 - **And** the big word is known
 - **When** the results are worked out
-- **Then** the board is captured, and the clear sound plays
+- **Then** the board is captured
+- **And** the clear sound plays, if the clear sound is switched on
+
+  A clear is about the **board**, not about any one player. Levels are normally
+  played by many people at once, and it makes no difference who found which
+  word — the level counts as a clear as soon as every slot is filled, however
+  the credit is spread.
+
+  The clear sound is a setting in both views. When it is switched off the level
+  is still a clear and the board is still captured; only the sound is skipped.
 
 ### Scenario: five stars counts as a clear
 
@@ -346,17 +355,21 @@ word from what that player typed in chat.
 ### Scenario: the near-miss and decent-effort sounds
 
 - **Given** a level ends without being cleared
+- **And** the sounds are switched on
 - **When** it ended with 1 star
 - **Then** the near-miss sound plays
 - **And when** it ended with 3 stars
 - **Then** the decent-effort sound plays
+
+  Every sound WoS+ plays is behind the same setting. When it is switched off no
+  sound plays, and nothing else about the level changes.
 
 ### Scenario: the game ends
 
 - **Given** the channel's run comes to an end
 - **When** the game ends
 - **Then** the game log records the level the run ended on, the missed words are
-  shown, and the end-of-game sound plays
+  shown, and the end-of-game sound plays if the sounds are switched on
 
 ### Scenario: records are refreshed after a level
 
