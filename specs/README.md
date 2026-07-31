@@ -93,7 +93,18 @@ These words mean the same thing everywhere in this directory.
 | **the board archive** | WoS+'s store of boards it has captured, keyed by big word |
 | **the shared word list** | the pooled dictionary of words WoS+ knows about |
 | **the channel records** | the stored all-time and daily achievements for a channel |
-| **the chatbot** | the companion bot that writes daily achievements; only some channels have it |
+| **the chatbot** | the companion bot that writes daily achievements. Only some channels have it — see below |
+
+### Which channels have the chatbot
+
+Whether a channel has the chatbot is **granted, not detected**. Today the
+maintainer turns it on for a channel by hand; in future it is intended to become
+a paid feature that a streamer opts into.
+
+Either way it is a deliberate, long-lived property of the channel. It does not
+come and go by itself, and nothing that happens during a stream changes it.
+That matters for reading any scenario about the daily badges: those badges
+follow a **grant**, not a live capability check.
 
 ## The specs
 
@@ -163,7 +174,7 @@ below.
 
 | # | Question | Pinned by |
 | --- | --- | --- |
-| C2 | A brief failure reading the channel records **hides the daily badges**: the three numbers are protected from a failed refresh, but `chatbotEnabled` is not, so badges flicker away on a blip. Still open after the #160 review — the answer there settled *when* the numbers may change, not whether the badges should vanish. | route half: `channel-stats.acceptance.test.ts` — "reports the chatbot as disabled on a blip …"; view half: `it.todo` (lives in `wos-plus-main.ts`) |
+| C2 | A brief failure reading the channel records **hides the daily badges**: the three numbers are protected from a failed refresh, but `chatbotEnabled` is not, so badges flicker away on a blip. Still open after the #160 review — the answer there settled *when* the numbers may change, not whether the badges should vanish. **Sharpened by a later answer**: having the chatbot is a *granted* property of the channel (manually today, a paid opt-in later), so it cannot actually change mid-stream — which makes a failed read reporting "no chatbot" a wrong answer rather than a stale one. | route half: `channel-stats.acceptance.test.ts` — "reports the chatbot as disabled on a blip …"; view half: `it.todo` (lives in `wos-plus-main.ts`) |
 
 ### Words — [words.md](words.md)
 

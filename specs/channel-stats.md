@@ -10,6 +10,11 @@ The two daily numbers are written by **the chatbot**, and only channels that
 have the chatbot enabled have them. Channels without the chatbot see only the
 all-time best.
 
+Having the chatbot is **granted, not detected** — turned on for a channel by
+hand today, and intended to become a paid feature a streamer opts into. It is a
+long-lived property of the channel that nothing during a stream changes. See
+[README.md](README.md#which-channels-have-the-chatbot).
+
 "Today" means the current day in UTC, so the daily numbers reset at the same
 moment for every channel regardless of where the streamer lives.
 
@@ -248,3 +253,12 @@ case it is typed in.
 > above under § When the numbers change. That answers what moves the numbers,
 > but not whether the **badges** should vanish when a refresh fails. The
 > question here is only about the badges.
+>
+> A later answer in the same review sharpens it. Having the chatbot is
+> **granted**, not detected — set by hand today, intended to become a paid
+> opt-in (see [README.md](README.md#which-channels-have-the-chatbot)). A grant
+> does not lapse for a moment and come back. So a failed read reporting "this
+> channel has no chatbot" is not a stale answer, it is a wrong one, and the
+> badges disappear on the strength of it. That makes the case for treating
+> `chatbotEnabled` like the three numbers — protected from a failed refresh —
+> but it is still the maintainer's call, so the marker stays.
