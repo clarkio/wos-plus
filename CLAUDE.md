@@ -32,6 +32,7 @@ The shape you need to know before touching code:
 | Shared helpers | `src/lib/**` | e.g. `cors.ts`, `board-utils.ts`, `launch-menu.ts` |
 | Tests | `tests/unit/`, `tests/acceptance/`, `tests/property/` | Vitest 4 + happy-dom; setup in `tests/setup.ts`. Two streams — see §7 |
 | Behavioural contract | `specs/` | Human-owned. Acceptance tests cite it; open questions indexed in [specs/README.md](specs/README.md) |
+| **Where the quality plan stands** | [AGENTIC-TESTING-PLAN.md § Where this stands](AGENTIC-TESTING-PLAN.md) | Phase-by-phase status, what to do next, and the 13-issue behaviour backlog. **Start here if picking the work up cold.** |
 
 Full architecture, data flows, conventions, and known pitfalls:
 [.github/copilot-instructions.md](.github/copilot-instructions.md).

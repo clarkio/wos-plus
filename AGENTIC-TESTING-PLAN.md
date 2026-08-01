@@ -8,6 +8,87 @@ Astro + Vitest + Cloudflare Pages/Workers + Supabase + pnpm**.
 
 ---
 
+## Where this stands (keep current)
+
+**Read this first if you are picking the work up cold.** The phase descriptions
+in Part 3 are the original plan and were never rewritten as work landed, so they
+describe intent, not status. This section is the status.
+
+| Phase | Issue | State | Landed in |
+| --- | --- | --- | --- |
+| 0 — Fix the foundation | [#146](https://github.com/clarkio/wos-plus/issues/146) | ✅ done | PR #145 |
+| 1 — Static analysis gate (ESLint 9 flat, type-aware) | [#147](https://github.com/clarkio/wos-plus/issues/147) | ✅ done | PR #159 |
+| 2a — Close the unit-test gap in `wos-words.ts` | [#148](https://github.com/clarkio/wos-plus/issues/148) | ✅ done | PR #159 |
+| 2b — Fixture-driven tests for `wos-worker` | [#149](https://github.com/clarkio/wos-plus/issues/149) | ✅ done | PR #159 |
+| **2c — Coverage thresholds + ratchet** | [**#155**](https://github.com/clarkio/wos-plus/issues/155) | ⬜ **not started** | — |
+| 3 — Acceptance-test stream (ATDD) | [#151](https://github.com/clarkio/wos-plus/issues/151) | ✅ done | PR #160 |
+| 4 — Property-based tests (fast-check) | [#150](https://github.com/clarkio/wos-plus/issues/150) | ✅ done | PR #159 |
+| 5 — Mutation testing + change-risk | [#154](https://github.com/clarkio/wos-plus/issues/154) | ⬜ not started | — |
+| 6 — Thin Playwright E2E | [#152](https://github.com/clarkio/wos-plus/issues/152) | ⬜ not started | — |
+| 7 — Security & supply-chain gates | [#153](https://github.com/clarkio/wos-plus/issues/153) | ⬜ not started | — |
+| 8 — Branch protection & agent contract | [#156](https://github.com/clarkio/wos-plus/issues/156) | ✅ done | PR #159 + maintainer enabled protection on `main` |
+
+Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
+
+### The numbers, as of PR #160
+
+**636 passing** tests across 19 files, plus 8 deliberate `it.todo`. Coverage
+**90.83% statements / 86.33% branches / 87.79% functions / 91.56% lines**, counting
+every file under `src/**/*.ts` so an untested module shows as 0% rather than being
+invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
+
+`CLAUDE.md` § 4 is the authoritative copy of this and is kept current; if the two
+ever disagree, believe `CLAUDE.md`.
+
+### What to do next, and why
+
+**#155 first.** It is small, and it turns 90.83% from an achievement into a floor
+that cannot silently erode — every PR after it lands against an enforced baseline.
+Suggested thresholds are roughly current-minus-one so ordinary churn does not trip
+them: statements 90, branches 85, functions 86, lines 90.
+
+Then the **behaviour issues** below, which include live defects. Then #153 (cheap,
+workflow files only), then #154. #152 last or never — `wrangler dev` may not run in
+a sandbox at all.
+
+**Two need maintainer sign-off before starting**, per `CLAUDE.md` §2.3: #152 adds
+Playwright and #154 adds StrykerJS.
+
+### The behaviour backlog from the #160 review
+
+Thirteen issues, all approved by the maintainer, none implemented:
+[#161](https://github.com/clarkio/wos-plus/issues/161)–[#173](https://github.com/clarkio/wos-plus/issues/173).
+
+Each has a ⚠️ scenario in `specs/` and an acceptance test **pinning current
+behaviour** under the name `known gap (#N)`. That is the mechanism to understand
+before touching any of them: the test asserts behaviour the maintainer has already
+ruled *wrong*, on purpose, so implementing the fix cannot happen quietly. **Invert
+the assertion in the same PR — never delete it to get green.** A red `known gap`
+test is the system working.
+
+Sharpest first, both affecting streamers today:
+
+- [#173](https://github.com/clarkio/wos-plus/issues/173) — a failed channel-stats read answers **200 with three zeros**, so a personal best silently reads 0 mid-stream
+- [#170](https://github.com/clarkio/wos-plus/issues/170) — the daily badges vanish on a blip, because `chatbotEnabled` is not protected from a failed refresh the way the three numbers are
+
+**Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
+
+### Where the rest of the state lives
+
+Nothing below duplicates these, deliberately — a second copy is a second thing to
+go stale:
+
+| What | Where |
+| --- | --- |
+| Current test counts, coverage, lint baseline | `CLAUDE.md` § 4 |
+| The behavioural contract, and every decision behind it | `specs/README.md` § Decisions from the #160 review |
+| Open spec questions | `specs/README.md` § Open questions — **empty right now**; the section is the mechanism, not a leftover |
+| Testing conventions, the two streams | `TESTING.md` |
+| Branch protection settings and required checks | `docs/BRANCH-PROTECTION.md` |
+| Confirmed WoS wire payloads | `tests/fixtures/wos-events/README.md` |
+
+---
+
 ## Part 1 — Research summary: what actually creates confidence in AI-generated code
 
 ### 1.1 The core problem
@@ -93,7 +174,11 @@ concrete control system, and this plan adopts it. His workflow:
 
 ---
 
-## Part 2 — Where WoS+ stands today (audit, July 2026)
+## Part 2 — Where WoS+ stood at the start (audit, July 2026)
+
+> **Historical.** This is the audit that motivated the plan, kept for the
+> reasoning. It describes the repository *before* any phase landed. For current
+> status see § Where this stands.
 
 **Already strong:**
 
@@ -129,6 +214,10 @@ concrete control system, and this plan adopts it. His workflow:
 ---
 
 ## Part 3 — Implementation plan
+
+> **Original plan, not status.** Phase descriptions here were written up front
+> and deliberately not rewritten as work landed, so they still read as future
+> work even where they are done. § Where this stands is the status.
 
 Each phase is independently shippable, ordered by (confidence gained ÷ effort).
 Every phase ends with a CI-enforced, agent-runnable gate.
