@@ -69,12 +69,11 @@
  * ❓ Unconfirmed things this file deliberately does NOT settle
  * ---------------------------------------------------------------------------
  *
- * 1. **Where masking begins.** `specs/game-flow.md § Masked guesses` flags that
- *    the code comments say level 19 and `copilot-instructions.md` says level 20.
- *    Neither is enforced: `updateGameState` branches purely on the word
- *    containing '?', with no reference to `currentLevel` at all. There is a test
- *    below pinning exactly that, because "test what the code does" is the only
- *    honest option while two documents disagree.
+ * 1. **Where masking begins — RESOLVED (#160 review): level 19 and above.**
+ *    Left in this list because the *reason* it is not asserted here still holds:
+ *    the threshold belongs to the game, and WoS+ enforces none. `updateGameState`
+ *    branches purely on the word containing '?', with no reference to
+ *    `currentLevel`. The test below pins that independence deliberately.
  *
  * 2. **The shape of an unguessed slot.** `tests/fixtures/wos-events/README.md`
  *    marks the slot element shape as INFERRED. The fixtures use `letters: []`
@@ -1011,13 +1010,14 @@ describe('specs/game-flow.md § Masked guesses', () => {
   });
 
   it('resolves a masked guess at any level — no level threshold is enforced', async () => {
-    // ❓ Unconfirmed — `specs/game-flow.md § Masked guesses` flags that the code
-    // comments say masking begins at level 19 while `copilot-instructions.md`
-    // says level 20. Neither number is in the code: `updateGameState` branches
+    // ✅ Confirmed (#160 review): masking begins at level 19 and above. That is
+    // the GAME's threshold, not one WoS+ enforces — `updateGameState` branches
     // only on the word containing '?', and never reads `currentLevel`. So a
-    // masked event at level 3 is resolved from chat exactly like one at level
-    // 19. This test pins that, and is the honest answer while the two documents
-    // disagree — it is not a vote for either threshold.
+    // masked event at level 3 is resolved from chat exactly like one at level 19.
+    //
+    // That independence is deliberate, which is why this test is a feature and
+    // not a workaround: if Words on Stream moves the threshold, WoS+ keeps
+    // working and only the spec line changes.
     await useDictionary(CAUTION_DICTIONARY);
     await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [6] }));
     playChatMessage('clarkio', 'action', 1_000);

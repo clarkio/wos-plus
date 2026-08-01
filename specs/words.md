@@ -175,36 +175,29 @@ board is not in the archive.
 
 ---
 
-## Adding a newly seen word
+## Where new words come from
 
-### Scenario: a word WoS+ already knows is not sent again
+New words are derived from **boards**, as part of saving one, and that happens
+in the database layer. WoS+ itself never adds a word to the shared list: it
+reads the list, and the board archive is what grows it.
 
-- **Given** the shared word list already holds `caution`
-- **When** WoS+ is asked to add `CAUTION`
-- **Then** nothing is sent and the list is unchanged
+### Scenario: WoS+ only ever reads the shared word list
 
-### Scenario: a new word becomes known immediately
+- **Given** a level in which players guess words WoS+ does not yet know
+- **When** the level plays out and ends
+- **Then** WoS+ sends nothing to the shared word list — the words reach it later
+  by way of the board being saved
 
-- **Given** the shared word list does not hold `trilby`
-- **When** WoS+ adds `trilby`
-- **Then** the word is recorded in the shared list and WoS+ recognises it from
-  then on without reloading
-
-### Scenario: adding a word fails
-
-- **Given** the shared word list cannot be updated
-- **When** WoS+ tries to add a word
-- **Then** the failure is reported and the word is not treated as known
-
-> ❓ **Unconfirmed** — this whole section reflects capability that exists but is
-> not currently used anywhere in WoS+: no part of a live level adds a word to
-> the shared list today. Maintainer to confirm whether adding words is intended
-> to be wired up (the project notes describe words being added when they are
-> correctly guessed) or whether this should be retired.
+> ⚠️ **Approved, not yet implemented** — WoS+ still carries an unused
+> client-side path for adding a word, which reaches an external address and has
+> no callers. Retiring it is tracked by
+> [#171](https://github.com/clarkio/wos-plus/issues/171). Only *adding* is
+> retired; reading the list stays exactly as it is, and is still what backs the
+> missed-word fallback and masked-guess recovery.
 
 ---
 
-## Open questions for the maintainer
+## Known limitations
 
 ### Scenario: a hidden letter that was never revealed
 
@@ -214,12 +207,14 @@ board is not in the archive.
 - **Then** no word needing that hidden letter is suggested, because WoS+ only
   builds words from the letters it can actually see
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. When WoS+ reconstructs a masked chat guess it *does* treat a
-> still-hidden tile as standing for any letter, so the two paths treat an
-> unrevealed hidden tile differently. Suggesting every word that any letter
-> could complete would be very noisy, so the current behaviour may well be the
-> right call — but it should be a decision, not a coincidence.
+> ✅ **Confirmed (maintainer)** — and the premise turns out to be rarer than it
+> looked. **Hidden letters are always eventually revealed by the game**, through
+> a specific reveal event, so a tile that is still masked when the missed words
+> are worked out is not the normal end state.
+>
+> That is also why this does not really conflict with masked-guess recovery
+> treating a hidden tile as standing for any letter: those two run at different
+> moments, and by the time missed words are worked out the letter is known.
 
 ### Scenario: an archived board whose slots are in a different order
 
@@ -229,7 +224,8 @@ board is not in the archive.
 - **Then** an archived word is only reported as missed when the slot in the
   *same position* of the current level was also unfilled
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. If the game ever presents the same board with its slots in a
-> different order, some genuinely missed words would go unreported. It is not
-> clear whether slot order is guaranteed stable for a given board.
+> ✅ **Confirmed (maintainer)** — matching by slot position is intended and
+> stays. The repair path is what handles a stored board that disagrees with what
+> the game presents: a board found to be broken is mended from a clean capture
+> rather than worked around at read time. See
+> [boards.md § Repairing a board that was stored badly](boards.md).

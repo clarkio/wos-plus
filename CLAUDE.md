@@ -136,11 +136,14 @@ Prefer a failing build over a paragraph of good advice.
 
 ## 4. Known state (keep current)
 
-- Test suite: **635 passing** Vitest tests across 19 files, plus **10
-  `it.todo`**. Every remaining todo is a **deliberate open question or a stated
-  coverage limitation**, indexed in
-  [specs/README.md § Open questions](specs/README.md) — none of them is simply
-  an unwritten test, and none may be deleted to tidy the count.
+- Test suite: **636 passing** Vitest tests across 19 files, plus **8
+  `it.todo`**. Every remaining todo is a **known gap with a tracking issue or a
+  stated coverage limitation** — none is simply an unwritten test, and none may
+  be deleted to tidy the count. The decisions behind them are tabulated in
+  [specs/README.md § Decisions from the #160 review](specs/README.md).
+  - **There are no open spec questions right now.** Every ❓ raised while
+    writing the specs was answered in that review. The ❓ marker and its index
+    stay — they are the mechanism for the next batch, not a leftover.
 - ~~28 `it.todo` placeholders in `tests/integration/api-routes.test.ts`.~~
   **Gone** — every one of those API-route placeholders is now covered by a real
   test in `tests/acceptance/`, so the stub file and the empty
@@ -255,8 +258,12 @@ it is an `it.todo` naming the question. Every one of them is indexed in
 
 - Do not resolve one, and do not remove its marker, without a maintainer's
   answer.
-- Do not delete a deliberate `it.todo` to make the count nicer. All 10 remaining
-  todos are listed in that index; none is an unwritten test.
+- Do not delete a deliberate `it.todo` to make the count nicer. None of the 8
+  remaining is an unwritten test. The one narrow exception already taken: when a
+  maintainer **retires** the spec scenario a todo names, the todo goes with it —
+  a todo pointing at a scenario that no longer exists is worse than none. That
+  is a spec change, not a tidy-up, and it belongs in the same PR as the spec
+  edit.
 - If your change makes a pinned test fail, that is the mechanism working: the
   question now has to be answered in the same PR, not silently settled.
 

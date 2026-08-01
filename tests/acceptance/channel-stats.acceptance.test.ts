@@ -746,7 +746,7 @@ describe('specs/channel-stats.md — approved changes not yet implemented, and o
     // the badges then vanish mid-stream — lives in `src/scripts/wos-plus-main.ts`
     // and belongs with the game-flow work.
 
-    it('reports the chatbot as disabled on a blip, even for a channel that has it — unconfirmed, pending maintainer decision', async () => {
+    it('known gap (#170): reports the chatbot as disabled on a blip, even for a channel that has it', async () => {
       // Same mechanism as "whether the channel has the chatbot cannot be
       // determined", which the spec *does* confirm. What is unconfirmed is the
       // consequence: that a one-off failure is indistinguishable from a channel
@@ -776,10 +776,11 @@ describe('specs/channel-stats.md — approved changes not yet implemented, and o
     });
 
     it.todo(
-      '❓ Unconfirmed: a transient failure should not hide the daily badges — ' +
-      'open question: should chatbotEnabled be sticky across a failed refresh, ' +
-      'the way the three numbers already are? The view half lives in ' +
-      'src/scripts/wos-plus-main.ts (specs/channel-stats.md § Open questions)',
+      'known gap (#170): a transient failure must not hide the daily badges — the ' +
+      'maintainer ruled the badges follow the chatbot GRANT, and a grant does not lapse ' +
+      'for a moment and come back, so chatbotEnabled must be sticky across a failed ' +
+      'refresh the way the three numbers already are. The view half lives in ' +
+      'src/scripts/wos-plus-main.ts (specs/channel-stats.md § Showing the records on screen)',
     );
   });
 

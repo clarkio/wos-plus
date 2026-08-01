@@ -223,36 +223,30 @@ case it is typed in.
 > sends on connect and shows only the stored value. Tracked by
 > [#166](https://github.com/clarkio/wos-plus/issues/166).
 >
-> Note this sits deliberately alongside the chatbot-lag rule in
+> ✅ The distinction is **when**, confirmed by the maintainer. This sits
+> deliberately alongside the chatbot-lag rule in
 > [game-flow.md](game-flow.md): **on connect** the game reports a historical
 > record and wins; **during play** a level just reached waits for the chatbot
-> rather than being applied optimistically. That reading joins two separate
-> maintainer answers and is flagged for confirmation in
-> [#166](https://github.com/clarkio/wos-plus/issues/166).
+> rather than being applied optimistically. The two answers do not conflict —
+> they cover different moments.
 
----
-
-## Open questions for the maintainer
-
-### Scenario: a temporary failure hides the daily badges
+### Scenario: a temporary failure does not hide the daily badges
 
 - **Given** WoS+ is connected to a channel that has the chatbot, and the daily
   badges are visible
 - **And** the channel records briefly cannot be reached
 - **When** a refresh is attempted
-- **Then** the numbers stay as they were, but the daily badges disappear until a
-  later refresh succeeds
+- **Then** the numbers stay as they were **and the daily badges stay visible**
 
-> ❓ **Unconfirmed** — this reflects current behaviour; maintainer to confirm it
-> is intended. The numbers themselves are deliberately protected from a failed
-> refresh, but whether the channel has the chatbot is not, so badges can flicker
-> away mid-stream on a blip.
->
-> **Still open after the #160 review.** The maintainer confirmed *when* these
-> numbers may change — on a refresh, or on a game event — which is now recorded
-> above under § When the numbers change. That answers what moves the numbers,
-> but not whether the **badges** should vanish when a refresh fails. The
-> question here is only about the badges.
+  The badges follow the channel's chatbot **grant**, and a grant does not lapse
+  for a moment and come back. A failed read has not discovered that the channel
+  lost the chatbot; it has discovered nothing at all.
+
+> ⚠️ **Approved, not yet implemented** — WoS+ today reports the channel as not
+> having the chatbot when the read fails, and the badges disappear until a later
+> refresh succeeds. The three numbers are already protected from a failed
+> refresh; whether the channel has the chatbot is not. Tracked by
+> [#170](https://github.com/clarkio/wos-plus/issues/170).
 >
 > A later answer in the same review sharpens it. Having the chatbot is
 > **granted**, not detected — set by hand today, intended to become a paid

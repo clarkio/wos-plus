@@ -119,8 +119,13 @@ follow a **grant**, not a live capability check.
 
 ## Decisions from the #160 review
 
-The maintainer worked through this index in review of PR #160 and answered ten
-of the thirteen questions. Recorded here so the reasoning stays findable.
+The maintainer worked through this index in review of PR #160 and answered
+**every open question**. Recorded here so the reasoning stays findable.
+
+There is no § Open questions section below any more, and that is the point: the
+❓ marker exists to make unanswered questions impossible to overlook, so an
+empty list is the marker having done its job. New ones will appear here as new
+spec work turns them up.
 
 **Approved — WoS+ does not do these yet.** Each is a ⚠️ scenario in the spec,
 with an issue tracking the change. The acceptance tests still pin current
@@ -136,6 +141,9 @@ behaviour, so implementing one forces its test to be inverted deliberately.
 | G3 | The 12-letter chat filter is correct and stays; the **board name rule comes down** from 20 to 12 to match it. Longest word in the shared list is 8, so 12 is the cushion. | [#168](https://github.com/clarkio/wos-plus/issues/168) |
 | *new* | A board's words must all be spellable from its big word's letters; one that is not makes the board **broken and repairable**. | [#163](https://github.com/clarkio/wos-plus/issues/163) |
 | *new* | A board is saved only with a **supplied, supported** word language — no more substituting English. | [#161](https://github.com/clarkio/wos-plus/issues/161) |
+| C2 | The daily badges follow the chatbot **grant**. A failed read must not hide them — it has discovered nothing, not that the channel lost the chatbot. | [#170](https://github.com/clarkio/wos-plus/issues/170) |
+| W1 | The client-side word-adding path is **retired**. New words are derived from boards, in the database layer, as part of the board save flow. Reading the list is untouched. | [#171](https://github.com/clarkio/wos-plus/issues/171) |
+| G6 | On reconnect, rebuild the found-words list from the re-reported slots **only on a level with no masked guesses**. On a masked level the gap stays — a masked guess cannot be recovered after the fact. | [#169](https://github.com/clarkio/wos-plus/issues/169) |
 
 **Confirmed — current behaviour is intended.** No work; the reasoning is
 recorded in the spec so these are not raised again.
@@ -145,51 +153,40 @@ recorded in the spec so these are not raised again.
 | B4 | No paging is fine at ~1,600 boards. Revisit with the stored slot shape if the game ever ships thousands. |
 | G4 | A guess for a slot the board lacks **should never happen** — it means WoS+ took up the wrong board data earlier. The display disagreement is a symptom, and tidying it would hide the signal. |
 | G5 | The all-time best waits for the chatbot **during play**; the chatbot is the source of truth there. This does not conflict with C3, which is about connect time. |
+| G1 | Masking begins at **level 19 and above**. This is the *game's* threshold; WoS+ enforces none, branching only on `?` in the word — so if Words on Stream moves it, WoS+ keeps working and only the spec line changes. |
+| W2 | Excluding a never-revealed hidden letter from missed-word suggestions is correct. **Hidden letters are always eventually revealed** by a specific game event, so a still-masked tile at that point is not the normal end state. |
+| W3 | Missed words stay matched to the archived board **by slot position**. The repair path is what handles a stored board that disagrees with the game, rather than working around it at read time. |
 
 Two answers cross-check each other and are worth reading together: **C3** (the
-game wins on connect) and **G5** (the chatbot wins during play). The joining
-inference — that the distinction is *when*, not *what* — is flagged for
-confirmation in [#166](https://github.com/clarkio/wos-plus/issues/166).
+game wins on connect) and **G5** (the chatbot wins during play). The maintainer
+has **confirmed** the joining reading — the distinction is *when*, not *what*.
+
+One decision was reached by correcting an agent's inference, and is worth
+knowing about before touching the length rules. **G3 was first written the wrong
+way round**: it proposed raising the 12-letter chat filter to match the
+20-letter board rule. The maintainer reversed it — the longest word in the
+shared list is 8, 12 is a deliberate cushion, and the *board* rule comes down.
+The migration risk that carried (stranding an already-stored board with a 13–20
+letter name) was checked against the archive and cleared: no board id exceeds
+12 letters.
 
 ---
 
 ## Open questions
 
-Every ❓ **Unconfirmed** scenario across these specs, in one list, so a
-maintainer can work through them without reading four files.
+**None right now.** Every ❓ **Unconfirmed** scenario raised while writing these
+specs was answered by the maintainer in the review of PR #160, and each answer
+is recorded in the tables above and in the scenario it belongs to.
 
-**This is an index, not a decision log.** Nothing here has been decided, and
-nothing here may be resolved by an agent. Answering one means editing the spec
-scenario it points at — and, where a test pins the behaviour, editing that test
-in the same change.
+This section stays because it is the mechanism, not a leftover. When new spec
+work turns up behaviour that cannot be told apart from an accident, it is
+written as it currently behaves, marked ❓, and listed here — pinned by an
+acceptance test asserting *current behaviour under protest* where the behaviour
+is reachable, or an `it.todo` naming the question where it is not.
 
-Most are pinned by an acceptance test that asserts **current behaviour under
-protest**: the test passes today, and if someone changes the behaviour the test
-fails and forces the question to be answered rather than quietly settled.
-Where the behaviour is not reachable from the code the acceptance stream can
-drive, it is an `it.todo` naming the question instead. Both kinds are marked
-below.
-
-### Channel stats — [channel-stats.md § Open questions](channel-stats.md)
-
-| # | Question | Pinned by |
-| --- | --- | --- |
-| C2 | A brief failure reading the channel records **hides the daily badges**: the three numbers are protected from a failed refresh, but `chatbotEnabled` is not, so badges flicker away on a blip. Still open after the #160 review — the answer there settled *when* the numbers may change, not whether the badges should vanish. **Sharpened by a later answer**: having the chatbot is a *granted* property of the channel (manually today, a paid opt-in later), so it cannot actually change mid-stream — which makes a failed read reporting "no chatbot" a wrong answer rather than a stale one. | route half: `channel-stats.acceptance.test.ts` — "reports the chatbot as disabled on a blip …"; view half: `it.todo` (lives in `wos-plus-main.ts`) |
-
-### Words — [words.md](words.md)
-
-| # | Question | Pinned by |
-| --- | --- | --- |
-| W1 | **Adding words to the shared list is not wired up at all.** The whole "Adding a newly seen word" section is unconfirmed: `/api/words` exports `GET` and `OPTIONS` only (the `POST` handler is commented out, there is no `PATCH`), and the one client-side add path, `updateWordsDb`, `PATCH`es `clarkio.com/wos-dictionary` and has no callers anywhere in `src/`. Should adding be wired up, or retired? | `words.acceptance.test.ts` — canary "serves reads only — no way to add a word exists on this route today", plus three `it.todo`s naming the sub-questions |
-| W2 | A hidden letter **never revealed** is excluded from the missed-word suggestions, while a masked chat guess treats the same tile as standing for any letter. The two paths disagree. | spec only — no acceptance pin |
-| W3 | Missed words from an archived board are matched **by slot position**, so a board presented with its slots re-ordered would under-report. It is not known whether slot order is stable. | spec only — no acceptance pin |
-
-### Game flow — [game-flow.md § Masked guesses](game-flow.md) and [§ Open questions](game-flow.md)
-
-| # | Question | Pinned by |
-| --- | --- | --- |
-| G1 | **Which level the game starts masking guesses at.** The code comments say 19, the architecture notes said 20. Note that **WoS+ itself has no level threshold**: `currentLevel` is only ever assigned, never compared, and the masked path is chosen purely by whether the word arrives with `?` in it. The question is about the *game*, not about WoS+. | `game-flow.acceptance.test.ts` — a masked event at level 3 resolves exactly as one at level 19 would |
-| G6 | On **reconnecting** mid-level, the slots come back correct because the game re-reports them, but the **found-words list does not** — guesses made during the outage were never seen, so the list can be missing words the slots beside it show. Should WoS+ rebuild the list from the re-reported slots, or leave the gap? WoS+ does not currently tell a reconnect apart from joining a game in progress. | spec only — no acceptance pin; raised by the maintainer during the #160 review |
+**Nothing here may be resolved by an agent.** Answering one means editing the
+spec scenario it points at — and, where a test pins the behaviour, editing that
+test in the same change.
 
 ### Gaps recorded, not fixed
 

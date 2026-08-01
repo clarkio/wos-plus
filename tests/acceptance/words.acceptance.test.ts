@@ -308,33 +308,27 @@ describe('specs/words.md — Loading the shared word list', () => {
   });
 });
 
-describe('specs/words.md — Adding a newly seen word (❓ Unconfirmed — not a contract)', () => {
+describe('specs/words.md — Where new words come from (✅ read-only is the contract)', () => {
   /**
-   * The spec marks this **entire section** ❓ Unconfirmed: it describes a
-   * capability that exists but that nothing in a live level uses. Per
-   * `specs/README.md`, an unconfirmed scenario "is not yet part of the
-   * contract", so none of its three scenarios is asserted as passing behaviour
-   * here. They are `it.todo` below, each naming the open question.
+   * RESOLVED in the #160 review. This block used to hold three `it.todo`s asking
+   * whether adding words should be wired up or retired. The maintainer answered:
+   * **retired**. New words are derived from boards, in the database layer, as
+   * part of the board save flow — nothing client-side adds a word, which is why
+   * the add path never acquired a caller.
    *
-   * What is true today, and is worth stating because it is what makes those
-   * scenarios untestable:
+   * Those three todos are gone because the spec scenarios they named are gone,
+   * not to make anything pass: `specs/words.md § Adding a newly seen word` was
+   * replaced by § Where new words come from. A todo naming a scenario that no
+   * longer exists is worse than no todo at all.
    *
-   * - `/api/words` exports `GET` and `OPTIONS` only. A `POST` handler exists in
-   *   `src/pages/api/words.ts` but is entirely commented out, and there is no
-   *   `PATCH` handler at all.
-   * - The one client-side add path, `updateWordsDb` in
-   *   `src/scripts/wos-words.ts`, does not call this route: it `PATCH`es the
-   *   external URL `https://clarkio.com/wos-dictionary`. It has **no callers
-   *   anywhere in `src/`**.
+   * Read-only is therefore no longer an observation about today's code — it is
+   * the contract. The test below asserts it as such.
    *
-   * So the architecture notes' claim that words are auto-added on correct
-   * guesses is not wired up, and the add path that does exist bypasses this
-   * route. Nothing below asserts anything about gameplay wiring.
+   * Note this retires **adding only**. Reading the list is untouched and still
+   * load-bearing: it backs the missed-word fallback and masked-guess recovery.
    */
 
-  // Canary. If someone adds a write handler to `/api/words`, this test fails
-  // and the `it.todo`s underneath it must be answered rather than left behind.
-  it('serves reads only — no way to add a word exists on this route today', async () => {
+  it('serves reads only — adding words is not this route\'s job', async () => {
     const exportedHandlers = Object.keys(wordsRoute)
       .filter((name) => /^[A-Z]+$/.test(name))
       .sort();
@@ -351,20 +345,11 @@ describe('specs/words.md — Adding a newly seen word (❓ Unconfirmed — not a
   });
 
   it.todo(
-    '❓ Unconfirmed: a word WoS+ already knows is not sent again — ' +
-    'open question: should adding words be wired up at all, or retired? ' +
-    'No add endpoint exists on /api/words (specs/words.md § Adding a newly seen word)',
-  );
-
-  it.todo(
-    '❓ Unconfirmed: a new word becomes known immediately — ' +
-    'open question: if adding is kept, should it go through /api/words rather than ' +
-    'the external clarkio.com/wos-dictionary URL that updateWordsDb uses today?',
-  );
-
-  it.todo(
-    '❓ Unconfirmed: adding a word fails and the word is not treated as known — ' +
-    'open question: unreachable until an add endpoint exists to fail',
+    'known gap (#171): the retired add path is still in the tree — `updateWordsDb` in ' +
+    'src/scripts/wos-words.ts PATCHes the external clarkio.com/wos-dictionary URL and has ' +
+    'no callers, and a commented-out POST handler remains in src/pages/api/words.ts. ' +
+    'Both are to be deleted. Not reachable from this route, so it is recorded here rather ' +
+    'than asserted (specs/words.md § Where new words come from)',
   );
 });
 

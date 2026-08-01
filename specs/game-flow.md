@@ -89,25 +89,38 @@ Related: [boards.md](boards.md) covers what happens to a captured board;
   log notes the level is in progress rather than started, and nothing already on
   screen is cleared
 
-### Scenario: reconnecting to a game after losing the connection
+### Scenario: reconnecting to a level with no masked guesses
 
-- **Given** WoS+ was following a level and lost its connection to the game
+- **Given** WoS+ was following a level with no masked guesses in it
 - **And** players kept guessing while WoS+ was away
 - **When** the connection comes back and WoS+ picks the level up again
 - **Then** the level number and the board's slots are adopted afresh from the
-  game — so the slots show the words found during the outage — and nothing
-  already on screen is cleared
+  game, and the found-words list is rebuilt from those slots — so the words
+  found during the outage appear in the list as well as on the board
 
-  WoS+ does not tell a reconnection apart from joining a game in progress; both
-  arrive as the same "level in progress" event and are handled identically.
+### Scenario: reconnecting to a level that has masked guesses
 
-> ❓ **Unconfirmed** — the slots come back correct, because the game re-reports
-> them. The **found-words list** does not: it is built up from guesses as they
-> arrive, and guesses made during the outage were never seen, so words the game
-> now shows in slots can be missing from the list beside them. Whether WoS+
-> should rebuild the found-words list from the re-reported slots on a
-> reconnect — or leave the gap — needs a maintainer's decision. Raised by the
-> maintainer's own question during the review of #160.
+- **Given** WoS+ was following a level in which guesses arrive masked
+- **And** players kept guessing while WoS+ was away
+- **When** the connection comes back and WoS+ picks the level up again
+- **Then** the slots are adopted afresh, but the found-words list is **left with
+  its gap** — the words missed during the outage are not added
+
+  A masked guess cannot be recovered after the fact: the chat message that
+  would have named it has passed, and the game reports the slot as filled
+  without saying with what. A visible gap in the list is better than a guessed
+  word or a blank in it.
+
+  This is the same split as an unrecoverable masked guess at the end of a level
+  (see § Approved, not yet implemented): whether a slot is **filled** and what
+  **word** fills it are two separate facts, and WoS+ can know the first without
+  the second.
+
+> ⚠️ **Approved, not yet implemented** — WoS+ today does not tell a reconnection
+> apart from joining a game in progress: both arrive as the same "level in
+> progress" event and are handled identically, so the found-words list keeps its
+> gap in *both* cases. Tracked by
+> [#169](https://github.com/clarkio/wos-plus/issues/169).
 
 ### Scenario: the game's word language is noticed
 
@@ -225,13 +238,15 @@ game's own reveal near the end of the level.
 
 ## Masked guesses
 
-From level 19 onwards the game stops telling WoS+ which word was guessed: it
+From **level 19 onwards** the game stops telling WoS+ which word was guessed: it
 reports only who guessed and how many letters the word had. WoS+ recovers the
 word from what that player typed in chat.
 
-> ❓ **Unconfirmed** — the level at which masking begins. The code says level 19
-> and the project's architecture notes say level 20. Maintainer to confirm which
-> is right; the scenarios below hold either way.
+> ✅ **Confirmed (maintainer)** — level 19 and above. This is the *game's*
+> threshold, not one WoS+ enforces: WoS+ never compares the level number, and
+> takes the masked path purely because the word arrives with `?` in it. That is
+> deliberate — if Words on Stream ever moves the threshold, WoS+ keeps working
+> and this line is what gets updated.
 
 ### Scenario: a masked guess is recovered from chat
 

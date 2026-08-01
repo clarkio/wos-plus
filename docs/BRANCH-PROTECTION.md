@@ -5,8 +5,14 @@ Branch protection is a repository setting and **cannot be configured from a
 pull request** — a maintainer with admin rights has to enable it in
 **Settings → Branches → Branch protection rules**.
 
-Until this is done, every check in this repo is advisory: an agent (or a human)
-can merge straight past a red build.
+> ✅ **Enabled on `main`** (maintainer, during the #160 review). Before this,
+> every check in the repo was advisory: an agent or a human could merge straight
+> past a red build. That is no longer true, which is what turns the rest of this
+> document from a wish-list into enforcement.
+>
+> This is the single highest-leverage setting in the repository. If it is ever
+> turned off, everything below stops being a gate and becomes a suggestion —
+> silently, with no failing build to say so.
 
 ---
 

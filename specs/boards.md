@@ -61,12 +61,10 @@ board.
 > ⚠️ **Approved, not yet implemented** — WoS+ today allows up to 20 letters
 > here. Tracked by [#168](https://github.com/clarkio/wos-plus/issues/168).
 >
-> **This one needs a check against the live archive before it lands.** Lowering
-> the limit makes any already-stored board with a 13–20 letter name permanently
-> unreachable through lookup — the same trap as
-> [#162](https://github.com/clarkio/wos-plus/issues/162), arrived at from the
-> other side. If any such board exists it must be dealt with in the same change,
-> not discovered afterwards.
+> The migration risk this carried has been **checked and cleared**: lowering the
+> limit would have stranded any already-stored board with a 13–20 letter name,
+> and the maintainer confirmed no board id in the archive exceeds 12 letters. No
+> migration is needed.
 
 ### Scenario: no board name at all
 
