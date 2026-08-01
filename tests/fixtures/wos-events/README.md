@@ -33,7 +33,7 @@ before trusting any field as protocol truth.
 | `data.record` on event 12 | **Known** | `wos-worker.ts` only copies `data.record` onto the result for event 12. |
 | `data.language` (1 = pt, 2 = en, 4 = fr) | **Known** | Documented in `WosWorkerMessage` and mapped by `wosLanguageIdToCode()` in `src/lib/board-utils.ts`. |
 | `data.hiddenLetters` / `data.falseLetters` on event 10 | **Known** | Both read by `wos-worker.ts` and by `handleLetterReveal()`. |
-| `data.slots` **element shape** | **INFERRED** | The worker passes `slots` through untouched, so its shape is invisible to the worker. The fixtures use the `Slots` type declared in `wos-plus-main.ts` (`{ letters, word, user?, hitMax, index, length }`), which is also the shape the existing `wos-plus-main` tests use. Whether WoS itself sends exactly these keys (or, e.g., omits `word`/`user` for unguessed slots) is **not verified**. |
+| `data.slots` **element shape** | ✅ **CONFIRMED (maintainer)** | WoS sends exactly `{ letters, user, hitMax }`. An **unguessed** slot carries a `'.'` placeholder per letter — `{ "letters": [".", ".", ".", "."], "user": null, "hitMax": false }` — so `letters.length` is the slot's word length. A **filled** slot carries the real letters and the finder's name. There is **no `word`, `index` or `length` on the wire**; `wos-plus-main.ts` adds those itself in `updateCurrentLevelSlots` when a guess fills a slot, which is why the `Slots` type declares them. `hitMax: true` marks the longest (big-word) slots. |
 | `data.level` on events 5 and 8 | **INFERRED** | Nothing reads `level` for these events. Included only so the fixtures aren't empty; the value is made up. |
 | `data.letters` on event 7 (Letters Cycled) | **INFERRED** | The name suggests a re-ordered letter set, and the worker copies `data.letters` for every event, but no consumer reads it for event 7. The specific array is made up. |
 | Event 11 (Guessing Unlocked) payload | **INFERRED** | Unknown; modelled as an empty object. Nothing in this repo reads any field of it. |
@@ -50,3 +50,36 @@ Malformed cases (null message, missing `data`, wrong types, empty payload) are
 built inline in `tests/unit/wos-worker.test.ts` rather than stored here — they
 are deliberately-broken inputs, not protocol samples, and keeping them in the
 test keeps the "what breaks" next to "what should happen".
+
+
+---
+
+## The confirmed level-start payload
+
+Supplied by the maintainer from a real game, and the reason the slot shape above
+is no longer marked INFERRED. Trimmed of the fields nothing in this repo reads:
+
+```json
+{
+  "level": 1,
+  "letters": ["r", "b", "a", "d", "e"],
+  "letterPoints": { "r": 1, "b": 3, "a": 1, "d": 2, "e": 1 },
+  "slots": [
+    { "letters": [".", ".", ".", "."], "user": null, "hitMax": false },
+    { "letters": [".", ".", ".", ".", "."], "user": null, "hitMax": true }
+  ],
+  "goal": 51,
+  "marks": [5, 5],
+  "maxPoints": 114,
+  "showAnswers": true,
+  "revealTime": 24000
+}
+```
+
+**Fields WoS sends that WoS+ ignores today**, recorded so they are not mistaken
+for things that need inventing: `letterPoints`, `goal`, `marks`, `maxPoints`,
+`showAnswers`, `revealTime`.
+
+`revealTime` is the interesting one — it corroborates the maintainer's answer on
+**W2**, that hidden letters are always eventually revealed by the game rather
+than staying masked to the end of a level.

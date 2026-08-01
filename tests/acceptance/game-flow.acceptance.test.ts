@@ -66,7 +66,7 @@
  * clock forward and lets the interleaved fetches settle instead.
  *
  * ---------------------------------------------------------------------------
- * ❓ Unconfirmed things this file deliberately does NOT settle
+ * Things this file deliberately does NOT settle (both now resolved upstream)
  * ---------------------------------------------------------------------------
  *
  * 1. **Where masking begins — RESOLVED (#160 review): level 19 and above.**
@@ -75,12 +75,12 @@
  *    branches purely on the word containing '?', with no reference to
  *    `currentLevel`. The test below pins that independence deliberately.
  *
- * 2. **The shape of an unguessed slot.** `tests/fixtures/wos-events/README.md`
- *    marks the slot element shape as INFERRED. The fixtures use `letters: []`
- *    for an unguessed slot; `db-service.saveBoard` rejects boards whose slots
- *    contain '.', which implies WoS actually sends a `['.', '.', …]` placeholder
- *    of the slot's length. That difference is load-bearing — see the pinned test
- *    in `§ Ending a level`.
+ * 2. **The shape of an unguessed slot — RESOLVED.** The maintainer supplied a
+ *    real level-start payload: WoS sends `{ letters: ['.', '.', …], user: null,
+ *    hitMax }`, a placeholder per letter, and no `word`/`index`/`length` at all.
+ *    The fixtures previously used `letters: []`, which is a state the wire never
+ *    produces; they now match. `slot.letters.length` is therefore the slot's word
+ *    length and the code reading it was correct — see § Ending a level.
  */
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1376,30 +1376,34 @@ describe('specs/game-flow.md § Ending a level', () => {
     hidden.mockRestore();
   });
 
-  it('reports missed words of length zero when a slot carries no letters (❓ unconfirmed)', async () => {
-    // ❓ Unconfirmed — `tests/fixtures/wos-events/README.md` marks the slot
-    // element shape as INFERRED. Everywhere else this file builds an unguessed
-    // slot as a '.'-placeholder of the slot's length, which is what
-    // `saveBoard`'s "letters.includes('.')" check implies WoS really sends.
+  it('takes the missed-word minimum from the shortest slot on the board', async () => {
+    // ✅ RESOLVED. This test used to pin the opposite — a minimum length of 0 and
+    // a "0 letter words" summary — because `01-level-start.json` built unguessed
+    // slots as `letters: []`, and the fixtures README marked that shape INFERRED.
     //
-    // This test uses `01-level-start.json` verbatim, where unguessed slots have
-    // `letters: []`, and pins what that shape produces: the missed-word minimum
-    // length collapses to 0 (so words shorter than any slot are reported) and
-    // the end-of-level summary counts every missed word as "0 letter words".
+    // The maintainer supplied a real level-start payload. WoS sends a '.'
+    // placeholder per letter:
     //
-    // If WoS really does send empty letter arrays, both of those are defects in
-    // `logMissingWords`/`logEmptySlots`, which read `slot.letters.length` rather
-    // than the `slot.length` the payload also carries. Maintainer to confirm the
-    // wire shape before either is changed — this test is a description of
-    // current behaviour, not an endorsement of it.
+    //     { "letters": [".", ".", ".", "."], "user": null, "hitMax": false }
+    //
+    // so `slot.letters.length` IS the slot's word length, and the code reading it
+    // was right all along. The fixtures were wrong, and the "defect" this test
+    // appeared to expose never existed — an empty letters array is a state the
+    // wire does not produce.
+    //
+    // Note the wire carries no `word`, `index` or `length` on a slot. WoS+ adds
+    // those itself in `updateCurrentLevelSlots` when a guess fills one, so
+    // `slot.letters.length` is not merely correct, it is the only length
+    // available at level start.
     spectator.isSoundsEnabled = false;
     await playWosEvent(levelStartFixture);
     await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
 
     await playWosEvent(levelResults(2));
 
-    // ACT is three letters; no slot on this board is.
-    expect(missedWords()).toContain('ACT*');
-    expect(gameLog()).toContain('Missed 3: 0 letter words');
+    // The shortest slot holds 4 letters, so ACT (3) is below the board's minimum
+    // and must not be suggested, and the summary counts real lengths.
+    expect(missedWords()).not.toContain('ACT*');
+    expect(gameLog()).not.toContain('0 letter words');
   });
 });

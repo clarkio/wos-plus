@@ -174,40 +174,45 @@ letter name) was checked against the archive and cleared: no board id exceeds
 
 ## Open questions
 
-Every ❓ **Unconfirmed** *scenario* raised while writing these specs was
-answered by the maintainer in the review of PR #160, and each answer is recorded
-in the tables above and in the scenario it belongs to.
-
-**One question remains, and it is not about behaviour — it is about the wire.**
-
-### Game flow — the shape of an unguessed slot
-
-| # | Question | Pinned by |
-| --- | --- | --- |
-| G7 | **What does Words on Stream actually send for a slot nobody has filled?** `tests/fixtures/wos-events/README.md` marks the slot element shape **INFERRED**. The fixtures use `letters: []`; `db-service.saveBoard` rejects boards whose slots contain `'.'`, which implies WoS really sends a `['.', '.', …]` placeholder of the slot's length. Only a maintainer who can watch a real payload can settle it. | `game-flow.acceptance.test.ts` — "reports missed words of length zero when a slot carries no letters (❓ unconfirmed)" |
-
-This one is load-bearing rather than cosmetic. `logMissingWords` and `logEmptySlots`
-read **`slot.letters.length`**, not the `slot.length` the payload also carries. So
-if WoS really does send empty letter arrays for unguessed slots:
-
-- the missed-word **minimum length collapses to 0**, so words shorter than any
-  slot on the board get suggested, and
-- the end-of-level summary counts **every missed word as a "0 letter word"**.
-
-Both would be defects in those two functions — but only under one reading of the
-wire, and reading it the other way makes the current code correct. That is why it
-was left alone: changing it on an inference risks breaking the case that works
-today. The test beside it describes current behaviour and says so explicitly.
+**None right now.** Every ❓ **Unconfirmed** scenario raised while writing these
+specs was answered by the maintainer in the review of PR #160, and each answer is
+recorded in the tables above and in the scenario it belongs to.
 
 This section stays because it is the mechanism, not a leftover. When new spec
-work turns up behaviour that cannot be told apart from an accident, it is
-written as it currently behaves, marked ❓, and listed here — pinned by an
-acceptance test asserting *current behaviour under protest* where the behaviour
-is reachable, or an `it.todo` naming the question where it is not.
+work turns up behaviour that cannot be told apart from an accident, it is written
+as it currently behaves, marked ❓, and listed here — pinned by an acceptance
+test asserting *current behaviour under protest* where the behaviour is
+reachable, or an `it.todo` naming the question where it is not.
 
 **Nothing here may be resolved by an agent.** Answering one means editing the
 spec scenario it points at — and, where a test pins the behaviour, editing that
 test in the same change.
+
+### The last one to close: the shape of an unguessed slot
+
+Worth recording because of *how* it was settled. It never appeared in this index
+while it was open — it lived in `tests/fixtures/wos-events/README.md` as an
+`INFERRED` marker rather than as a spec scenario, which is exactly how a real
+question stays invisible to a list that is supposed to catch them.
+
+The maintainer supplied a real level-start payload. WoS sends a `'.'` placeholder
+per letter for an unguessed slot:
+
+```json
+{ "letters": [".", ".", ".", "."], "user": null, "hitMax": false }
+```
+
+so `slot.letters.length` **is** the slot's word length, and `logMissingWords` and
+`logEmptySlots` reading it were correct all along. **The fixtures were wrong**,
+using `letters: []` — a state the wire never produces — and the "0 letter words"
+defect they appeared to expose never existed. The fixtures now match.
+
+An agent note recorded here on purpose: the case for calling this a defect rested
+on the claim that the payload "also carries `slot.length`". **It does not.** The
+wire has no `word`, `index` or `length` on a slot at all — WoS+ adds those itself
+when a guess fills one. The argument for changing the code was built on a field
+that was never there, and the only thing that stopped it was that the question
+was left open instead of inferred.
 
 ### Gaps recorded, not fixed
 
