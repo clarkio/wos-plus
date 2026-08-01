@@ -174,9 +174,30 @@ letter name) was checked against the archive and cleared: no board id exceeds
 
 ## Open questions
 
-**None right now.** Every ❓ **Unconfirmed** scenario raised while writing these
-specs was answered by the maintainer in the review of PR #160, and each answer
-is recorded in the tables above and in the scenario it belongs to.
+Every ❓ **Unconfirmed** *scenario* raised while writing these specs was
+answered by the maintainer in the review of PR #160, and each answer is recorded
+in the tables above and in the scenario it belongs to.
+
+**One question remains, and it is not about behaviour — it is about the wire.**
+
+### Game flow — the shape of an unguessed slot
+
+| # | Question | Pinned by |
+| --- | --- | --- |
+| G7 | **What does Words on Stream actually send for a slot nobody has filled?** `tests/fixtures/wos-events/README.md` marks the slot element shape **INFERRED**. The fixtures use `letters: []`; `db-service.saveBoard` rejects boards whose slots contain `'.'`, which implies WoS really sends a `['.', '.', …]` placeholder of the slot's length. Only a maintainer who can watch a real payload can settle it. | `game-flow.acceptance.test.ts` — "reports missed words of length zero when a slot carries no letters (❓ unconfirmed)" |
+
+This one is load-bearing rather than cosmetic. `logMissingWords` and `logEmptySlots`
+read **`slot.letters.length`**, not the `slot.length` the payload also carries. So
+if WoS really does send empty letter arrays for unguessed slots:
+
+- the missed-word **minimum length collapses to 0**, so words shorter than any
+  slot on the board get suggested, and
+- the end-of-level summary counts **every missed word as a "0 letter word"**.
+
+Both would be defects in those two functions — but only under one reading of the
+wire, and reading it the other way makes the current code correct. That is why it
+was left alone: changing it on an inference risks breaking the case that works
+today. The test beside it describes current behaviour and says so explicitly.
 
 This section stays because it is the mechanism, not a leftover. When new spec
 work turns up behaviour that cannot be told apart from an accident, it is
@@ -192,12 +213,14 @@ test in the same change.
 
 Not spec scenarios — defects found while writing the acceptance stream, pinned
 as canaries so that fixing one forces its note to be resolved rather than left
-stale. Each needs a maintainer decision because fixing it is new behaviour.
+stale. **All three now have a maintainer decision and a tracking issue.** Each
+canary asserts today's behaviour, so landing a fix turns it red and forces the
+assertion to be inverted deliberately.
 
 | # | Gap | Pinned by |
 | --- | --- | --- |
-| X1 | All three Supabase-backed routes advertise `OPTIONS` in `Access-Control-Allow-Methods` while exporting **no `OPTIONS` handler**, so a real CORS preflight falls through to a 404. Reachable in practice for `PUT /api/boards/[id]`, which does preflight from a browser. | "advertises OPTIONS but exports no handler for it" in `boards.acceptance.test.ts` (×2) and `channel-stats.acceptance.test.ts` |
-| X2 | `/api/channel-stats/[channel]` never inspects the all-time or daily read errors, so an **unreachable archive answers 200 with three zeros** — indistinguishable from a channel that has never played, and worse on screen than an error, because a "successful" zero is news. | `channel-stats.acceptance.test.ts` — the canary under § "A failed refresh leaves the numbers alone" |
+| X1 | All three Supabase-backed routes advertise `OPTIONS` in `Access-Control-Allow-Methods` while exporting **no `OPTIONS` handler**, so a real CORS preflight falls through to a 404. Reachable in practice for `PUT /api/boards/[id]`, which does preflight from a browser. **Approved: export the handlers** — [#172](https://github.com/clarkio/wos-plus/issues/172). | "advertises OPTIONS but exports no handler for it" in `boards.acceptance.test.ts` (×2) and `channel-stats.acceptance.test.ts` |
+| X2 | `/api/channel-stats/[channel]` never inspects the all-time or daily read errors, so an **unreachable archive answers 200 with three zeros** — indistinguishable from a channel that has never played, and worse on screen than an error, because a "successful" zero is news. **Approved: log the errors, and never present a failure as a zero** — hide the badges or keep the last known values. [#173](https://github.com/clarkio/wos-plus/issues/173). Same class as C2/[#170](https://github.com/clarkio/wos-plus/issues/170). | `channel-stats.acceptance.test.ts` — the canary under § "A failed refresh leaves the numbers alone" |
 | X3 | `POST /api/boards` **does not enforce slot completeness** — a slot with an empty word is stored. What keeps incomplete boards out today is the capture side in `wos-plus-main.ts`, which only offers a board once every slot is solved. **Answered in the #160 review** and now tracked by [#162](https://github.com/clarkio/wos-plus/issues/162) along with B1 and B2. | `boards.acceptance.test.ts` — `it.todo` under § "a capture where a word was never fully worked out" |
 
 Two further `it.todo`s are **neither open questions nor gaps** — they are
