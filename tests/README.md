@@ -5,7 +5,11 @@ This directory contains tests for the WoS+ application.
 ## Structure
 
 - `unit/` - Unit tests for individual functions and components
-- `integration/` - Integration tests for API routes and services
+- `acceptance/` - The behavioural contract in [`specs/`](../specs/), executable.
+  Also holds `api-harness.ts` (`invokeRoute`) and `network-mock.ts` (MSW).
+- `property/` - `fast-check` invariants for the dictionary and normalizers
+- `fixtures/` - Recorded WoS event sequences
+- `stubs/` - Module stubs aliased in `vitest.config.ts`
 - `setup.ts` - Global test setup configuration
 - `test-utils.ts` - Shared test utilities and mock helpers
 - `smoke.test.ts` - Basic smoke tests to verify test configuration
@@ -44,20 +48,38 @@ describe('myFunction', () => {
 });
 ```
 
-### Integration Tests
+### Acceptance Tests
 
-Integration tests should be placed in the `integration/` directory and test API routes, database interactions, etc.
+Acceptance tests go in `acceptance/`, named `*.acceptance.test.ts`, one file per
+behaviour area. Each `describe` cites the [`specs/`](../specs/) section it
+implements. API routes are invoked directly — no dev server — and Supabase is
+faked at the HTTP boundary, never with `vi.mock`.
 
 Example:
 ```typescript
+// @vitest-environment node
 import { describe, it, expect } from 'vitest';
+import { GET } from '../../src/pages/api/health';
+import { invokeRoute, readJson } from './api-harness';
+import { setupNetworkMocking } from './network-mock';
 
-describe('API /api/health', () => {
-  it('should return 200 OK', async () => {
-    // Test implementation
+setupNetworkMocking();
+
+describe('specs/game-flow.md — Is WoS+ itself up?', () => {
+  describe('Scenario: checking that WoS+ is running', () => {
+    it('answers that it is running', async () => {
+      const response = await invokeRoute(GET, { url: '/api/health' });
+      expect(response.status).toBe(200);
+      expect(await readJson(response)).toMatchObject({ status: 'ok' });
+    });
   });
 });
 ```
+
+The full conventions — including **why `onUnhandledRequest: 'error'` is not
+what keeps this suite off the network** — are in
+[TESTING.md § The acceptance stream](../TESTING.md#the-acceptance-stream).
+Read it before adding a file here.
 
 ## Test Utilities
 

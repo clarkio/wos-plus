@@ -5,8 +5,14 @@ Branch protection is a repository setting and **cannot be configured from a
 pull request** — a maintainer with admin rights has to enable it in
 **Settings → Branches → Branch protection rules**.
 
-Until this is done, every check in this repo is advisory: an agent (or a human)
-can merge straight past a red build.
+> ✅ **Enabled on `main`** (maintainer, during the #160 review). Before this,
+> every check in the repo was advisory: an agent or a human could merge straight
+> past a red build. That is no longer true, which is what turns the rest of this
+> document from a wish-list into enforcement.
+>
+> This is the single highest-leverage setting in the repository. If it is ever
+> turned off, everything below stops being a gate and becomes a suggestion —
+> silently, with no failing build to say so.
 
 ---
 
@@ -27,15 +33,37 @@ exists today; tick the others as their phases land.
 
 | Check | Workflow | Job | Status |
 | --- | --- | --- | --- |
-| `build` | `tests.yml` | `build` | **available now** — runs install → check → lint → test+coverage → build |
+| `build` | `tests.yml` | `build` | **available now** — runs install → check → lint → acceptance → test+coverage → build |
 | `analyze` | `codeql.yml` | — | pending #153 |
 | `dependency-review` | `dependency-review.yml` | — | pending #153 |
 | `e2e` | e2e workflow | — | pending #152 |
-| acceptance stream | `tests.yml` (separate step today) | — | pending #151 — promote to its own job so the two test streams are independently visible in the required-checks list |
+| acceptance stream | `tests.yml` | `build`, step "Run acceptance tests" | **landed with #151** as a separate *step*, not a separate job — see below |
 
 > The single `build` job currently bundles type-check, lint, tests and build.
 > That is fine for enforcement (any failure fails the job) but coarse in the
 > UI. Splitting it into named jobs is worthwhile once there are more of them.
+
+### Why the acceptance stream is a step, not a job
+
+The two test streams are independently visible as two lines in the `build` job's
+log — a red "Run acceptance tests" means the behavioural contract in `specs/`
+broke, which is a different failure from a unit test breaking.
+
+It stays a *step* deliberately. Required checks are matched by **job** name, and
+this table is the source of truth for what a maintainer ticks in the branch
+protection UI. A new job would not be required until someone came back here and
+added it, so it would look like a gate while enforcing nothing — the same class
+of silent failure as the missing `pull_request` filter described below.
+Promoting it to its own job is fine, but the job name must land in this table in
+the same change.
+
+### The `pull_request` trigger has no branch filter
+
+`tests.yml` triggers on `pull_request` with **no `branches:` filter**, on
+purpose. It previously filtered on `main`, which meant a *stacked* PR — one
+targeting another feature branch — ran no tests at all and read as green,
+because only third-party checks reported. That happened on PR #159. The `push`
+trigger stays scoped to `main`. Do not re-add the filter.
 
 ### Also worth enabling
 

@@ -1,6 +1,10 @@
 allowBuilds:
   '@sentry/cli': true
   esbuild: true
+  # msw's postinstall only copies its browser service worker into a public
+  # directory. The acceptance suite intercepts in Node, so the script has
+  # nothing to do here and is not run.
+  msw: false
   sharp: true
   workerd: true
 
