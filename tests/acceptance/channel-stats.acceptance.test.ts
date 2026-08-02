@@ -630,29 +630,23 @@ describe("specs/channel-stats.md — Reading a channel's records", () => {
       expect(unhandledNetworkRequests()).toEqual([]);
     });
 
-    it('answers 200 with zeroed numbers when every lookup errors', async () => {
+    it('reports a failure rather than fabricating zeros when every lookup errors', async () => {
       /**
-       * ⚠️ GAP, recorded not fixed — a behaviour change, so out of scope here.
+       * Fixed by #173. Previously the route only inspected `userResult.error`,
+       * so a broken all-time/daily lookup was indistinguishable from a channel
+       * that has never played: a 200 carrying three zeros. That is worse than
+       * an error on screen — `specs/channel-stats.md § A failed refresh leaves
+       * the numbers alone` protects the badges by treating a failed read as "no
+       * news", but a successful-looking 200 of zeros *is* news, and a refresh
+       * that may only raise a number would happily believe the archive said
+       * zero.
        *
-       * The spec above says an unreachable archive must be reported as a failed
-       * read with "no numbers back". That holds only when the *client* cannot be
-       * built (the test above). When the database itself answers with an error,
-       * `postgrest-js` resolves with `{ data: null, error }` rather than
-       * throwing, and the route never inspects `allTimeResult.error` or
-       * `dailyResult.error` — only `userResult.error`. So a broken archive is
-       * indistinguishable, to the caller, from a channel that has never played:
-       * a 200 carrying three zeros.
-       *
-       * On screen that is worse than an error. `specs/channel-stats.md
-       * § A failed refresh leaves the numbers alone` protects the badges by
-       * treating a failed read as "no news"; a successful-looking 200 of zeros
-       * is news, and a refresh that may only raise a number will keep 42 while
-       * happily believing the archive said zero.
-       *
-       * Pinned as a canary rather than asserted as contract: when the route
-       * learns to surface these errors this test fails, and the spec scenario
-       * above becomes genuinely covered.
+       * The route now inspects every read error and answers 500 rather than
+       * present a failure as a zero, consistent with the "credentials missing"
+       * scenario above.
        */
+      silenceRouteLogging();
+
       archiveHas({
         allTime: supabaseFailure(ALL_TIME, { message: 'connection reset by peer' }, {
           once: true,
@@ -673,8 +667,101 @@ describe("specs/channel-stats.md — Reading a channel's records", () => {
         params: { channel: 'clarkio' },
       });
 
+      expect(response.status).toBe(500);
+      expect(await readJson<{ error?: string }>(response)).toMatchObject({
+        error: expect.any(String),
+      });
+    });
+
+    it('reports a failure when only the all-time lookup errors, even though the daily lookup succeeded', async () => {
+      silenceRouteLogging();
+
+      archiveHas({
+        allTime: supabaseFailure(ALL_TIME, { message: 'connection reset by peer' }, {
+          once: true,
+          status: 500,
+        }),
+        daily: dailyRow(30, 3),
+        users: chatbotEnabledFor('clarkio'),
+      });
+
+      const response = await invokeRoute(GET, {
+        url: '/api/channel-stats/clarkio',
+        params: { channel: 'clarkio' },
+      });
+
+      expect(response.status).toBe(500);
+      expect(await readJson<{ error?: string }>(response)).toMatchObject({
+        error: expect.any(String),
+      });
+    });
+
+    it('reports a failure when only the daily lookup errors, even though the all-time lookup succeeded', async () => {
+      silenceRouteLogging();
+
+      archiveHas({
+        allTime: allTimeRow(42),
+        daily: supabaseFailure(DAILY, { message: 'connection reset by peer' }, {
+          once: true,
+          status: 500,
+        }),
+        users: chatbotEnabledFor('clarkio'),
+      });
+
+      const response = await invokeRoute(GET, {
+        url: '/api/channel-stats/clarkio',
+        params: { channel: 'clarkio' },
+      });
+
+      expect(response.status).toBe(500);
+      expect(await readJson<{ error?: string }>(response)).toMatchObject({
+        error: expect.any(String),
+      });
+    });
+
+    it('still answers 200 with a zero for a genuine "no rows" on the all-time lookup, not a failure', async () => {
+      // A PGRST116 "no rows" on `.single()` is not a read failure — it is the
+      // normal shape of "this channel has no all-time record yet" and must not
+      // be conflated with the genuine-error cases above.
+      archiveHas({
+        allTime: supabaseNoRows(ALL_TIME, { once: true }),
+        daily: dailyRow(30, 3),
+        users: chatbotEnabledFor('clarkio'),
+      });
+
+      const response = await invokeRoute(GET, {
+        url: '/api/channel-stats/clarkio',
+        params: { channel: 'clarkio' },
+      });
+
       expect(response.status).toBe(200);
-      expect(await readJson(response)).toEqual(NO_RECORDS);
+      expect(await readJson(response)).toEqual({
+        allTimePersonalBest: 0,
+        dailyBest: 30,
+        dailyClears: 3,
+        chatbotEnabled: true,
+      });
+    });
+
+    it('still answers 200 with a zero for a genuine "no rows" on the daily lookup, not a failure', async () => {
+      archiveHas({
+        allTime: allTimeRow(42),
+        daily: supabaseNoRows(DAILY, { once: true }),
+        users: chatbotEnabledFor('clarkio'),
+      });
+
+      const response = await invokeRoute(GET, {
+        url: '/api/channel-stats/clarkio',
+        params: { channel: 'clarkio' },
+      });
+
+      expect(response.status).toBe(200);
+      expect(await readJson(response)).toEqual({
+        allTimePersonalBest: 42,
+        dailyBest: 0,
+        dailyClears: 0,
+        chatbotEnabled: true,
+      });
     });
   });
 });

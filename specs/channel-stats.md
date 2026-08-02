@@ -119,6 +119,16 @@ case it is typed in.
 - **When** stats are read
 - **Then** WoS+ is told the read failed, and no numbers come back
 
+  "Unavailable" covers the archive being unreachable at all (no credentials to
+  build a client) **and** any individual lookup — the all-time record or the
+  daily record — coming back with a genuine database error rather than a
+  legitimate "no rows yet". Either way the answer is a failed read, never a 200
+  carrying fabricated zeros: a phantom zero looks identical to a channel that
+  has genuinely never played, and per
+  [§ A refresh never lowers a number already on screen](#showing-the-records-on-screen)
+  a later real read could never correct it once shown. (Confirmed by the
+  maintainer; fixed by [#173](https://github.com/clarkio/wos-plus/issues/173).)
+
 ---
 
 ## Showing the records on screen

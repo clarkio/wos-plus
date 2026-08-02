@@ -20,7 +20,7 @@ describe intent, not status. This section is the status.
 | 1 — Static analysis gate (ESLint 9 flat, type-aware) | [#147](https://github.com/clarkio/wos-plus/issues/147) | ✅ done | PR #159 |
 | 2a — Close the unit-test gap in `wos-words.ts` | [#148](https://github.com/clarkio/wos-plus/issues/148) | ✅ done | PR #159 |
 | 2b — Fixture-driven tests for `wos-worker` | [#149](https://github.com/clarkio/wos-plus/issues/149) | ✅ done | PR #159 |
-| 2c — Coverage thresholds + ratchet | [#155](https://github.com/clarkio/wos-plus/issues/155) | ✅ done | this PR |
+| 2c — Coverage thresholds + ratchet | [#155](https://github.com/clarkio/wos-plus/issues/155) | ✅ done | PR #175 |
 | 3 — Acceptance-test stream (ATDD) | [#151](https://github.com/clarkio/wos-plus/issues/151) | ✅ done | PR #160 |
 | 4 — Property-based tests (fast-check) | [#150](https://github.com/clarkio/wos-plus/issues/150) | ✅ done | PR #159 |
 | 5 — Mutation testing + change-risk | [#154](https://github.com/clarkio/wos-plus/issues/154) | ⬜ not started | — |
@@ -30,7 +30,7 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of PR #160
+### The numbers, as of PR #175
 
 **636 passing** tests across 19 files, plus 8 deliberate `it.todo`. Coverage
 **90.83% statements / 86.33% branches / 87.79% functions / 91.56% lines**, counting
@@ -58,20 +58,25 @@ Playwright and #154 adds StrykerJS.
 
 ### The behaviour backlog from the #160 review
 
-Thirteen issues, all approved by the maintainer, none implemented:
+Thirteen issues, all approved by the maintainer:
 [#161](https://github.com/clarkio/wos-plus/issues/161)–[#173](https://github.com/clarkio/wos-plus/issues/173).
+**[#173](https://github.com/clarkio/wos-plus/issues/173) is done** (PR
+[#176](https://github.com/clarkio/wos-plus/pull/176)) — twelve remain.
 
-Each has a ⚠️ scenario in `specs/` and an acceptance test **pinning current
-behaviour** under the name `known gap (#N)`. That is the mechanism to understand
-before touching any of them: the test asserts behaviour the maintainer has already
-ruled *wrong*, on purpose, so implementing the fix cannot happen quietly. **Invert
-the assertion in the same PR — never delete it to get green.** A red `known gap`
-test is the system working.
+Each open one has a ⚠️ scenario in `specs/` and an acceptance test **pinning
+current behaviour** under the name `known gap (#N)`. That is the mechanism to
+understand before touching any of them: the test asserts behaviour the
+maintainer has already ruled *wrong*, on purpose, so implementing the fix
+cannot happen quietly. **Invert the assertion in the same PR — never delete it
+to get green.** A red `known gap` test is the system working. #173 shows the
+pattern: the route now tells the all-time and daily lookups apart from a
+genuine "no rows yet" (`PGRST116`) and answers a failure rather than
+fabricating a 200 with zeros, and the `known gap (#173)` canary in
+`channel-stats.acceptance.test.ts` was inverted, not deleted.
 
-Sharpest first, both affecting streamers today:
+Sharpest next, affecting streamers today:
 
-- [#173](https://github.com/clarkio/wos-plus/issues/173) — a failed channel-stats read answers **200 with three zeros**, so a personal best silently reads 0 mid-stream
-- [#170](https://github.com/clarkio/wos-plus/issues/170) — the daily badges vanish on a blip, because `chatbotEnabled` is not protected from a failed refresh the way the three numbers are
+- [#170](https://github.com/clarkio/wos-plus/issues/170) — the daily badges vanish on a blip, because `chatbotEnabled` is not protected from a failed refresh the way the three numbers are. Same defect class as #173; the client-side half (`wos-plus-main.ts`) is out of scope for #173's own fix, deliberately.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 
