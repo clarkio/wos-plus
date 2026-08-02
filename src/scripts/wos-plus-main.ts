@@ -122,7 +122,12 @@ export class GameSpectator {
     this.personalBest = Math.max(this.personalBest, stats.allTimePersonalBest);
     this.dailyBest = Math.max(this.dailyBest, stats.dailyBest);
     this.dailyClears = Math.max(this.dailyClears, stats.dailyClears);
-    this.chatbotEnabled = stats.chatbotEnabled;
+    // Having the chatbot is a grant, not something detected per-request (issue
+    // #170): once a refresh has confirmed it, a later refresh reporting
+    // "disabled" has discovered nothing — most likely a failed or ambiguous
+    // read that fails closed to false — rather than that the channel lost the
+    // chatbot. So this only ever turns on, mirroring the numbers above.
+    this.chatbotEnabled = this.chatbotEnabled || stats.chatbotEnabled;
     this.updateStatsDisplay();
   }
 

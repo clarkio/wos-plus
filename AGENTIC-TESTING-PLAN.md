@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of PR #175
+### The numbers, as of the #170 fix
 
-**636 passing** tests across 19 files, plus 8 deliberate `it.todo`. Coverage
-**90.83% statements / 86.33% branches / 87.79% functions / 91.56% lines**, counting
+**643 passing** tests across 19 files, plus 7 deliberate `it.todo`. Coverage
+**90.91% statements / 86.62% branches / 87.86% functions / 91.64% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -60,8 +60,10 @@ Playwright and #154 adds StrykerJS.
 
 Thirteen issues, all approved by the maintainer:
 [#161](https://github.com/clarkio/wos-plus/issues/161)–[#173](https://github.com/clarkio/wos-plus/issues/173).
-**[#173](https://github.com/clarkio/wos-plus/issues/173) is done** (PR
-[#176](https://github.com/clarkio/wos-plus/pull/176)) — twelve remain.
+**[#173](https://github.com/clarkio/wos-plus/issues/173) and
+[#170](https://github.com/clarkio/wos-plus/issues/170) are done** (PR
+[#176](https://github.com/clarkio/wos-plus/pull/176) and the #170 fix) —
+eleven remain.
 
 Each open one has a ⚠️ scenario in `specs/` and an acceptance test **pinning
 current behaviour** under the name `known gap (#N)`. That is the mechanism to
@@ -74,9 +76,22 @@ genuine "no rows yet" (`PGRST116`) and answers a failure rather than
 fabricating a 200 with zeros, and the `known gap (#173)` canary in
 `channel-stats.acceptance.test.ts` was inverted, not deleted.
 
+#170 shows a variant of the pattern worth knowing before touching a similar
+issue: the defect turned out to be entirely in the **view** layer
+(`GameSpectator.refreshChannelStats()` in `src/scripts/wos-plus-main.ts`),
+not the route. The route's per-request `chatbotEnabled: false` fail-closed
+answer on a genuine read error was already correct and stays unchanged — only
+the client's handling of that answer needed to become sticky (`chatbotEnabled`
+now only ever turns on, mirroring how the three numbers only ever rise). The
+route-level `known gap (#170)` acceptance test was reframed as confirmed
+rather than inverted in place, because the value it pins never changes; the
+real fix is proven by a new test in `tests/unit/wos-plus-main.test.ts` §
+`refreshChannelStats`. See `specs/channel-stats.md` § "a temporary failure
+does not hide the daily badges" for the full reasoning.
+
 Sharpest next, affecting streamers today:
 
-- [#170](https://github.com/clarkio/wos-plus/issues/170) — the daily badges vanish on a blip, because `chatbotEnabled` is not protected from a failed refresh the way the three numbers are. Same defect class as #173; the client-side half (`wos-plus-main.ts`) is out of scope for #173's own fix, deliberately.
+- [#166](https://github.com/clarkio/wos-plus/issues/166) — WoS+ ignores the all-time record the game reports on connect and shows only the stored value, so a channel's real history can lag behind what the game itself knows.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 

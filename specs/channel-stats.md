@@ -252,17 +252,14 @@ case it is typed in.
   for a moment and come back. A failed read has not discovered that the channel
   lost the chatbot; it has discovered nothing at all.
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today reports the channel as not
-> having the chatbot when the read fails, and the badges disappear until a later
-> refresh succeeds. The three numbers are already protected from a failed
-> refresh; whether the channel has the chatbot is not. Tracked by
-> [#170](https://github.com/clarkio/wos-plus/issues/170).
->
-> A later answer in the same review sharpens it. Having the chatbot is
-> **granted**, not detected — set by hand today, intended to become a paid
-> opt-in (see [README.md](README.md#which-channels-have-the-chatbot)). A grant
-> does not lapse for a moment and come back. So a failed read reporting "this
-> channel has no chatbot" is not a stale answer, it is a wrong one, and the
-> badges disappear on the strength of it. That makes the case for treating
-> `chatbotEnabled` like the three numbers — protected from a failed refresh —
-> but it is still the maintainer's call, so the marker stays.
+> ✅ **Confirmed (maintainer)**, fixed by
+> [#170](https://github.com/clarkio/wos-plus/issues/170). This is view
+> behaviour, not route behaviour: `/api/channel-stats/[channel]` still
+> correctly fails closed to `chatbotEnabled: false` on any one request where it
+> can't tell (see § "whether the channel has the chatbot cannot be determined"
+> above — that per-request answer is unchanged and still right). The fix is in
+> `GameSpectator.refreshChannelStats()` (`src/scripts/wos-plus-main.ts`): once a
+> refresh has reported the chatbot as enabled, `chatbotEnabled` only ever turns
+> on, the same way the three numbers only ever rise — a later refresh reporting
+> `false` (whether from a real change or, far more likely, a transient read
+> failure the route can't tell apart from "no chatbot") no longer overwrites it.
