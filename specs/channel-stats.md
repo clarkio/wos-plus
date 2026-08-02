@@ -222,19 +222,28 @@ case it is typed in.
 - **Given** WoS+ connects to a running game that reports the channel's record
   level
 - **When** the connection is made
-- **Then** that number is taken as the truth for the all-time best, and the
-  stored channel record is brought up to date to match it
+- **Then** that number is shown as the all-time best, taking priority over
+  whatever was previously on screen
 
   The game holds the real history; WoS+'s copy is a cache of it. This applies to
   the **all-time best only** — daily best and daily clears still come from the
   chatbot and are not touched.
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today ignores the record the game
-> sends on connect and shows only the stored value. Tracked by
-> [#166](https://github.com/clarkio/wos-plus/issues/166).
+> ✅ **Confirmed (maintainer)**, fixed by
+> [#166](https://github.com/clarkio/wos-plus/issues/166). Display-only, in
+> `GameSpectator`'s Game Connected handler (`src/scripts/wos-plus-main.ts`) —
+> WoS+ never writes this back to the database itself. The maintainer narrowed
+> the scope when implementation started: for a channel that has the chatbot,
+> the chatbot is what keeps `wos_channel_all_time_records` in sync, so there is
+> nothing for WoS+ to write; for a channel without it, nothing has ever written
+> that table and this change doesn't start now — WoS+ just shows the number the
+> game reports. A client-writable stats endpoint would also have been a new,
+> unauthenticated write path (anyone could inflate a channel's record), which
+> is exactly the kind of architecture change `CLAUDE.md` §5 gates behind
+> explicit sign-off; it turned out not to be needed at all.
 >
-> ✅ The distinction is **when**, confirmed by the maintainer. This sits
-> deliberately alongside the chatbot-lag rule in
+> ✅ The distinction from the chatbot-lag rule is **when**, confirmed by the
+> maintainer. This sits deliberately alongside that rule in
 > [game-flow.md](game-flow.md): **on connect** the game reports a historical
 > record and wins; **during play** a level just reached waits for the chatbot
 > rather than being applied optimistically. The two answers do not conflict —

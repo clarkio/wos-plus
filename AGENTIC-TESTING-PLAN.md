@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #170 fix
+### The numbers, as of the #166 fix
 
-**643 passing** tests across 19 files, plus 7 deliberate `it.todo`. Coverage
-**90.91% statements / 86.62% branches / 87.86% functions / 91.64% lines**, counting
+**645 passing** tests across 19 files, plus 6 deliberate `it.todo`. Coverage
+**90.94% statements / 86.70% branches / 87.86% functions / 91.66% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -60,10 +60,11 @@ Playwright and #154 adds StrykerJS.
 
 Thirteen issues, all approved by the maintainer:
 [#161](https://github.com/clarkio/wos-plus/issues/161)–[#173](https://github.com/clarkio/wos-plus/issues/173).
-**[#173](https://github.com/clarkio/wos-plus/issues/173) and
-[#170](https://github.com/clarkio/wos-plus/issues/170) are done** (PR
-[#176](https://github.com/clarkio/wos-plus/pull/176) and the #170 fix) —
-eleven remain.
+**[#173](https://github.com/clarkio/wos-plus/issues/173),
+[#170](https://github.com/clarkio/wos-plus/issues/170) and
+[#166](https://github.com/clarkio/wos-plus/issues/166) are done** (PR
+[#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix and the
+#166 fix) — ten remain.
 
 Each open one has a ⚠️ scenario in `specs/` and an acceptance test **pinning
 current behaviour** under the name `known gap (#N)`. That is the mechanism to
@@ -89,9 +90,25 @@ real fix is proven by a new test in `tests/unit/wos-plus-main.test.ts` §
 `refreshChannelStats`. See `specs/channel-stats.md` § "a temporary failure
 does not hide the daily badges" for the full reasoning.
 
-Sharpest next, affecting streamers today:
+#166 (all-time best follows the game's reported record on connect) narrowed in
+scope during implementation, worth knowing before assuming an issue's text is
+the final word: the original text called for WoS+ to write the game's record
+back to `wos_channel_all_time_records`, but that would have been a new,
+unauthenticated write path — an architecture-tier change under `CLAUDE.md` §5
+that needs sign-off regardless of confidence, and it opened a spoofing
+question (any client could claim a fabricated record). Asked directly, the
+maintainer confirmed no write-back is needed at all: the chatbot already keeps
+the table in sync for channels that have it, and nothing has ever written it
+for channels that don't, so the fix is purely a display update in
+`GameSpectator`'s Game Connected handler. Proven by a new test in
+`tests/unit/wos-plus-main.test.ts` § "worker routing (startEventProcessors)".
 
-- [#166](https://github.com/clarkio/wos-plus/issues/166) — WoS+ ignores the all-time record the game reports on connect and shows only the stored value, so a channel's real history can lag behind what the game itself knows.
+Sharpest next, affecting streamers today: none of the remaining ten are
+flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
+and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
+(see below), and [#164](https://github.com/clarkio/wos-plus/issues/164) (leading
+`#` stripped on the stats path) is the smallest, cleanest remaining pick with no
+overlap and no architecture question.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 

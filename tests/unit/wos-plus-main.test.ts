@@ -1389,6 +1389,62 @@ describe('GameSpectator class', () => {
       expect(document.getElementById('level-value')!.innerText).toBe('5');
     });
 
+    it('should honor the record the game reports on connect as the all-time best (issue #166)', async () => {
+      // The game holds the real history for the all-time best; WoS+'s stored
+      // copy is only a cache of it. On connect the game's reported record
+      // wins, purely in the UI — WoS+ never writes it back to the database
+      // (the chatbot is responsible for that on channels that have it).
+      const wosWorker = findWorkerByUrlSubstring('wos-worker');
+      expect(wosWorker).toBeTruthy();
+
+      spectator.currentChannel = 'testchannel';
+      spectator.personalBest = 3;
+
+      await wosWorker.emitMessage({
+        type: 'wos_event',
+        wosEventType: 12,
+        wosEventName: 'Game Connected',
+        username: '',
+        letters: ['a', 'b', 'c'],
+        hitMax: false,
+        stars: 0,
+        level: 5,
+        record: 47,
+        falseLetters: [],
+        hiddenLetters: [],
+        slots: [],
+        index: 0,
+      });
+
+      expect(spectator.personalBest).toBe(47);
+      expect(document.getElementById('pb-value')!.innerText).toBe('47');
+    });
+
+    it('should leave the all-time best alone when a Game Connected event carries no record', async () => {
+      const wosWorker = findWorkerByUrlSubstring('wos-worker');
+      expect(wosWorker).toBeTruthy();
+
+      spectator.currentChannel = 'testchannel';
+      spectator.personalBest = 12;
+
+      await wosWorker.emitMessage({
+        type: 'wos_event',
+        wosEventType: 12,
+        wosEventName: 'Game Connected',
+        username: '',
+        letters: ['a', 'b', 'c'],
+        hitMax: false,
+        stars: 0,
+        level: 5,
+        falseLetters: [],
+        hiddenLetters: [],
+        slots: [],
+        index: 0,
+      });
+
+      expect(spectator.personalBest).toBe(12);
+    });
+
     it('should route wos letter reveal events to update displays', async () => {
       const wosWorker = findWorkerByUrlSubstring('wos-worker');
       expect(wosWorker).toBeTruthy();
