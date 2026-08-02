@@ -37,6 +37,36 @@ export default defineConfig({
         '**/*.spec.ts',
         'tests/',
       ],
+
+      // Ratchet-only floor (CLAUDE.md §4 / AGENTIC-TESTING-PLAN.md #155):
+      // set just below the measured baseline so ordinary churn doesn't trip
+      // it, but a real regression fails the build. Raising a threshold is
+      // fine any time; lowering one is a deliberate, reviewed act — never
+      // do it just to get CI green.
+      thresholds: {
+        statements: 90,
+        branches: 85,
+        functions: 86,
+        lines: 90,
+
+        // Per-file floors for the crown jewels, measured at PR #155
+        // (statements/branches/functions/lines: 96.77/91.67/95.24/98.78).
+        'src/scripts/wos-words.ts': {
+          statements: 96,
+          branches: 90,
+          functions: 94,
+          lines: 98,
+        },
+        // Applies per-file, not aggregated: the floor here is set by
+        // launch-menu.ts (86.84/63.64/100/91.67), the weakest file in
+        // src/lib — board-utils.ts and cors.ts are both at 100%.
+        'src/lib/**': {
+          statements: 86,
+          branches: 63,
+          functions: 100,
+          lines: 91,
+        },
+      },
     },
 
     // Test file patterns

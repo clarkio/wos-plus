@@ -423,16 +423,30 @@ After running `npm run test:coverage`, coverage reports are generated in:
 
 ### Coverage Goals
 
-Aim for:
-- **Statements**: 80%+
-- **Branches**: 75%+
-- **Functions**: 80%+
-- **Lines**: 80%+
-
 Coverage is reported for **every** file under `src/**/*.ts`, including files no
 test imports yet, so an untested module shows up as `0%` rather than
-disappearing from the report. There are **no enforced thresholds** yet — that
-absence is not licence to lower coverage. Current numbers are in `CLAUDE.md` §4.
+disappearing from the report. Current numbers are in `CLAUDE.md` §4.
+
+**Thresholds are enforced in `vitest.config.ts`, not aspirational.**
+`pnpm run test:coverage` fails the build below:
+
+- **Global floor**: statements 90%, branches 85%, functions 86%, lines 90%
+  (set just below the measured baseline so ordinary churn doesn't trip it).
+- **Per-file floors** for the crown jewels, checked against every matching
+  file individually (not aggregated): `src/scripts/wos-words.ts` (statements
+  96%, branches 90%, functions 94%, lines 98%) and `src/lib/**` (statements
+  86%, branches 63%, functions 100%, lines 91% — set by `launch-menu.ts`, the
+  weakest file in that directory).
+
+**Ratchet-only policy**: thresholds only go up. A PR that adds code must keep
+coverage at or above the floor it's landing against; if you land new tests
+that raise real coverage, raise the threshold in the same PR. Lowering a
+threshold is a deliberate, reviewed act — justify it explicitly in the PR
+description, and never do it just to get CI green. The quarterly target
+remains 85/80/85/85 global as coverage continues to climb.
+
+Padding coverage with assertion-free tests to clear a threshold defeats the
+point — see §2 (Agent contract) in `CLAUDE.md`.
 
 ### What to Test
 
