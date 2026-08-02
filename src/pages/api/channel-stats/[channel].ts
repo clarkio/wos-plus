@@ -44,6 +44,15 @@ export const GET: APIRoute = async ({ params }) => {
 
     const todayUtc = new Date().toISOString().slice(0, 10);
 
+    // PostgREST reports a `.single()` query that matched zero rows as an error
+    // with code `PGRST116` — that is "not found", not "the read failed", and
+    // must keep answering 200 with a zero (see specs/channel-stats.md
+    // § "a channel WoS+ has never seen"). Any other error code is a genuine
+    // failure and must never be presented to the caller as a fabricated zero
+    // (issue #173).
+    const isGenuineReadFailure = (error: { code?: string } | null): boolean =>
+      !!error && error.code !== 'PGRST116';
+
     const [allTimeResult, dailyResult, userResult] = await Promise.all([
       supabase
         .from('wos_channel_all_time_records')
@@ -67,6 +76,27 @@ export const GET: APIRoute = async ({ params }) => {
         .eq('twitch_username', cleanChannel)
         .limit(1),
     ]);
+
+    if (allTimeResult.error) {
+      console.error('Error fetching all-time channel record:', allTimeResult.error);
+    }
+    if (dailyResult.error) {
+      console.error('Error fetching daily channel record:', dailyResult.error);
+    }
+    if (userResult.error) {
+      console.error('Error fetching chatbot-enabled status:', userResult.error);
+    }
+
+    // Never turn a genuine read failure into a fabricated zero: a 200 with
+    // three zeros is indistinguishable from a channel that has never played,
+    // and a refresh may only ever raise the on-screen numbers, so a phantom
+    // zero could never be corrected by a later real read (issue #173).
+    if (isGenuineReadFailure(allTimeResult.error) || isGenuineReadFailure(dailyResult.error)) {
+      return new Response(JSON.stringify({ error: 'Failed to read channel records' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const allTimePersonalBest = allTimeResult.data?.all_time_highest_level_reached ?? 0;
     const dailyBest = dailyResult.data?.highest_level_reached ?? 0;
