@@ -289,6 +289,61 @@ describe('GameSpectator class', () => {
     });
   });
 
+  describe('refreshChannelStats', () => {
+    beforeEach(() => {
+      spectator = new GameSpectator();
+      spectator.currentChannel = 'testchannel';
+    });
+
+    it('keeps the daily badges visible across a refresh that reports the chatbot as disabled (issue #170)', async () => {
+      // Having the chatbot is a grant, not something detected per-request — a
+      // read that comes back saying "not enabled" after one already reported
+      // "enabled" has discovered nothing, not that the channel lost the
+      // chatbot (specs/channel-stats.md § Showing the records on screen).
+      spectator.chatbotEnabled = true;
+
+      vi.mocked(fetchChannelStats).mockResolvedValueOnce({
+        allTimePersonalBest: 42,
+        dailyBest: 30,
+        dailyClears: 3,
+        chatbotEnabled: false,
+      });
+
+      await (spectator as any).refreshChannelStats();
+
+      expect(spectator.chatbotEnabled).toBe(true);
+      expect(document.getElementById('daily-pb-record')!.style.display).toBe('');
+      expect(document.getElementById('daily-clear-record')!.style.display).toBe('');
+    });
+
+    it('turns the daily badges on once a refresh reports the chatbot as enabled', async () => {
+      spectator.chatbotEnabled = false;
+
+      vi.mocked(fetchChannelStats).mockResolvedValueOnce({
+        allTimePersonalBest: 42,
+        dailyBest: 30,
+        dailyClears: 3,
+        chatbotEnabled: true,
+      });
+
+      await (spectator as any).refreshChannelStats();
+
+      expect(spectator.chatbotEnabled).toBe(true);
+      expect(document.getElementById('daily-pb-record')!.style.display).toBe('');
+      expect(document.getElementById('daily-clear-record')!.style.display).toBe('');
+    });
+
+    it('does nothing when no channel is connected', async () => {
+      spectator.currentChannel = '';
+      spectator.chatbotEnabled = true;
+
+      await (spectator as any).refreshChannelStats();
+
+      expect(fetchChannelStats).not.toHaveBeenCalled();
+      expect(spectator.chatbotEnabled).toBe(true);
+    });
+  });
+
   describe('clearBoard', () => {
     beforeEach(() => {
       spectator = new GameSpectator();

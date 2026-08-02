@@ -770,11 +770,11 @@ describe("specs/channel-stats.md — Reading a channel's records", () => {
 // specs/channel-stats.md § Open questions for the maintainer
 // ===========================================================================
 
-describe('specs/channel-stats.md — approved changes not yet implemented, and one still-open question', () => {
+describe('specs/channel-stats.md — approved changes, some still not implemented', () => {
   /**
-   * Mixed block, deliberately. Two of these were answered by the maintainer in
-   * review of PR #160 and are now **known gaps** with issues; one is still an
-   * open question.
+   * Mixed block, deliberately. One of these was answered by the maintainer in
+   * review of PR #160 and is still a **known gap** with an issue; the #170
+   * scenario below has since been resolved and is confirmed, not a gap.
    *
    * Every assertion pins what the code does **today**. None is approved
    * contract, and none may be deleted to make an implementation pass — per
@@ -821,24 +821,24 @@ describe('specs/channel-stats.md — approved changes not yet implemented, and o
     });
   });
 
-  describe('Scenario: a temporary failure hides the daily badges', () => {
+  describe('Scenario: a temporary failure does not hide the daily badges (#170, resolved)', () => {
     // Given WoS+ is connected to a channel that has the chatbot, and the daily
     //       badges are visible
     // And the channel records briefly cannot be reached
     // When a refresh is attempted
-    // Then the numbers stay as they were, but the daily badges disappear until a
-    //      later refresh succeeds
+    // Then the numbers stay as they were and the daily badges stay visible
     //
-    // ❓ Unconfirmed. The route's half is pinned below; the view's half — that
-    // the badges then vanish mid-stream — lives in `src/scripts/wos-plus-main.ts`
-    // and belongs with the game-flow work.
+    // ✅ Confirmed (maintainer), fixed by #170 — see specs/channel-stats.md §
+    // "a temporary failure does not hide the daily badges". This is view
+    // behaviour, not route behaviour: the route's per-request answer below is
+    // unchanged and still correct (same mechanism as "whether the channel has
+    // the chatbot cannot be determined" above). The fix is that
+    // `GameSpectator.refreshChannelStats()` in `src/scripts/wos-plus-main.ts`
+    // now only ever turns `chatbotEnabled` on, so a later blip reporting
+    // `false` no longer overwrites a grant it already observed — see
+    // `tests/unit/wos-plus-main.test.ts` § refreshChannelStats.
 
-    it('known gap (#170): reports the chatbot as disabled on a blip, even for a channel that has it', async () => {
-      // Same mechanism as "whether the channel has the chatbot cannot be
-      // determined", which the spec *does* confirm. What is unconfirmed is the
-      // consequence: that a one-off failure is indistinguishable from a channel
-      // genuinely without the chatbot, so a transient error hides badges that
-      // were legitimately on screen a second ago.
+    it('still fails closed to chatbotEnabled: false on a single request, even though the numbers survive the blip', async () => {
       archiveHas({
         allTime: allTimeRow(42),
         daily: dailyRow(30, 3),
@@ -854,21 +854,11 @@ describe('specs/channel-stats.md — approved changes not yet implemented, and o
       });
 
       expect(await readJson(response)).toMatchObject({
-        // The numbers survive the blip …
         dailyBest: 30,
         dailyClears: 3,
-        // … but the flag that decides whether they are shown does not.
         chatbotEnabled: false,
       });
     });
-
-    it.todo(
-      'known gap (#170): a transient failure must not hide the daily badges — the ' +
-      'maintainer ruled the badges follow the chatbot GRANT, and a grant does not lapse ' +
-      'for a moment and come back, so chatbotEnabled must be sticky across a failed ' +
-      'refresh the way the three numbers already are. The view half lives in ' +
-      'src/scripts/wos-plus-main.ts (specs/channel-stats.md § Showing the records on screen)',
-    );
   });
 
   describe('Scenario: the all-time best the game itself reports', () => {

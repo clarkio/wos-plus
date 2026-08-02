@@ -141,7 +141,6 @@ behaviour, so implementing one forces its test to be inverted deliberately.
 | G3 | The 12-letter chat filter is correct and stays; the **board name rule comes down** from 20 to 12 to match it. Longest word in the shared list is 8, so 12 is the cushion. | [#168](https://github.com/clarkio/wos-plus/issues/168) |
 | *new* | A board's words must all be spellable from its big word's letters; one that is not makes the board **broken and repairable**. | [#163](https://github.com/clarkio/wos-plus/issues/163) |
 | *new* | A board is saved only with a **supplied, supported** word language — no more substituting English. | [#161](https://github.com/clarkio/wos-plus/issues/161) |
-| C2 | The daily badges follow the chatbot **grant**. A failed read must not hide them — it has discovered nothing, not that the channel lost the chatbot. | [#170](https://github.com/clarkio/wos-plus/issues/170) |
 | W1 | The client-side word-adding path is **retired**. New words are derived from boards, in the database layer, as part of the board save flow. Reading the list is untouched. | [#171](https://github.com/clarkio/wos-plus/issues/171) |
 | G6 | On reconnect, rebuild the found-words list from the re-reported slots **only on a level with no masked guesses**. On a masked level the gap stays — a masked guess cannot be recovered after the fact. | [#169](https://github.com/clarkio/wos-plus/issues/169) |
 
@@ -156,6 +155,7 @@ recorded in the spec so these are not raised again.
 | G1 | Masking begins at **level 19 and above**. This is the *game's* threshold; WoS+ enforces none, branching only on `?` in the word — so if Words on Stream moves it, WoS+ keeps working and only the spec line changes. |
 | W2 | Excluding a never-revealed hidden letter from missed-word suggestions is correct. **Hidden letters are always eventually revealed** by a specific game event, so a still-masked tile at that point is not the normal end state. |
 | W3 | Missed words stay matched to the archived board **by slot position**. The repair path is what handles a stored board that disagrees with the game, rather than working around it at read time. |
+| ~~C2~~ | ~~The daily badges follow the chatbot **grant**. A failed read must not hide them — it has discovered nothing, not that the channel lost the chatbot.~~ **Fixed** — `GameSpectator.refreshChannelStats()` now only ever turns `chatbotEnabled` on, mirroring the three numbers; the route's own per-request fail-closed answer is unchanged and still correct. Per [#170](https://github.com/clarkio/wos-plus/issues/170). |
 
 Two answers cross-check each other and are worth reading together: **C3** (the
 game wins on connect) and **G5** (the chatbot wins during play). The maintainer
