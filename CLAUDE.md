@@ -152,12 +152,23 @@ Prefer a failing build over a paragraph of good advice.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
 - Coverage: **90.83% statements / 86.33% branches / 87.79% functions /
   91.56% lines**. It counts **all** files under `src/**/*.ts`, so an untested
-  module appears at 0% instead of being invisible. There are **no coverage
-  thresholds yet** — do not let that absence justify lowering coverage.
+  module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.
   - `src/scripts/wos-widget.ts` is still at **0%** — the one module no test
     imports.
+  - **Thresholds are enforced** (`vitest.config.ts` `coverage.thresholds`,
+    landed with [#155](https://github.com/clarkio/wos-plus/issues/155)):
+    global floor statements 90 / branches 85 / functions 86 / lines 90, plus
+    per-file floors for `src/scripts/wos-words.ts` (96/90/94/98) and
+    `src/lib/**` (86/63/100/91, set by `launch-menu.ts`, the weakest file
+    there — `cors.ts` and `board-utils.ts` are both at 100%). Per-file
+    thresholds apply to each matching file individually, not aggregated.
+    **Ratchet-only policy**: thresholds only go up. A PR that adds code keeps
+    coverage at or above the floor it lands against; lowering a threshold is
+    a deliberate, reviewed act justified in the PR, never a shortcut to green.
+    Quarterly target stays 85/80/85/85 global. Details in
+    [TESTING.md § Coverage](TESTING.md#coverage).
 - ~~Known coverage-tooling gap: the four API routes importing
   `cloudflare:workers` are dropped from coverage.~~ **Fixed** — the specifier is
   aliased to `tests/stubs/cloudflare-workers.ts` in `vitest.config.ts`.

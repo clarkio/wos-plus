@@ -20,7 +20,7 @@ describe intent, not status. This section is the status.
 | 1 — Static analysis gate (ESLint 9 flat, type-aware) | [#147](https://github.com/clarkio/wos-plus/issues/147) | ✅ done | PR #159 |
 | 2a — Close the unit-test gap in `wos-words.ts` | [#148](https://github.com/clarkio/wos-plus/issues/148) | ✅ done | PR #159 |
 | 2b — Fixture-driven tests for `wos-worker` | [#149](https://github.com/clarkio/wos-plus/issues/149) | ✅ done | PR #159 |
-| **2c — Coverage thresholds + ratchet** | [**#155**](https://github.com/clarkio/wos-plus/issues/155) | ⬜ **not started** | — |
+| 2c — Coverage thresholds + ratchet | [#155](https://github.com/clarkio/wos-plus/issues/155) | ✅ done | this PR |
 | 3 — Acceptance-test stream (ATDD) | [#151](https://github.com/clarkio/wos-plus/issues/151) | ✅ done | PR #160 |
 | 4 — Property-based tests (fast-check) | [#150](https://github.com/clarkio/wos-plus/issues/150) | ✅ done | PR #159 |
 | 5 — Mutation testing + change-risk | [#154](https://github.com/clarkio/wos-plus/issues/154) | ⬜ not started | — |
@@ -42,12 +42,14 @@ ever disagree, believe `CLAUDE.md`.
 
 ### What to do next, and why
 
-**#155 first.** It is small, and it turns 90.83% from an achievement into a floor
-that cannot silently erode — every PR after it lands against an enforced baseline.
-Suggested thresholds are roughly current-minus-one so ordinary churn does not trip
-them: statements 90, branches 85, functions 86, lines 90.
+**#155 is done.** `vitest.config.ts` now enforces a global floor (statements 90,
+branches 85, functions 86, lines 90) plus per-file floors for `wos-words.ts` and
+`src/lib/**`, with a ratchet-only policy documented in `CLAUDE.md` § 4 and
+`TESTING.md` § Coverage. `pnpm run test:coverage` fails below those numbers —
+verified by temporarily raising a threshold above measured reality and watching
+the run fail, then reverting.
 
-Then the **behaviour issues** below, which include live defects. Then #153 (cheap,
+Next: the **behaviour issues** below, which include live defects. Then #153 (cheap,
 workflow files only), then #154. #152 last or never — `wrangler dev` may not run in
 a sandbox at all.
 
