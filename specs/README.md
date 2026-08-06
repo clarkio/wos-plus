@@ -136,7 +136,6 @@ behaviour, so implementing one forces its test to be inverted deliberately.
 | B1, B2 | The board **save** path must apply the same name, slot and completeness guards as lookup and repair. Today it applies only the repeated-word rule. | [#162](https://github.com/clarkio/wos-plus/issues/162) |
 | B3 | A board is filed under the **longest** word on it, alphabetically last among ties — not the last slot's word. | [#165](https://github.com/clarkio/wos-plus/issues/165) |
 | C1 | A leading `#` is **always** stripped, on the stats path as well as the board path. | [#164](https://github.com/clarkio/wos-plus/issues/164) |
-| C3 | The record level the game reports **on connect** wins over the stored value, and the stored record is updated. All-time best only. | [#166](https://github.com/clarkio/wos-plus/issues/166) |
 | G2 | An unrecoverable masked guess **counts as a clear**, but **blocks the board save**. Two outcomes, deliberately decoupled. | [#167](https://github.com/clarkio/wos-plus/issues/167) |
 | G3 | The 12-letter chat filter is correct and stays; the **board name rule comes down** from 20 to 12 to match it. Longest word in the shared list is 8, so 12 is the cushion. | [#168](https://github.com/clarkio/wos-plus/issues/168) |
 | *new* | A board's words must all be spellable from its big word's letters; one that is not makes the board **broken and repairable**. | [#163](https://github.com/clarkio/wos-plus/issues/163) |
@@ -156,6 +155,7 @@ recorded in the spec so these are not raised again.
 | W2 | Excluding a never-revealed hidden letter from missed-word suggestions is correct. **Hidden letters are always eventually revealed** by a specific game event, so a still-masked tile at that point is not the normal end state. |
 | W3 | Missed words stay matched to the archived board **by slot position**. The repair path is what handles a stored board that disagrees with the game, rather than working around it at read time. |
 | ~~C2~~ | ~~The daily badges follow the chatbot **grant**. A failed read must not hide them — it has discovered nothing, not that the channel lost the chatbot.~~ **Fixed** — `GameSpectator.refreshChannelStats()` now only ever turns `chatbotEnabled` on, mirroring the three numbers; the route's own per-request fail-closed answer is unchanged and still correct. Per [#170](https://github.com/clarkio/wos-plus/issues/170). |
+| ~~C3~~ | ~~The record level the game reports **on connect** wins over the stored value, and the stored record is updated.~~ **Fixed, scope narrowed** — display-only in `GameSpectator`'s Game Connected handler; WoS+ never writes the record back itself. The chatbot already keeps the stored value in sync for channels that have it, and nothing has ever written it for channels that don't, so there was no write-back left to build — a client-writable stats endpoint would also have been an unauthenticated write path. Per [#166](https://github.com/clarkio/wos-plus/issues/166). |
 
 Two answers cross-check each other and are worth reading together: **C3** (the
 game wins on connect) and **G5** (the chatbot wins during play). The maintainer

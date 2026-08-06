@@ -861,24 +861,20 @@ describe('specs/channel-stats.md — approved changes, some still not implemente
     });
   });
 
-  describe('Scenario: the all-time best the game itself reports', () => {
-    // Given WoS+ connects to a running game that reports the channel's record level
-    // When the connection is made
-    // Then that number is ignored, and the all-time best shown comes only from
-    //      the stored channel records
-    //
-    // Nothing in this route can see the game's connection payload, so there is
-    // no route-level half to pin. Recorded here because the question belongs to
-    // this spec file.
-
-    it.todo(
-      'known gap (#166): the record level on the game connection payload is ignored — ' +
-      'the maintainer ruled the game is the source of truth for the all-time best on ' +
-      'connect, and the stored record should be updated to match. The code comment ' +
-      'saying so was right; nothing read the value. Lives in src/scripts/wos-plus-main.ts ' +
-      '(specs/channel-stats.md § Approved, not yet implemented)',
-    );
-  });
+  // Scenario: the all-time best the game itself reports (#166, resolved)
+  //
+  // Given WoS+ connects to a running game that reports the channel's record level
+  // When the connection is made
+  // Then that number is shown as the all-time best, taking priority over
+  //      whatever was previously on screen
+  //
+  // ✅ Confirmed (maintainer), fixed by #166 — display-only, in
+  // `GameSpectator`'s Game Connected handler. Nothing in this route can see
+  // the game's connection payload, so there is no route-level half to pin;
+  // the real test lives in `tests/unit/wos-plus-main.test.ts` §
+  // "worker routing (startEventProcessors)". See specs/channel-stats.md §
+  // "the all-time best the game itself reports" for why this turned out not
+  // to need a write-back path at all.
 });
 
 // ===========================================================================

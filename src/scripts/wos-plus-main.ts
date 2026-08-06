@@ -216,7 +216,7 @@ export class GameSpectator {
     // Set up WOS worker message handler
     wosWorker.onmessage = async (e) => {
       if (e.data.type === 'wos_event') {
-        const { wosEventType, wosEventName, username, letters, hitMax, stars, level, falseLetters, hiddenLetters, slots, index, language } = e.data;
+        const { wosEventType, wosEventName, username, letters, hitMax, stars, level, record, falseLetters, hiddenLetters, slots, index, language } = e.data;
 
         const message = username ? `:${username} - ${letters.join('')} - Big Word: ${hitMax}` : '';
         console.log(`[WOS Event] <${wosEventName}>${message}`);
@@ -232,6 +232,16 @@ export class GameSpectator {
 
         if (wosEventType === 1 || wosEventType === 12) {
           this.handleGameInitialization(level, wosEventType, letters, slots);
+          if (wosEventType === 12 && typeof record === 'number') {
+            // The game holds the real history for the all-time best; WoS+'s
+            // stored copy is only a cache of it, so on connect the game's
+            // reported record wins over whatever is currently shown (issue
+            // #166). This is a display-only update — WoS+ never writes it
+            // back to the database; the chatbot is what keeps the stored
+            // record in sync for channels that have it.
+            this.personalBest = record;
+            this.updateStatsDisplay();
+          }
           await this.refreshChannelStats();
         } else if (wosEventType === 3) {
           await this.handleCorrectGuess(username, letters, index, hitMax);
