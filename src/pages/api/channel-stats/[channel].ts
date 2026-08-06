@@ -20,7 +20,10 @@ export const GET: APIRoute = async ({ params }) => {
     });
   }
 
-  const cleanChannel = channel.toLowerCase().trim();
+  // Streamers write channel names both with and without a leading '#'; strip
+  // it here the same way normalizeTwitchChannel does for the board path, so
+  // '#clarkio' and 'clarkio' resolve to the same channel everywhere (#164).
+  const cleanChannel = channel.trim().replace(/^#/, '').toLowerCase();
 
   if (!/^[a-z0-9_]+$/.test(cleanChannel)) {
     return new Response(JSON.stringify({ error: 'Invalid channel name format. Only lowercase letters, numbers, and underscores are allowed.' }), {
