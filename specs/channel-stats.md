@@ -204,18 +204,21 @@ case it is typed in.
 
 ---
 
-## Approved, not yet implemented
+## Naming a channel written the way a streamer would type it
 
-### Scenario: a channel name written the way a streamer would type it
+### Scenario: a channel name with a leading hash
 
 - **Given** stats are requested for `#clarkio`
 - **When** WoS+ handles the request
 - **Then** the leading `#` is stripped and the stats for `clarkio` come back
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today *rejects* this as an invalid
-> channel name, while the board path accepts the same input and strips the `#`.
-> The leading `#` should always be stripped, in either case. Tracked by
-> [#164](https://github.com/clarkio/wos-plus/issues/164).
+> ✅ **Confirmed (maintainer)**, fixed by
+> [#164](https://github.com/clarkio/wos-plus/issues/164). The route strips a
+> leading `#` before validating the channel name, the same way
+> `normalizeTwitchChannel` does for the board path, so `#clarkio` and
+> `clarkio` are the same channel everywhere in WoS+.
+
+## Approved, not yet implemented
 
 ### Scenario: the all-time best the game itself reports
 

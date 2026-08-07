@@ -61,10 +61,11 @@ Playwright and #154 adds StrykerJS.
 Thirteen issues, all approved by the maintainer:
 [#161](https://github.com/clarkio/wos-plus/issues/161)–[#173](https://github.com/clarkio/wos-plus/issues/173).
 **[#173](https://github.com/clarkio/wos-plus/issues/173),
-[#170](https://github.com/clarkio/wos-plus/issues/170) and
-[#166](https://github.com/clarkio/wos-plus/issues/166) are done** (PR
-[#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix and the
-#166 fix) — ten remain.
+[#170](https://github.com/clarkio/wos-plus/issues/170),
+[#166](https://github.com/clarkio/wos-plus/issues/166) and
+[#164](https://github.com/clarkio/wos-plus/issues/164) are done** (PR
+[#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
+#166 fix and the #164 fix) — nine remain.
 
 Each open one has a ⚠️ scenario in `specs/` and an acceptance test **pinning
 current behaviour** under the name `known gap (#N)`. That is the mechanism to
@@ -103,12 +104,13 @@ for channels that don't, so the fix is purely a display update in
 `GameSpectator`'s Game Connected handler. Proven by a new test in
 `tests/unit/wos-plus-main.test.ts` § "worker routing (startEventProcessors)".
 
-Sharpest next, affecting streamers today: none of the remaining ten are
+Sharpest next, affecting streamers today: none of the remaining nine are
 flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
 and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below), and [#164](https://github.com/clarkio/wos-plus/issues/164) (leading
-`#` stripped on the stats path) is the smallest, cleanest remaining pick with no
-overlap and no architecture question.
+(see below), and [#172](https://github.com/clarkio/wos-plus/issues/172) (export
+the `OPTIONS` handlers the three Supabase-backed routes already advertise) is
+the smallest, cleanest remaining pick with no overlap and no architecture
+question — the pattern to copy (`/api/words`) is already in the tree.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 

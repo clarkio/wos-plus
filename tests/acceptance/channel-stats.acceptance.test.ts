@@ -783,38 +783,35 @@ describe('specs/channel-stats.md — approved changes, some still not implemente
    */
 
   describe('Scenario: a channel name written the way a streamer would type it', () => {
-    // APPROVED (#164): the leading `#` is stripped and the stats for `clarkio`
-    //                  come back. The maintainer's ruling is that `#` is always
-    //                  stripped, on this path as well as the board path.
-    // TODAY:           it is rejected as an invalid channel name.
-    //
-    // The assertion below pins TODAY. Invert it when #164 lands.
+    // RESOLVED (#164): the leading `#` is stripped and the stats for `clarkio`
+    //                  come back, matching the board path's normaliser.
 
-    it('known gap (#164): rejects a leading hash the board path would accept', async () => {
+    it('#164: strips a leading hash the same way the board path does', async () => {
+      archiveHas({ allTime: allTimeRow(42) });
+
       const response = await invokeRoute(GET, {
         url: '/api/channel-stats/%23clarkio',
         params: { channel: '#clarkio' },
       });
 
-      expect(response.status).toBe(400);
-      expect(await readJson<{ error: string }>(response)).toMatchObject({
-        error: 'Invalid channel name format. Only lowercase letters, numbers, and underscores are allowed.',
+      expect(response.status).toBe(200);
+      expect(await readJson(response)).toMatchObject({
+        allTimePersonalBest: 42,
+        dailyBest: 0,
+        dailyClears: 0,
+        chatbotEnabled: false,
       });
       expect(unhandledNetworkRequests()).toEqual([]);
     });
 
-    it('is the opposite of what the same name gets when a board is recorded', () => {
+    it('now agrees with what the same name gets when a board is recorded', () => {
       /**
-       * The concrete shape of the open question: two normalisers, two answers
-       * for one name a streamer plausibly types either way.
+       * The concrete shape of the fix: one normaliser, one answer for a name a
+       * streamer plausibly types either way.
        *
-       *   - reading stats     → the inline regex in `[channel].ts` rejects it
+       *   - reading stats     → the route strips the leading `#` before validating
        *   - recording a board → `normalizeTwitchChannel` strips the `#` and
        *                         accepts it (see `specs/boards.md`)
-       *
-       * Asserted side by side so the divergence is a fact on the record rather
-       * than a claim in a comment. If the maintainer unifies the two, this test
-       * fails and both halves of the question get answered at once.
        */
       expect(normalizeTwitchChannel('#clarkio')).toBe('clarkio');
       expect(normalizeTwitchChannel('#ClarkIO')).toBe('clarkio');
