@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #172 fix
+### The numbers, as of the #161 fix
 
-**648 passing** tests across 19 files, plus 6 deliberate `it.todo`. Coverage
-**90.98% statements / 86.70% branches / 88.06% functions / 91.68% lines**, counting
+**650 passing** tests across 19 files, plus 6 deliberate `it.todo`. Coverage
+**90.99% statements / 86.62% branches / 88.06% functions / 91.69% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -63,10 +63,24 @@ Thirteen issues, all approved by the maintainer:
 **[#173](https://github.com/clarkio/wos-plus/issues/173),
 [#170](https://github.com/clarkio/wos-plus/issues/170),
 [#166](https://github.com/clarkio/wos-plus/issues/166),
-[#164](https://github.com/clarkio/wos-plus/issues/164) and
-[#168](https://github.com/clarkio/wos-plus/issues/168) are done** (PR
+[#164](https://github.com/clarkio/wos-plus/issues/164),
+[#168](https://github.com/clarkio/wos-plus/issues/168) and
+[#161](https://github.com/clarkio/wos-plus/issues/161) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
-#166 fix, the #164 fix and the #168 fix) — eight remain.
+#166 fix, the #164 fix, the #168 fix and the #161 fix) — seven remain.
+
+**#161 is done** — both `POST /api/boards` and the client's `saveBoard` in
+`src/scripts/db-service.ts` now reject a fresh save whose word language is
+missing or unrecognised, instead of silently substituting English. The
+self-healing repair branch (an existing board saved with redundant words,
+replaced via `PUT /api/boards/[id]`) deliberately keeps its old fallback —
+`specs/boards.md` § Repairing a board already says a repair carrying no
+language leaves the stored value alone, and that scenario was out of #161's
+scope. The two `known gap (#161)` acceptance scenarios in
+`boards.acceptance.test.ts` were inverted, not deleted, and a new scenario
+for "no language key at all" was added alongside them.
+`specs/boards.md` § Channel and language on a captured board is now ✅
+Confirmed for both scenarios rather than ⚠️.
 
 Separately, **[#172](https://github.com/clarkio/wos-plus/issues/172)** (the X1
 gap: export the `OPTIONS` handlers the three Supabase-backed routes already
@@ -126,15 +140,16 @@ boundary test for the longest-valid (12-letter) name; the length assertions
 in `tests/unit/db-service.test.ts` were updated to the new numbers.
 `specs/boards.md` § Naming a board is now ✅ Confirmed rather than ⚠️.
 
-Sharpest next, affecting streamers today: none of the remaining eight are
+Sharpest next, affecting streamers today: none of the remaining seven are
 flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
 and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below). With #172 and #168 done, the next cleanest picks without an
-overlapping PR are [#163](https://github.com/clarkio/wos-plus/issues/163)
-(board words must be spellable from the big word's letters) and
-[#161](https://github.com/clarkio/wos-plus/issues/161) (reject an
-unsupported word language on save) — neither touches the two files #142/#144
-are already mid-flight on.
+(see below). With #172, #168 and #161 done, the next cleanest pick without an
+overlapping PR is [#163](https://github.com/clarkio/wos-plus/issues/163)
+(a stored board containing a word with letters not on the board is broken and
+repairable) — it doesn't touch the two files #142/#144 are already mid-flight
+on. [#162](https://github.com/clarkio/wos-plus/issues/162) and
+[#171](https://github.com/clarkio/wos-plus/issues/171) are also clear of both
+PRs, but larger in scope.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 

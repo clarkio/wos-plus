@@ -183,10 +183,11 @@ unrecognised one, is not saved.
 - **When** the board is saved
 - **Then** the board is rejected and nothing is saved
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today saves the board with English
-> as its language. Recording a Portuguese board as English quietly corrupts the
-> archive for every future level on that board, which is worse than refusing the
-> capture. Tracked by [#161](https://github.com/clarkio/wos-plus/issues/161).
+> ✅ **Confirmed (maintainer)** — implemented in
+> [#161](https://github.com/clarkio/wos-plus/issues/161). Both `POST
+> /api/boards` and the client's `saveBoard` now reject a capture whose
+> language is missing or unrecognised, before anything reaches the archive.
+> The English-substitution path is gone.
 
 ### Scenario: a capture with no word language at all
 
@@ -194,8 +195,9 @@ unrecognised one, is not saved.
 - **When** the board is saved
 - **Then** the board is rejected and nothing is saved
 
-> ⚠️ **Approved, not yet implemented** — see
-> [#161](https://github.com/clarkio/wos-plus/issues/161).
+> ✅ **Confirmed (maintainer)** — implemented in
+> [#161](https://github.com/clarkio/wos-plus/issues/161), alongside the
+> scenario above.
 
 ---
 
