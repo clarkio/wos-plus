@@ -137,7 +137,7 @@ Prefer a failing build over a paragraph of good advice.
 
 ## 4. Known state (keep current)
 
-- Test suite: **648 passing** Vitest tests across 19 files, plus **6
+- Test suite: **649 passing** Vitest tests across 19 files, plus **6
   `it.todo`**. Every remaining todo is a **known gap with a tracking issue or a
   stated coverage limitation** — none is simply an unwritten test, and none may
   be deleted to tidy the count. The decisions behind them are tabulated in

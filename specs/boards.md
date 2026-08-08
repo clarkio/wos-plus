@@ -58,13 +58,15 @@ board.
 - **Then** the lookup is rejected as an invalid board name length, and the
   archive is never consulted
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today allows up to 20 letters
-> here. Tracked by [#168](https://github.com/clarkio/wos-plus/issues/168).
+> ✅ **Confirmed (maintainer)** — implemented in
+> [#168](https://github.com/clarkio/wos-plus/issues/168). Board names now run
+> 4–12 letters on both the lookup (`validateBoardId` in `[id].ts`) and the
+> `db-service.ts` save/fetch paths.
 >
-> The migration risk this carried has been **checked and cleared**: lowering the
-> limit would have stranded any already-stored board with a 13–20 letter name,
-> and the maintainer confirmed no board id in the archive exceeds 12 letters. No
-> migration is needed.
+> The migration risk this carried was **checked and cleared** before landing:
+> lowering the limit would have stranded any already-stored board with a
+> 13–20 letter name, and the maintainer confirmed no board id in the archive
+> exceeds 12 letters. No migration was needed.
 
 ### Scenario: no board name at all
 
@@ -337,7 +339,7 @@ must hold to the same rules as every other.
 
 ### Scenario: a board offered for saving under a name that is not a big word
 
-- **Given** a board is offered for saving with a name that is not 4–20 letters —
+- **Given** a board is offered for saving with a name that is not 4–12 letters —
   for example `CAT` or `CAUT10N`
 - **When** the save is attempted
 - **Then** the board is rejected as an invalid board name, and nothing is saved

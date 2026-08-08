@@ -62,10 +62,11 @@ Thirteen issues, all approved by the maintainer:
 [#161](https://github.com/clarkio/wos-plus/issues/161)–[#173](https://github.com/clarkio/wos-plus/issues/173).
 **[#173](https://github.com/clarkio/wos-plus/issues/173),
 [#170](https://github.com/clarkio/wos-plus/issues/170),
-[#166](https://github.com/clarkio/wos-plus/issues/166) and
-[#164](https://github.com/clarkio/wos-plus/issues/164) are done** (PR
+[#166](https://github.com/clarkio/wos-plus/issues/166),
+[#164](https://github.com/clarkio/wos-plus/issues/164) and
+[#168](https://github.com/clarkio/wos-plus/issues/168) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
-#166 fix and the #164 fix) — nine remain.
+#166 fix, the #164 fix and the #168 fix) — eight remain.
 
 Separately, **[#172](https://github.com/clarkio/wos-plus/issues/172)** (the X1
 gap: export the `OPTIONS` handlers the three Supabase-backed routes already
@@ -115,14 +116,25 @@ for channels that don't, so the fix is purely a display update in
 `GameSpectator`'s Game Connected handler. Proven by a new test in
 `tests/unit/wos-plus-main.test.ts` § "worker routing (startEventProcessors)".
 
-Sharpest next, affecting streamers today: none of the remaining nine are
+**#168 is done** — `validateBoardId` in `src/pages/api/boards/[id].ts` and both
+length checks in `src/scripts/db-service.ts` (save and fetch) now enforce
+4–12 letters, matching the chat filter. The migration risk flagged in the
+issue was already cleared in the #160 review (no stored board id exceeds 12
+letters), so no data migration was needed. The `known gap (#168)` acceptance
+test in `boards.acceptance.test.ts` was inverted in place, plus a new
+boundary test for the longest-valid (12-letter) name; the length assertions
+in `tests/unit/db-service.test.ts` were updated to the new numbers.
+`specs/boards.md` § Naming a board is now ✅ Confirmed rather than ⚠️.
+
+Sharpest next, affecting streamers today: none of the remaining eight are
 flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
 and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below). With #172 done, the next cleanest pick without an overlapping PR
-is [#168](https://github.com/clarkio/wos-plus/issues/168) (bring the board name
-rule down from 20 to 12 letters to match the chat filter) — small, self-
-contained, and the archive was already checked in the #160 review to confirm no
-stored board id exceeds 12 letters.
+(see below). With #172 and #168 done, the next cleanest picks without an
+overlapping PR are [#163](https://github.com/clarkio/wos-plus/issues/163)
+(board words must be spellable from the big word's letters) and
+[#161](https://github.com/clarkio/wos-plus/issues/161) (reject an
+unsupported word language on save) — neither touches the two files #142/#144
+are already mid-flight on.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 
