@@ -10,6 +10,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+// Handle CORS preflight requests (issue #172).
+export const OPTIONS: APIRoute = () => new Response(null, { status: 204, headers: corsHeaders });
+
 export const GET: APIRoute = async ({ params }) => {
   const { channel } = params;
 

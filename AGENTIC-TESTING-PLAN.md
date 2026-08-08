@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #166 fix
+### The numbers, as of the #172 fix
 
-**645 passing** tests across 19 files, plus 6 deliberate `it.todo`. Coverage
-**90.94% statements / 86.70% branches / 87.86% functions / 91.66% lines**, counting
+**648 passing** tests across 19 files, plus 6 deliberate `it.todo`. Coverage
+**90.98% statements / 86.70% branches / 88.06% functions / 91.68% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -66,6 +66,17 @@ Thirteen issues, all approved by the maintainer:
 [#164](https://github.com/clarkio/wos-plus/issues/164) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
 #166 fix and the #164 fix) — nine remain.
+
+Separately, **[#172](https://github.com/clarkio/wos-plus/issues/172)** (the X1
+gap: export the `OPTIONS` handlers the three Supabase-backed routes already
+advertise) is also done — `/api/boards`, `/api/boards/[id]` and
+`/api/channel-stats/[channel]` now each export an `OPTIONS` handler answering a
+204 with the route's existing static CORS headers, and the `advertises OPTIONS
+but exports no handler for it` canaries in `boards.acceptance.test.ts` (×2) and
+`channel-stats.acceptance.test.ts` were inverted, not deleted. #172 was not one
+of the thirteen #160-review issues — it tracked a transport-layer gap (X1 in
+`specs/README.md`), not a game-behaviour spec scenario, so no `specs/*.md`
+change was needed.
 
 Each open one has a ⚠️ scenario in `specs/` and an acceptance test **pinning
 current behaviour** under the name `known gap (#N)`. That is the mechanism to
@@ -107,10 +118,11 @@ for channels that don't, so the fix is purely a display update in
 Sharpest next, affecting streamers today: none of the remaining nine are
 flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
 and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below), and [#172](https://github.com/clarkio/wos-plus/issues/172) (export
-the `OPTIONS` handlers the three Supabase-backed routes already advertise) is
-the smallest, cleanest remaining pick with no overlap and no architecture
-question — the pattern to copy (`/api/words`) is already in the tree.
+(see below). With #172 done, the next cleanest pick without an overlapping PR
+is [#168](https://github.com/clarkio/wos-plus/issues/168) (bring the board name
+rule down from 20 to 12 letters to match the chat filter) — small, self-
+contained, and the archive was already checked in the #160 review to confirm no
+stored board id exceeds 12 letters.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 

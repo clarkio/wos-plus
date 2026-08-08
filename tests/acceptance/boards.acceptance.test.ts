@@ -985,25 +985,34 @@ describe('/api/boards/[id] — transport concerns (no spec section)', () => {
     expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
   });
 
-  it('advertises OPTIONS but exports no handler for it', async () => {
+  it('exports the OPTIONS handler its Access-Control-Allow-Methods promises (fixed #172)', async () => {
     /**
-     * ⚠️ GAP, recorded not fixed — out of scope for this task.
-     *
-     * `Access-Control-Allow-Methods` promises `GET, PUT, OPTIONS`, but the
-     * module exports no `OPTIONS` handler, so a real CORS preflight to this
-     * route falls through to Astro's 404. In practice `PUT` with
-     * `Content-Type: application/json` from a browser *does* trigger a
-     * preflight, so this is reachable — but adding a handler is new behaviour
-     * and belongs with whoever owns the CORS work, not here.
-     *
-     * Pinned as a canary: if an `OPTIONS` export is added, this fails and the
-     * note above must be resolved rather than left stale.
+     * Was a ⚠️ GAP canary: `Access-Control-Allow-Methods` promised
+     * `GET, PUT, OPTIONS` while the module exported no `OPTIONS` handler, so a
+     * real preflight (triggered in practice by a JSON `PUT` from a browser)
+     * fell through to Astro's 404. Fixed by exporting `OPTIONS` alongside
+     * `GET`/`PUT`, per issue #172.
      */
     const exportedHandlers = Object.keys(boardByIdRoute)
       .filter((name) => /^[A-Z]+$/.test(name))
       .sort();
 
-    expect(exportedHandlers).toEqual(['GET', 'PUT']);
+    expect(exportedHandlers).toEqual(['GET', 'OPTIONS', 'PUT']);
+  });
+
+  it('answers a preflight with no body (#172)', async () => {
+    const response = await invokeRoute(boardByIdRoute.OPTIONS, {
+      method: 'OPTIONS',
+      url: '/api/boards/CAUTION',
+      params: { id: 'CAUTION' },
+    });
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+    expect(responseHeaders(response)).toMatchObject({
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, PUT, OPTIONS',
+    });
   });
 });
 
@@ -1701,21 +1710,33 @@ describe('/api/boards — transport concerns (no spec section)', () => {
     expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
   });
 
-  it('advertises OPTIONS but exports no handler for it', async () => {
+  it('exports the OPTIONS handler its Access-Control-Allow-Methods promises (fixed #172)', async () => {
     /**
-     * GAP, recorded not fixed — same as on `/api/boards/[id]`, and out of scope
-     * for this task. `Access-Control-Allow-Methods` promises
-     * `GET, POST, OPTIONS` while no `OPTIONS` handler exists, so a real
-     * preflight — which a JSON `POST` from a browser does trigger — falls
-     * through to Astro's 404.
-     *
-     * Pinned as a canary so adding a handler forces this note to be resolved.
+     * Was a GAP canary, same class as `/api/boards/[id]`: `Access-Control-
+     * Allow-Methods` promised `GET, POST, OPTIONS` while no `OPTIONS` handler
+     * existed, so a real preflight (triggered in practice by a JSON `POST`
+     * from a browser) fell through to Astro's 404. Fixed by exporting
+     * `OPTIONS` alongside `GET`/`POST`, per issue #172.
      */
     const exportedHandlers = Object.keys(boardsRoute)
       .filter((name) => /^[A-Z]+$/.test(name))
       .sort();
 
-    expect(exportedHandlers).toEqual(['GET', 'POST']);
+    expect(exportedHandlers).toEqual(['GET', 'OPTIONS', 'POST']);
+  });
+
+  it('answers a preflight with no body (#172)', async () => {
+    const response = await invokeRoute(boardsRoute.OPTIONS, {
+      method: 'OPTIONS',
+      url: '/api/boards',
+    });
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+    expect(responseHeaders(response)).toMatchObject({
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+    });
   });
 });
 

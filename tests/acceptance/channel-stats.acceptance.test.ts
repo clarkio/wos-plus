@@ -927,25 +927,33 @@ describe('/api/channel-stats/[channel] — transport concerns (no spec section)'
     expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
   });
 
-  it('advertises OPTIONS but exports no handler for it', async () => {
+  it('exports the OPTIONS handler its Access-Control-Allow-Methods promises (fixed #172)', async () => {
     /**
-     * ⚠️ GAP, recorded not fixed — out of scope for this task.
-     *
-     * `Access-Control-Allow-Methods` promises `GET, OPTIONS`, but the module
-     * exports no `OPTIONS` handler, so a real CORS preflight to this route falls
-     * through to Astro's 404. The same gap is pinned on both board routes in
-     * `boards.acceptance.test.ts`. A simple `GET` with no custom headers does
-     * not preflight, so this is unreachable from the views as they are written
-     * today — but the advertisement is a promise the route cannot keep, and
-     * adding a handler is new behaviour needing a maintainer decision.
-     *
-     * Pinned as a canary: if an `OPTIONS` export is added, this fails and the
-     * note above must be resolved rather than left stale.
+     * Was a ⚠️ GAP canary, same class as both board routes in
+     * `boards.acceptance.test.ts`: `Access-Control-Allow-Methods` promised
+     * `GET, OPTIONS` while the module exported no `OPTIONS` handler, so a real
+     * preflight to this route fell through to Astro's 404. Fixed by exporting
+     * `OPTIONS` alongside `GET`, per issue #172.
      */
     const exportedHandlers = Object.keys(channelStatsRoute)
       .filter((name) => /^[A-Z]+$/.test(name))
       .sort();
 
-    expect(exportedHandlers).toEqual(['GET']);
+    expect(exportedHandlers).toEqual(['GET', 'OPTIONS']);
+  });
+
+  it('answers a preflight with no body (#172)', async () => {
+    const response = await invokeRoute(channelStatsRoute.OPTIONS, {
+      method: 'OPTIONS',
+      url: '/api/channel-stats/clarkio',
+      params: { channel: 'clarkio' },
+    });
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+    expect(responseHeaders(response)).toMatchObject({
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, OPTIONS',
+    });
   });
 });
