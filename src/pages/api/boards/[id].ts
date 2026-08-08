@@ -40,6 +40,9 @@ function validateBoardId(id: string | undefined): { cleanId: string } | { errorR
   return { cleanId };
 }
 
+// Handle CORS preflight requests (issue #172).
+export const OPTIONS: APIRoute = () => new Response(null, { status: 204, headers: corsHeaders });
+
 export const GET: APIRoute = async ({ params }) => {
   const validation = validateBoardId(params.id);
   if ('errorResponse' in validation) {
@@ -52,7 +55,7 @@ export const GET: APIRoute = async ({ params }) => {
       env.SUPABASE_URL,
       env.SUPABASE_KEY
     );
-    
+
     // Query for the specific board by ID using the sanitized cleanId
     const { data, error } = await supabase
       .from('boards')
