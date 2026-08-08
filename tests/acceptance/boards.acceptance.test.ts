@@ -234,7 +234,7 @@ describe('specs/boards.md — Naming a board', () => {
 
       expect(response.status).toBe(400);
       expect(await readJson(response)).toEqual({
-        error: 'Invalid board ID length. Must be between 4 and 20 characters.',
+        error: 'Invalid board ID length. Must be between 4 and 12 characters.',
       });
       expect(unhandledNetworkRequests()).toEqual([]);
     });
@@ -254,41 +254,54 @@ describe('specs/boards.md — Naming a board', () => {
   });
 
   describe('Scenario: a board name that is too long to be a big word', () => {
-    // Given a lookup for a board named with 21 or more letters
+    // Given a lookup for a board named with 13 or more letters
     // When WoS+ tries to find it
     // Then the lookup is rejected as an invalid board name length, and the
     //      archive is never consulted
 
-    it('rejects a twenty-one-letter name, without consulting the archive', async () => {
+    it('rejects a thirteen-letter name, without consulting the archive', async () => {
       const response = await invokeRoute(GET_BOARD, {
         url: '/api/boards/long',
-        params: { id: 'A'.repeat(21) },
+        params: { id: 'A'.repeat(13) },
       });
 
       expect(response.status).toBe(400);
       expect(await readJson(response)).toEqual({
-        error: 'Invalid board ID length. Must be between 4 and 20 characters.',
+        error: 'Invalid board ID length. Must be between 4 and 12 characters.',
       });
       expect(unhandledNetworkRequests()).toEqual([]);
     });
 
-    it('known gap (#168): accepts a twenty-letter name, above the approved twelve', async () => {
-      // APPROVED (#168): board names run 4–12 letters, matching the chat filter.
-      //                  The longest word in the shared list is 8; 12 is the
-      //                  cushion. A 20-letter name is rejected.
-      // TODAY:           4–20 is enforced, so this is accepted.
-      //
-      // Invert when #168 lands — and read the migration warning in
-      // `specs/boards.md` first: lowering the limit strands any already-stored
-      // board with a 13–20 letter name, which is #162's trap in reverse.
-      server.use(supabaseSuccess('boards', storedBoard({ id: 'A'.repeat(20) })));
+    it('accepts the longest name that is a big word', async () => {
+      // The boundary itself: 12 letters is valid, so the rejection above is
+      // about length and not about long names in general.
+      server.use(supabaseSuccess('boards', storedBoard({ id: 'A'.repeat(12) })));
 
+      const response = await invokeRoute(GET_BOARD, {
+        url: '/api/boards/long',
+        params: { id: 'A'.repeat(12) },
+      });
+
+      expect(response.status).toBe(200);
+    });
+
+    it('#168 landed: rejects a twenty-letter name, above the approved twelve', async () => {
+      // APPROVED and now enforced (#168): board names run 4–12 letters,
+      // matching the chat filter. The longest word in the shared list is 8;
+      // 12 is the cushion. A 20-letter name is rejected — inverted from the
+      // prior "known gap" assertion, which pinned it as accepted under the
+      // old 4–20 rule. The archive migration risk was checked and cleared
+      // before this landed: no stored board id exceeds 12 letters.
       const response = await invokeRoute(GET_BOARD, {
         url: '/api/boards/long',
         params: { id: 'A'.repeat(20) },
       });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(400);
+      expect(await readJson(response)).toEqual({
+        error: 'Invalid board ID length. Must be between 4 and 12 characters.',
+      });
+      expect(unhandledNetworkRequests()).toEqual([]);
     });
   });
 
@@ -336,8 +349,8 @@ describe('specs/boards.md — Naming a board', () => {
 
     it.each([
       ['a name with a digit', 'CAUT10N', 'Invalid board ID format. Only letters are allowed.'],
-      ['a name that is too short', 'CAT', 'Invalid board ID length. Must be between 4 and 20 characters.'],
-      ['a name that is too long', 'A'.repeat(21), 'Invalid board ID length. Must be between 4 and 20 characters.'],
+      ['a name that is too short', 'CAT', 'Invalid board ID length. Must be between 4 and 12 characters.'],
+      ['a name that is too long', 'A'.repeat(13), 'Invalid board ID length. Must be between 4 and 12 characters.'],
     ])('refuses a repair addressed to %s', async (_label, id, error) => {
       const response = await invokeRoute(PUT, {
         method: 'PUT',

@@ -63,19 +63,19 @@ describe('db-service module', () => {
         expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId must be a non-empty string.');
       });
 
-      it('should reject boardId longer than 20 characters after cleanup', async () => {
-        const longBoardId = 'a'.repeat(21);
+      it('should reject boardId longer than 12 characters after cleanup', async () => {
+        const longBoardId = 'a'.repeat(13);
         const result = await saveBoard(longBoardId, validSlots);
 
         expect(result).toBeUndefined();
-        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId length must be between 4 and 20 characters.');
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId length must be between 4 and 12 characters.');
       });
 
       it('should reject boardId shorter than 4 characters', async () => {
         const result = await saveBoard('ABC', validSlots);
 
         expect(result).toBeUndefined();
-        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId length must be between 4 and 20 characters.');
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot save board: boardId length must be between 4 and 12 characters.');
       });
 
       it('should reject boardId with special characters', async () => {
@@ -1053,15 +1053,15 @@ describe('db-service module', () => {
         const result = await fetchBoard('ABC');
 
         expect(result).toBeNull();
-        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId length must be between 4 and 20 characters.');
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId length must be between 4 and 12 characters.');
       });
 
-      it('should reject boardId longer than 20 characters', async () => {
-        const longBoardId = 'A'.repeat(21);
+      it('should reject boardId longer than 12 characters', async () => {
+        const longBoardId = 'A'.repeat(13);
         const result = await fetchBoard(longBoardId);
 
         expect(result).toBeNull();
-        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId length must be between 4 and 20 characters.');
+        expect(consoleWarnSpy).toHaveBeenCalledWith('Cannot fetch board: boardId length must be between 4 and 12 characters.');
       });
 
       it('should accept valid boardId with spaces', async () => {

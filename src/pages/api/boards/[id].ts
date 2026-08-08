@@ -32,9 +32,10 @@ function validateBoardId(id: string | undefined): { cleanId: string } | { errorR
     return { errorResponse: jsonResponse({ error: 'Invalid board ID format. Only letters are allowed.' }, 400) };
   }
 
-  // Validate: reasonable length (game words are typically 4-20 characters)
-  if (cleanId.length < 4 || cleanId.length > 20) {
-    return { errorResponse: jsonResponse({ error: 'Invalid board ID length. Must be between 4 and 20 characters.' }, 400) };
+  // Validate: reasonable length (game words are typically 4-12 characters;
+  // see specs/boards.md § Naming a board for why 12 is the cushion, issue #168)
+  if (cleanId.length < 4 || cleanId.length > 12) {
+    return { errorResponse: jsonResponse({ error: 'Invalid board ID length. Must be between 4 and 12 characters.' }, 400) };
   }
 
   return { cleanId };

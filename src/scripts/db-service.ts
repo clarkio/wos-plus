@@ -154,8 +154,8 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
     return;
   }
 
-  if (cleanBoardId.length < 4 || cleanBoardId.length > 20) {
-    console.warn('Cannot save board: boardId length must be between 4 and 20 characters.');
+  if (cleanBoardId.length < 4 || cleanBoardId.length > 12) {
+    console.warn('Cannot save board: boardId length must be between 4 and 12 characters.');
     return;
   }
 
@@ -307,8 +307,8 @@ export async function fetchBoard(boardId: string): Promise<Board | null> {
   }
 
   // Validate length to prevent abuse
-  if (cleanBoardId.length < 4 || cleanBoardId.length > 20) {
-    console.warn('Cannot fetch board: boardId length must be between 4 and 20 characters.');
+  if (cleanBoardId.length < 4 || cleanBoardId.length > 12) {
+    console.warn('Cannot fetch board: boardId length must be between 4 and 12 characters.');
     return null;
   }
 
