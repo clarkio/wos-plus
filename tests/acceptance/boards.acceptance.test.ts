@@ -72,6 +72,9 @@ const CLEAN_SLOTS = [slot('ACT'), slot('COAT'), slot('ACTION'), slot('CAUTION')]
 /** A corrupted board: `ACTION` fills two slots. */
 const REDUNDANT_SLOTS = [slot('ACTION'), slot('ACTION'), slot('CAUTION')];
 
+/** A corrupted board: `ACTOR` uses an `R`, which `CAUTION` does not have. */
+const INVALID_SLOTS = [slot('ACT'), slot('ACTOR'), slot('CAUTION')];
+
 /** A stored archive row for `CAUTION`. */
 function storedBoard(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -563,6 +566,55 @@ describe('specs/boards.md — Repairing a board that was stored with repeated wo
     });
   });
 
+  describe('Scenario: a stored board containing a word with letters that are not on the board', () => {
+    // Given the board `CAUTION` is in the archive
+    // And one of its slots holds the word `ACTOR`, which uses an `R` that
+    //     `CAUTION` does not have
+    // When WoS+ examines the stored board
+    // Then the board is treated as broken and needs to be repaired, in the
+    //      same way as a board with a repeated word
+    //
+    // issue #163
+
+    it('replaces slots containing a word with letters not on the board', async () => {
+      const update = requestRecorder();
+      server.use(
+        supabaseSuccess('boards', storedBoard({ slots: INVALID_SLOTS }), { once: true }),
+        supabaseSuccess('boards', [storedBoard()], {
+          method: 'patch',
+          once: true,
+          onRequest: update.onRequest,
+        }),
+      );
+
+      const response = await invokeRoute(PUT, {
+        method: 'PUT',
+        url: '/api/boards/CAUTION',
+        params: { id: 'CAUTION' },
+        json: { slots: CLEAN_SLOTS },
+      });
+
+      expect(response.status).toBe(200);
+      expect(update.captured.body).toEqual({ slots: CLEAN_SLOTS });
+    });
+
+    it('spots the invalid word even when the archive returns slots as JSON text', async () => {
+      server.use(
+        supabaseSuccess('boards', storedBoard({ slots: JSON.stringify(INVALID_SLOTS) }), { once: true }),
+        supabaseSuccess('boards', [storedBoard()], { method: 'patch', once: true }),
+      );
+
+      const response = await invokeRoute(PUT, {
+        method: 'PUT',
+        url: '/api/boards/CAUTION',
+        params: { id: 'CAUTION' },
+        json: { slots: CLEAN_SLOTS },
+      });
+
+      expect(response.status).toBe(200);
+    });
+  });
+
   describe('Scenario: a repair also fills in a missing channel and language', () => {
     // Given the stored board `CAUTION` is being repaired
     // And the clean capture came from a known channel, in a known language
@@ -683,10 +735,11 @@ describe('specs/boards.md — Repairing a board that was stored with repeated wo
   });
 
   describe('Scenario: a sound stored board is never overwritten', () => {
-    // Given the stored board `CAUTION` has no repeated words
+    // Given the stored board `CAUTION` has no repeated words, and no words
+    //     using letters that are not on the board
     // When a repair is offered for it
     // Then the repair is refused, the stored board is untouched, and the reason
-    //      says the board has no repeated words
+    //      says the board is already sound
 
     it('refuses the repair and leaves the stored board untouched', async () => {
       // Only the read handler is registered. If the route issued the update
@@ -705,7 +758,7 @@ describe('specs/boards.md — Repairing a board that was stored with repeated wo
       expect(response.status).toBe(409);
       expect(await readJson(response)).toEqual({
         error: 'Board update not allowed',
-        message: 'Board CAUTION has no redundant words; refusing to overwrite it.',
+        message: 'Board CAUTION is already sound; refusing to overwrite it.',
         code: 'BOARD_UPDATE_NOT_ALLOWED',
       });
       expect(unhandledNetworkRequests()).toEqual([]);
