@@ -82,17 +82,25 @@ export const POST: APIRoute = async ({ request }) => {
     }
   }
 
-  // Same treatment for the board's word language (issue #124): store the
-  // normalized code when it's one WoS supports, otherwise drop it so the
-  // column's database default ('en') applies instead of failing the save.
-  if ('language_code' in (body ?? {})) {
-    const cleanLanguageCode = normalizeLanguageCode(body.language_code);
-    if (cleanLanguageCode) {
-      body.language_code = cleanLanguageCode;
-    } else {
-      delete body.language_code;
-    }
+  // Unlike the channel, the word language is not informational (issue #161):
+  // a board's words only mean anything alongside the language they were
+  // played in, so a missing or unrecognised language rejects the save
+  // outright rather than silently substituting English.
+  const cleanLanguageCode = normalizeLanguageCode(body?.language_code);
+  if (!cleanLanguageCode) {
+    return new Response(
+      JSON.stringify({
+        error: 'Unsupported or missing word language',
+        message: `Board ${body?.id || 'ID'} was not saved: a supported word language (en, pt or fr) is required.`,
+        code: 'INVALID_LANGUAGE',
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
+  body.language_code = cleanLanguageCode;
 
   try {
     const supabase = createClient(

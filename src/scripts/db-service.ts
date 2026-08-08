@@ -209,13 +209,13 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
     console.warn('Saving board without twitch channel: channel name is invalid.');
   }
 
-  // Language is informational metadata too (issue #124): fall back to English
-  // rather than blocking the save, since 'en' was the implicit language of
-  // every board saved before language capture existed.
-  const cleanLanguageCode = normalizeLanguageCode(languageCode) ?? 'en';
-  if (languageCode !== undefined && normalizeLanguageCode(languageCode) === null) {
-    console.warn(`Saving board with default language 'en': language code is invalid.`);
-  }
+  // The word language, unlike the channel, is not informational (issue #161):
+  // a board's words only mean anything alongside the language they were
+  // played in, so a fresh save requires one of the languages WoS actually
+  // plays in. A repair (the self-healing branch below) keeps the pre-#161
+  // fallback, since a repair carrying no language is meant to leave the
+  // stored value alone rather than fail.
+  const requestedLanguageCode = normalizeLanguageCode(languageCode);
 
   try {
     const { exists, board: existingBoard } = await fetchExistingBoard(cleanBoardId);
@@ -225,7 +225,7 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
       // instead of skipping the save.
       if (existingBoard && hasRedundantWords(existingBoard.slots)) {
         console.warn(`Board ${cleanBoardId} exists with redundant words; updating it with the clean version.`);
-        return await updateBoardSlots(cleanBoardId, slots, cleanTwitchChannel, cleanLanguageCode);
+        return await updateBoardSlots(cleanBoardId, slots, cleanTwitchChannel, requestedLanguageCode ?? 'en');
       }
 
       const duplicateMessage = `Board ${cleanBoardId} has already been saved.`;
@@ -241,6 +241,16 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
     console.warn('Unable to verify whether board exists before save; proceeding with save attempt.', error);
   }
 
+  if (!requestedLanguageCode) {
+    const rejectMessage = `Cannot save board ${cleanBoardId}: a supported word language (en, pt or fr) is required.`;
+    console.warn(rejectMessage);
+    return {
+      error: 'Unsupported or missing word language',
+      message: rejectMessage,
+      code: 'INVALID_LANGUAGE',
+    };
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -251,7 +261,7 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
         id: cleanBoardId,
         slots: slots,
         created_at: new Date().toISOString(),
-        language_code: cleanLanguageCode,
+        language_code: requestedLanguageCode,
         ...(cleanTwitchChannel ? { twitch_channel: cleanTwitchChannel } : {}),
       }),
     });

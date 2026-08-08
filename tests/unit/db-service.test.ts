@@ -119,7 +119,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
-        await saveBoard('W O R D', validSlots);
+        await saveBoard('W O R D', validSlots, undefined, 'en');
 
         expect(global.fetch).toHaveBeenNthCalledWith(
           2,
@@ -141,7 +141,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
-        await saveBoard('test', validSlots);
+        await saveBoard('test', validSlots, undefined, 'en');
 
         expect(global.fetch).toHaveBeenNthCalledWith(
           2,
@@ -163,7 +163,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
-        await saveBoard('t e s t   w o r d', validSlots);
+        await saveBoard('t e s t   w o r d', validSlots, undefined, 'en');
 
         expect(global.fetch).toHaveBeenNthCalledWith(
           2,
@@ -584,7 +584,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
-        await saveBoard('TEST', validSlots, '#Clarkio');
+        await saveBoard('TEST', validSlots, '#Clarkio', 'en');
 
         const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
         expect(requestBody.twitch_channel).toBe('clarkio');
@@ -601,7 +601,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
-        await saveBoard('TEST', validSlots, 'bad channel!');
+        await saveBoard('TEST', validSlots, 'bad channel!', 'en');
 
         const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
         expect(requestBody).not.toHaveProperty('twitch_channel');
@@ -621,7 +621,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
-        await saveBoard('TEST', validSlots);
+        await saveBoard('TEST', validSlots, undefined, 'en');
 
         const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
         expect(requestBody).not.toHaveProperty('twitch_channel');
@@ -683,25 +683,35 @@ describe('db-service module', () => {
         expect(requestBody.language_code).toBe('fr');
       });
 
-      it('should default to en when no language code is provided', async () => {
+      it('should reject the save when no language code is provided (issue #161)', async () => {
         global.fetch = notFoundThenSuccess();
 
-        await saveBoard('TEST', validSlots);
+        const result = await saveBoard('TEST', validSlots, 'clarkio');
 
-        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
-        expect(requestBody.language_code).toBe('en');
+        // Only the existence-check GET happened; the save itself never reached
+        // the network because a fresh save requires a supported language.
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({
+          error: 'Unsupported or missing word language',
+          message: 'Cannot save board TEST: a supported word language (en, pt or fr) is required.',
+          code: 'INVALID_LANGUAGE',
+        });
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Cannot save board TEST: a supported word language (en, pt or fr) is required.'
+        );
       });
 
-      it('should default to en when the language code is unsupported', async () => {
+      it('should reject the save when the language code is unsupported (issue #161)', async () => {
         global.fetch = notFoundThenSuccess();
 
-        await saveBoard('TEST', validSlots, 'clarkio', 'es');
+        const result = await saveBoard('TEST', validSlots, 'clarkio', 'es');
 
-        const requestBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
-        expect(requestBody.language_code).toBe('en');
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-          `Saving board with default language 'en': language code is invalid.`
-        );
+        expect(global.fetch).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({
+          error: 'Unsupported or missing word language',
+          message: 'Cannot save board TEST: a supported word language (en, pt or fr) is required.',
+          code: 'INVALID_LANGUAGE',
+        });
       });
 
       it('should include the language code in the self-healing update', async () => {
@@ -742,7 +752,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => mockFetchResponse(mockResponse));
 
-        const result = await saveBoard('test', validSlots);
+        const result = await saveBoard('test', validSlots, undefined, 'en');
 
         expect(global.fetch).toHaveBeenNthCalledWith(
           2,
@@ -770,7 +780,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => mockFetchResponse({ success: true }));
 
-        await saveBoard('TEST', validSlots);
+        await saveBoard('TEST', validSlots, undefined, 'en');
 
         const fetchCall = (global.fetch as any).mock.calls[1];
         const requestBody = JSON.parse(fetchCall[1].body);
@@ -801,7 +811,7 @@ describe('db-service module', () => {
           },
         ];
 
-        const result = await saveBoard('TEST', slotsWithoutUser);
+        const result = await saveBoard('TEST', slotsWithoutUser, undefined, 'en');
 
         expect(result).toBeDefined();
         expect(global.fetch).toHaveBeenCalled();
@@ -827,7 +837,7 @@ describe('db-service module', () => {
           },
         ];
 
-        const result = await saveBoard('TEST', slotsWithNullUser);
+        const result = await saveBoard('TEST', slotsWithNullUser, undefined, 'en');
 
         expect(result).toBeDefined();
         expect(global.fetch).toHaveBeenCalled();
@@ -854,7 +864,7 @@ describe('db-service module', () => {
           },
         ];
 
-        const result = await saveBoard('TEST', slotsWithOriginalIndex);
+        const result = await saveBoard('TEST', slotsWithOriginalIndex, undefined, 'en');
 
         expect(result).toBeDefined();
         expect(global.fetch).toHaveBeenCalled();
@@ -908,7 +918,7 @@ describe('db-service module', () => {
             } as Response)
           );
 
-        const result = await saveBoard('TEST', validSlots);
+        const result = await saveBoard('TEST', validSlots, undefined, 'en');
 
         expect(result).toEqual(duplicateResponse);
         expect(consoleWarnSpy).toHaveBeenCalledWith('Board TEST has already been saved.');
@@ -927,7 +937,7 @@ describe('db-service module', () => {
           )
           .mockImplementationOnce(() => Promise.reject(networkError));
 
-        const result = await saveBoard('TEST', validSlots);
+        const result = await saveBoard('TEST', validSlots, undefined, 'en');
 
         expect(result).toBeUndefined();
         expect(consoleErrorSpy).toHaveBeenCalledWith('Error saving board to Cloudflare Worker:', networkError);
@@ -951,7 +961,7 @@ describe('db-service module', () => {
             } as Response)
           );
 
-        const result = await saveBoard('TEST', validSlots);
+        const result = await saveBoard('TEST', validSlots, undefined, 'en');
 
         expect(result).toBeUndefined();
         expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -978,7 +988,7 @@ describe('db-service module', () => {
             } as Response)
           );
 
-        const result = await saveBoard('TEST', validSlots);
+        const result = await saveBoard('TEST', validSlots, undefined, 'en');
 
         expect(result).toBeUndefined();
         expect(consoleErrorSpy).toHaveBeenCalled();
@@ -1001,7 +1011,7 @@ describe('db-service module', () => {
             } as Response)
           );
 
-        const result = await saveBoard('TEST', validSlots);
+        const result = await saveBoard('TEST', validSlots, undefined, 'en');
 
         expect(result).toBeUndefined();
         expect(consoleErrorSpy).toHaveBeenCalledWith(

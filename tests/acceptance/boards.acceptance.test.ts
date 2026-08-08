@@ -1085,7 +1085,7 @@ describe('specs/boards.md — Capturing a board', () => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: 'en' },
       });
 
       expect(await readJson(response)).toEqual([storedBoard()]);
@@ -1109,7 +1109,7 @@ describe('specs/boards.md — Capturing a board', () => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: 'en' },
       });
 
       // Not a 500: "already saved" is an expected outcome of a re-capture, and
@@ -1133,7 +1133,7 @@ describe('specs/boards.md — Capturing a board', () => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: 'en' },
       });
 
       expect(response.status).toBe(409);
@@ -1150,7 +1150,7 @@ describe('specs/boards.md — Capturing a board', () => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { slots: CLEAN_SLOTS },
+        json: { slots: CLEAN_SLOTS, language_code: 'en' },
       });
 
       expect(await readJson<{ message: string }>(response)).toMatchObject({
@@ -1172,7 +1172,7 @@ describe('specs/boards.md — Capturing a board', () => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: 'en' },
       });
 
       expect(response.status).toBe(500);
@@ -1311,7 +1311,7 @@ describe('specs/boards.md — Channel and language on a captured board', () => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: channel },
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: channel, language_code: 'en' },
       });
 
       expect(response.status).toBe(200);
@@ -1329,7 +1329,7 @@ describe('specs/boards.md — Channel and language on a captured board', () => {
       await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: 'wos_player_1' },
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: 'wos_player_1', language_code: 'en' },
       });
 
       expect(insert.captured.body).toMatchObject({ twitch_channel: 'wos_player_1' });
@@ -1361,7 +1361,7 @@ describe('specs/boards.md — Channel and language on a captured board', () => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: channel },
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: channel, language_code: 'en' },
       });
 
       // "rather than being rejected" is the load-bearing half: a bad channel
@@ -1384,7 +1384,7 @@ describe('specs/boards.md — Channel and language on a captured board', () => {
       await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: 'c'.repeat(50) },
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, twitch_channel: 'c'.repeat(50), language_code: 'en' },
       });
 
       expect(insert.captured.body).toMatchObject({ twitch_channel: 'c'.repeat(50) });
@@ -1439,8 +1439,11 @@ describe('specs/boards.md — Channel and language on a captured board', () => {
   describe('Scenario: an unrecognised word language', () => {
     // Given a capture whose word language is not one Words on Stream plays in
     // When the board is saved
-    // Then the board is saved with English as its language, rather than being
-    //      rejected
+    // Then the board is rejected and nothing is saved
+    //
+    // known gap (#161), inverted in place: WoS+ used to save the board with
+    // English substituted for the unrecognised language, which quietly
+    // corrupted the archive. It now rejects the capture instead.
 
     it.each([
       ['a language WoS does not play in', 'de'],
@@ -1448,7 +1451,7 @@ describe('specs/boards.md — Channel and language on a captured board', () => {
       ['nothing at all', ''],
       ['a value that is not text', 2],
       ['a null', null],
-    ])('saves the board and lets English apply when the capture carries %s', async (_label, code) => {
+    ])('rejects the save and stores nothing when the capture carries %s', async (_label, code) => {
       const insert = requestRecorder();
       server.use(supabaseSuccess('boards', [storedBoard()], {
         method: 'post',
@@ -1462,26 +1465,19 @@ describe('specs/boards.md — Channel and language on a captured board', () => {
         json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: code },
       });
 
-      expect(response.status).toBe(200);
-      /**
-       * "saved with English as its language" is delivered by *omission*, not by
-       * the route writing `'en'`: the column is
-       * `language_code TEXT NOT NULL DEFAULT 'en'`
-       * (db-scripts/add-language-code-to-boards.sql), so dropping the field is
-       * what makes the stored language English. Sending the unrecognised code
-       * instead would violate that column's CHECK constraint and lose the
-       * board, which is what this guards against.
-       */
-      expect(insert.captured.body).not.toHaveProperty('language_code');
-      expect(insert.captured.body).toMatchObject({ id: 'CAUTION', slots: CLEAN_SLOTS });
+      expect(response.status).toBe(400);
+      expect(await readJson(response)).toMatchObject({ code: 'INVALID_LANGUAGE' });
+      // The route returned before ever asking Supabase to insert anything.
+      expect(insert.captured.body).toBeUndefined();
     });
   });
 
-  describe('neither field is invented when the capture omits it', () => {
-    it('sends no channel or language keys at all when the capture carried none', async () => {
-      // The route only touches a field that is present, so a capture from a
-      // client that predates either feature is stored untouched and the column
-      // defaults apply.
+  describe('Scenario: a capture with no word language at all', () => {
+    // Given a capture that carries no word language
+    // When the board is saved
+    // Then the board is rejected and nothing is saved
+
+    it('rejects the save and stores nothing when the capture carries no language key', async () => {
       const insert = requestRecorder();
       server.use(supabaseSuccess('boards', [storedBoard()], {
         method: 'post',
@@ -1489,13 +1485,37 @@ describe('specs/boards.md — Channel and language on a captured board', () => {
         onRequest: insert.onRequest,
       }));
 
-      await invokeRoute(POST, {
+      const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
         json: { id: 'CAUTION', slots: CLEAN_SLOTS },
       });
 
-      expect(insert.captured.body).toEqual({ id: 'CAUTION', slots: CLEAN_SLOTS });
+      expect(response.status).toBe(400);
+      expect(await readJson(response)).toMatchObject({ code: 'INVALID_LANGUAGE' });
+      expect(insert.captured.body).toBeUndefined();
+    });
+  });
+
+  describe('the channel stays informational even though the language is now required', () => {
+    it('saves the board with no channel recorded when the capture carries a supported language but no channel', async () => {
+      // The channel remains "recorded when it makes sense, quietly dropped
+      // when it does not" — #161 only tightened the language rule.
+      const insert = requestRecorder();
+      server.use(supabaseSuccess('boards', [storedBoard()], {
+        method: 'post',
+        once: true,
+        onRequest: insert.onRequest,
+      }));
+
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: 'en' },
+      });
+
+      expect(response.status).toBe(200);
+      expect(insert.captured.body).toEqual({ id: 'CAUTION', slots: CLEAN_SLOTS, language_code: 'en' });
     });
   });
 });
@@ -1613,7 +1633,7 @@ describe('specs/boards.md — a capture that cannot be stored', () => {
     const response = await invokeRoute(POST, {
       method: 'POST',
       url: '/api/boards',
-      json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+      json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: 'en' },
     });
 
     expect(response.status).toBe(500);
@@ -1628,7 +1648,7 @@ describe('specs/boards.md — a capture that cannot be stored', () => {
     const response = await invokeRoute(POST, {
       method: 'POST',
       url: '/api/boards',
-      json: { id: 'CAUTION', slots: CLEAN_SLOTS },
+      json: { id: 'CAUTION', slots: CLEAN_SLOTS, language_code: 'en' },
       workerEnv: { SUPABASE_URL: undefined, SUPABASE_KEY: undefined },
     });
 
@@ -1636,27 +1656,22 @@ describe('specs/boards.md — a capture that cannot be stored', () => {
     expect(unhandledNetworkRequests()).toEqual([]);
   });
 
-  it('does not crash on a capture whose body is JSON null', async () => {
+  it('does not crash on a capture whose body is JSON null (issue #161: rejected for missing language, not the archive)', async () => {
     // `null` parses cleanly, so it gets past the body guard and reaches the
-    // channel/language handling, which is written `'twitch_channel' in (body ??
-    // {})` precisely so a null body cannot throw there. The archive gets the
-    // final word.
-    silenceRouteLogging();
-    server.use(supabaseFailure('boards', {
-      code: '23502',
-      message: 'null value in column "id" violates not-null constraint',
-    }, { method: 'post', status: 400, once: true }));
-
+    // channel/language handling, which is written with `?.` and `?? {}`
+    // precisely so a null body cannot throw there. Since #161, a missing
+    // language now short-circuits before the archive is ever consulted — the
+    // capture is rejected for that reason rather than reaching Supabase's
+    // not-null constraint on `id`.
     const response = await invokeRoute(POST, {
       method: 'POST',
       url: '/api/boards',
       json: null,
     });
 
-    expect(response.status).toBe(500);
-    expect(await readJson<{ error?: string }>(response)).toMatchObject({
-      error: expect.stringContaining('not-null constraint'),
-    });
+    expect(response.status).toBe(400);
+    expect(await readJson<{ code?: string }>(response)).toMatchObject({ code: 'INVALID_LANGUAGE' });
+    expect(unhandledNetworkRequests()).toEqual([]);
   });
 
   it.each([
@@ -1812,7 +1827,7 @@ describe('specs/boards.md — approved changes not yet implemented (current beha
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id, slots: CLEAN_SLOTS },
+        json: { id, slots: CLEAN_SLOTS, language_code: 'en' },
       });
 
       expect(response.status).toBe(200);
@@ -1836,7 +1851,7 @@ describe('specs/boards.md — approved changes not yet implemented (current beha
       const saved = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUT10N', slots: CLEAN_SLOTS },
+        json: { id: 'CAUT10N', slots: CLEAN_SLOTS, language_code: 'en' },
       });
       expect(saved.status).toBe(200);
 
@@ -1889,7 +1904,7 @@ describe('specs/boards.md — approved changes not yet implemented (current beha
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
-        json: { id: 'CAUTION', slots },
+        json: { id: 'CAUTION', slots, language_code: 'en' },
       });
 
       expect(response.status).toBe(200);
