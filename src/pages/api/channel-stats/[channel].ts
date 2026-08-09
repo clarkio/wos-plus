@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
+import { cleanTwitchChannel } from '../../../lib/board-utils';
 
 export const prerender = false;
 
@@ -24,9 +25,10 @@ export const GET: APIRoute = async ({ params }) => {
   }
 
   // Streamers write channel names both with and without a leading '#'; strip
-  // it here the same way normalizeTwitchChannel does for the board path, so
-  // '#clarkio' and 'clarkio' resolve to the same channel everywhere (#164).
-  const cleanChannel = channel.trim().replace(/^#/, '').toLowerCase();
+  // it here with the same helper normalizeTwitchChannel uses for the board
+  // path, so '#clarkio' and 'clarkio' resolve to the same channel everywhere
+  // (#164).
+  const cleanChannel = cleanTwitchChannel(channel);
 
   if (!/^[a-z0-9_]+$/.test(cleanChannel)) {
     return new Response(JSON.stringify({ error: 'Invalid channel name format. Only lowercase letters, numbers, and underscores are allowed.' }), {
