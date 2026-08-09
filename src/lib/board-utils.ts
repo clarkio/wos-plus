@@ -181,6 +181,17 @@ export function normalizeLanguageCode(code: unknown): string | null {
 }
 
 /**
+ * Strips the formatting streamers plausibly type a Twitch channel name with —
+ * a leading '#', surrounding whitespace, mixed case — without judging whether
+ * the result is a valid Twitch username. Shared by `normalizeTwitchChannel`
+ * (below) and the channel-stats read path so both sides of a name written
+ * either way resolve to the same channel (#164).
+ */
+export function cleanTwitchChannel(channel: string): string {
+  return channel.trim().replace(/^#/, '').toLowerCase();
+}
+
+/**
  * Normalizes a Twitch channel name for storage on a board (lowercase, no
  * leading '#'). Returns null when the value isn't a valid Twitch username
  * (letters, digits, underscores, max 50 chars) so callers can simply omit it —
@@ -191,7 +202,7 @@ export function normalizeTwitchChannel(channel: unknown): string | null {
     return null;
   }
 
-  const cleanChannel = channel.trim().replace(/^#/, '').toLowerCase();
+  const cleanChannel = cleanTwitchChannel(channel);
   if (!/^[a-z0-9_]{1,50}$/.test(cleanChannel)) {
     return null;
   }

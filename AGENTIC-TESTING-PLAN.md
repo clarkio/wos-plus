@@ -71,7 +71,7 @@ Thirteen issues, all approved by the maintainer:
 [#162](https://github.com/clarkio/wos-plus/issues/162) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
 #166 fix, the #164 fix, the #168 fix, the #161 fix, the #163 fix, the
-#171 fix and the #162 fix) — four remain.
+#171 fix and the #162 fix) — three remain.
 
 **#162 is done** — `POST /api/boards` now applies the same board-name and
 slot-shape rules that lookup (`GET /api/boards/[id]`) and repair (`PUT
@@ -187,27 +187,30 @@ covers two independent reasons a board can be broken.
 `specs/boards.md` § Repairing a board that was stored badly is now ✅
 Confirmed rather than ⚠️ for that scenario.
 
-Sharpest next, affecting streamers today: none of the remaining four are
+**#164 is done** — the leading-`#` strip on the channel-stats read path
+(`src/pages/api/channel-stats/[channel].ts`) already matched the board path's
+behaviour, but reimplemented the transform inline instead of sharing it with
+`normalizeTwitchChannel` (`src/lib/board-utils.ts`). The shared step —
+trim, strip a leading `#`, lowercase — is now `cleanTwitchChannel`, exported
+from `board-utils.ts` and used by both `normalizeTwitchChannel` (board path)
+and the channel-stats route, instead of being duplicated. The route keeps its
+own format/length checks after cleaning (not a call to `normalizeTwitchChannel`
+itself), because the two paths give a caller different error messages for "bad
+characters" vs. "too long" and `normalizeTwitchChannel` collapses both into a
+single null — folding that distinction away for a strings-only refactor would
+have been an unrelated behaviour change. No acceptance test changed; the
+`#164` scenario in `channel-stats.acceptance.test.ts` (§ "a channel name
+written the way a streamer would type it") already pinned the correct
+behaviour and stays green, unchanged.
+
+Sharpest next, affecting streamers today: none of the remaining three are
 flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
 and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below). With #172, #168, #161, #163, #171 and #162 done, the next
-cleanest pick without an overlapping PR is
-[#164](https://github.com/clarkio/wos-plus/issues/164) — small.
+(see below). With #172, #168, #161, #163, #171, #162 and #164 done, the
+remaining pick without an overlapping PR is
 [#169](https://github.com/clarkio/wos-plus/issues/169) (rebuild the found-words
-list on reconnect) is the other option without an overlapping PR, and the
-larger of the two — it touches `GameSpectator`'s reconnect handling in
+list on reconnect) — it touches `GameSpectator`'s reconnect handling in
 `wos-plus-main.ts`, not just a route.
-
-Note: GitHub still shows issue #164 open, but its *behaviour* (strip a leading
-`#` from the channel name on the channel-stats read path) already exists in
-`src/pages/api/channel-stats/[channel].ts`, inline with a comment citing
-#164 — it just reimplements the same regex `normalizeTwitchChannel`
-(`src/lib/board-utils.ts`) already applies to the board path, rather than
-reusing it. That duplication is exactly the kind #133 tracks separately. So
-#164's actual remaining work is small: replace the inline regex with
-`normalizeTwitchChannel`, verify the acceptance test still pins the same
-behaviour, and close the tracking issue — not implement the strip from
-scratch.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 
