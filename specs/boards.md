@@ -142,6 +142,12 @@ A board is only ever captured from a level WoS+ believes is complete — see
 - **When** WoS+ tries to save it
 - **Then** nothing is saved — an incomplete board is worse than no board
 
+> ✅ **Confirmed (maintainer)** — enforced at two layers. The capture side in
+> `src/scripts/wos-plus-main.ts` only offers a board once every slot is
+> solved; since [#162](https://github.com/clarkio/wos-plus/issues/162), `POST
+> /api/boards` also refuses a slot with an empty word directly, so the archive
+> no longer relies on caller discipline alone.
+
 ---
 
 ## Channel and language on a captured board
@@ -352,10 +358,12 @@ must hold to the same rules as every other.
 - **When** the save is attempted
 - **Then** the board is rejected as an invalid board name, and nothing is saved
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today does not check the name on
-> save, so such a board reaches the archive and is then unreachable: the lookup
-> rules that would find it reject the very name it was stored under. Tracked by
-> [#162](https://github.com/clarkio/wos-plus/issues/162).
+> ✅ **Confirmed (maintainer)** — implemented in
+> [#162](https://github.com/clarkio/wos-plus/issues/162). `POST /api/boards`
+> now validates the board id with the same `validateBoardName` rule that
+> `[id].ts` already applied on lookup and repair (`src/lib/board-utils.ts`),
+> so a board can no longer be filed under a name the lookup path will then
+> always reject.
 
 ### Scenario: a board offered for saving with malformed slots
 
@@ -364,10 +372,12 @@ must hold to the same rules as every other.
 - **When** the save is attempted
 - **Then** the board is rejected, and nothing is saved
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today applies only the
-> repeated-word rule here, so a *repair* of the same board is rejected while the
-> *save* succeeds. Tracked by
-> [#162](https://github.com/clarkio/wos-plus/issues/162).
+> ✅ **Confirmed (maintainer)** — implemented in
+> [#162](https://github.com/clarkio/wos-plus/issues/162). `POST /api/boards`
+> now rejects a missing or malformed `slots` array with the same
+> `isWellFormedSlot` check `PUT /api/boards/[id]` already applied on repair.
+> This also closes the completeness gap noted under "Capturing a board" above:
+> an unsolved slot (empty word) is exactly the shape this guard rejects.
 
 ### Scenario: which word a board is filed under
 

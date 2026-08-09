@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
-import { findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../../../lib/board-utils';
+import { findRedundantWords, hasInvalidWords, hasRedundantWords, isWellFormedSlot, normalizeLanguageCode, normalizeTwitchChannel, validateBoardName } from '../../../lib/board-utils';
 
 export const prerender = false;
 
@@ -20,25 +20,15 @@ const jsonResponse = (body: object, status = 200) =>
 // Security validation: sanitize and validate board ID.
 // Board IDs should only contain letters (they are words from the game).
 // Returns the cleaned ID, or an error response when validation fails.
+// The rules themselves live in `validateBoardName` (src/lib/board-utils.ts),
+// shared with the POST save path (issue #162); this just shapes the result
+// into the Response this route's callers expect.
 function validateBoardId(id: string | undefined): { cleanId: string } | { errorResponse: Response } {
-  if (!id) {
-    return { errorResponse: jsonResponse({ error: 'Board ID is required' }, 400) };
+  const result = validateBoardName(id);
+  if ('error' in result) {
+    return { errorResponse: jsonResponse({ error: result.error }, 400) };
   }
-
-  const cleanId = id.replace(/\s+/g, '').toUpperCase();
-
-  // Validate: only alphabetic characters allowed
-  if (!/^[A-Z]+$/.test(cleanId)) {
-    return { errorResponse: jsonResponse({ error: 'Invalid board ID format. Only letters are allowed.' }, 400) };
-  }
-
-  // Validate: reasonable length (game words are typically 4-12 characters;
-  // see specs/boards.md § Naming a board for why 12 is the cushion, issue #168)
-  if (cleanId.length < 4 || cleanId.length > 12) {
-    return { errorResponse: jsonResponse({ error: 'Invalid board ID length. Must be between 4 and 12 characters.' }, 400) };
-  }
-
-  return { cleanId };
+  return result;
 }
 
 // Handle CORS preflight requests (issue #172).
@@ -112,14 +102,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return jsonResponse({ error: 'slots must be a non-empty array' }, 400);
   }
 
-  const isValidSlots = slots.every(slot =>
-    slot &&
-    typeof slot === 'object' &&
-    Array.isArray(slot.letters) &&
-    typeof slot.word === 'string' &&
-    slot.word.length > 0
-  );
-  if (!isValidSlots) {
+  if (!slots.every(isWellFormedSlot)) {
     return jsonResponse({ error: 'Invalid slot structure detected' }, 400);
   }
 

@@ -18,11 +18,12 @@
  * - `src/pages/api/boards/[id].ts` — `GET` looks one board up; `PUT` repairs a
  *   stored board that was saved with the same word in two slots (issue #119).
  *
- * The board **name** rules in `specs/boards.md § Naming a board` are enforced
- * by `validateBoardId` in `[id].ts` — that is, on *lookup* and *repair*, but
- * **not** on the `POST` save path. The spec records that asymmetry as an open
- * question, and the tests below treat it as one rather than as contract. See
- * the "Open questions" describe at the foot of this file.
+ * The board **name** and **slot-shape** rules in `specs/boards.md § Naming a
+ * board` and `§ Saving a board directly` are shared, via `validateBoardName`
+ * and `isWellFormedSlot` in `src/lib/board-utils.ts`, across *lookup*,
+ * *repair* and the `POST` save path (issue #162) — the save path used to skip
+ * both, which let a board be filed under a name lookup would then always
+ * reject.
  *
  * ---------------------------------------------------------------------------
  * How these tests prove a route did *not* touch the archive
@@ -1312,22 +1313,26 @@ describe('specs/boards.md — Capturing a board', () => {
     // When WoS+ tries to save it
     // Then nothing is saved — an incomplete board is worse than no board
     //
-    // This scenario is NOT enforced by this route. The route's only slot check
-    // is the repeated-word guard; a slot with an empty word is simply ignored
-    // by `findRedundantWords` and the board is saved as-is. The spec records
-    // that gap under "Open questions" as "a board saved with malformed slots",
-    // and it is pinned there rather than asserted as contract here.
-    //
-    // What *does* enforce it today is the capture side in
-    // `src/scripts/wos-plus-main.ts`, which only offers a board once every slot
-    // is solved. That is out of this task's scope (game flow is task 6), so
-    // this describe deliberately asserts nothing and points at both halves.
+    // The capture side in `src/scripts/wos-plus-main.ts` only offers a board
+    // once every slot is solved, but that is caller discipline, not a
+    // guarantee — see specs/boards.md § Saving a board directly. Since #162,
+    // this route also refuses an unsolved slot directly: a slot with an empty
+    // word is exactly the shape `isWellFormedSlot` rejects.
 
-    it.todo(
-      'incomplete captures are refused by the archive itself — ' +
-      'open question: the route does not check slot completeness, only repeated words; ' +
-      'see the "a board saved with malformed slots" open question below',
-    );
+    it('rejects the capture and saves nothing when a slot still has an empty word', async () => {
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: {
+          id: 'CAUTION',
+          slots: [slot('ACT'), { letters: Array.from('COAT'), word: '' }, slot('CAUTION')],
+          language_code: 'en',
+        },
+      });
+
+      expect(response.status).toBe(400);
+      expect(unhandledNetworkRequests()).toEqual([]);
+    });
   });
 });
 
@@ -1822,91 +1827,51 @@ describe('/api/boards — transport concerns (no spec section)', () => {
 });
 
 // ===========================================================================
-// specs/boards.md § Saving a board directly, § Known limitations
+// specs/boards.md § Saving a board directly
 //
-// ANSWERED by the maintainer in review of PR #160. These were open questions;
-// they are now decisions, and the spec has been rewritten to state the approved
-// behaviour rather than the current behaviour.
+// #162 landed: the save path now applies the same board-name and slot-shape
+// rules the lookup and repair paths already enforced. These describes used to
+// live in the "approved changes not yet implemented" block below, pinning
+// today's (wrong) behaviour under protest; they are inverted here, not
+// deleted, per CLAUDE.md §2.2.
 // ===========================================================================
 
-describe('specs/boards.md — approved changes not yet implemented (current behaviour under protest)', () => {
-  /**
-   * Every test in this block asserts what WoS+ does **today**, which the
-   * maintainer has now ruled is **wrong**. They are kept, not deleted, and this
-   * is deliberate — per `CLAUDE.md` §2.2 an existing assertion is never removed
-   * to make a change pass.
-   *
-   * Their job has changed. They no longer ask a question; they hold the current
-   * behaviour still so that implementing the approved change cannot happen
-   * silently. Landing #162 or #165 *must* turn these red, and the fix is to
-   * invert each assertion in that same PR — not to delete it here first.
-   *
-   * If you are reading this because one of them just failed: that is the
-   * mechanism working. Check the issue named on the test, and invert it.
-   */
-
+describe('specs/boards.md — Saving a board directly', () => {
   describe('Scenario: a board offered for saving under a name that is not a big word', () => {
-    // APPROVED (#162): the board is rejected as an invalid board name, and
-    //                  nothing is saved.
-    // TODAY:           the name is not checked, and the board is saved.
-    //
-    // The assertions below pin TODAY. Invert them when #162 lands.
+    // Given a board is offered for saving with a name that is not 4-12
+    //       letters — for example `CAT` or `CAUT10N`
+    // When the save is attempted
+    // Then the board is rejected as an invalid board name, and nothing is
+    //      saved
 
     it.each([
       ['a name that is too short', 'CAT'],
       ['a name with a digit in it', 'CAUT10N'],
       ['a name that is too long', 'A'.repeat(21)],
       ['a name that is not letters at all', '!!!'],
-    ])('known gap (#162): stores a board named with %s', async (_label, id) => {
-      /**
-       * KNOWN GAP (#162) — pins current behaviour; the maintainer has ruled it wrong.
-       *
-       * Approved: the save path applies the same name rules as the
-       * lookup and repair paths? `validateBoardId` lives in `[id].ts` and is
-       * never called by `index.ts`, so a board can be filed under a name that
-       * the lookup rules will then always reject — see the companion test
-       * below, which shows the board becoming unreachable.
-       *
-       * Asserted only to make the asymmetry visible and to fail loudly if it
-       * changes. NOT a statement that saving such a board is right.
-       */
-      const insert = requestRecorder();
-      server.use(supabaseSuccess('boards', [storedBoard({ id })], {
-        method: 'post',
-        once: true,
-        onRequest: insert.onRequest,
-      }));
-
+    ])('#162 landed: rejects a board named with %s, and saves nothing', async (_label, id) => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
         json: { id, slots: CLEAN_SLOTS, language_code: 'en' },
       });
 
-      expect(response.status).toBe(200);
-      expect(insert.captured.body).toMatchObject({ id });
+      expect(response.status).toBe(400);
+      expect(await readJson<{ code: string }>(response)).toMatchObject({ code: 'INVALID_BOARD_ID' });
+      expect(unhandledNetworkRequests()).toEqual([]);
     });
 
-    it('known gap (#162): a board saved under a bad name can then never be looked up', async () => {
-      /**
-       * KNOWN GAP (#162) — the consequence of the asymmetry above, spelled out.
-       *
-       * The save succeeds; the lookup of the very same name is rejected before
-       * the archive is consulted. The board is in the archive and unreachable
-       * through the normal path. The maintainer has ruled the save path must
-       * apply the same name rules, so this test inverts when #162 lands.
-       */
-      server.use(supabaseSuccess('boards', [storedBoard({ id: 'CAUT10N' })], {
-        method: 'post',
-        once: true,
-      }));
-
+    it('#162 landed: a board rejected on save is never left unreachable at lookup', async () => {
+      // The old failure mode this replaces: a save that skipped the name
+      // check would succeed, then the very same name would 400 on lookup —
+      // a board in the archive that the normal path could never reach again.
       const saved = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
         json: { id: 'CAUT10N', slots: CLEAN_SLOTS, language_code: 'en' },
       });
-      expect(saved.status).toBe(200);
+      expect(saved.status).toBe(400);
+      expect(unhandledNetworkRequests()).toEqual([]);
 
       const lookup = await invokeRoute(GET_BOARD, {
         url: '/api/boards/CAUT10N',
@@ -1924,8 +1889,7 @@ describe('specs/boards.md — approved changes not yet implemented (current beha
     // Given a board is offered for saving whose slots have no letters, or no
     //       words
     // When the save is attempted
-    // Then only the repeated-word rule is applied; the slots' shape is not
-    //      checked, and the board is saved
+    // Then the board is rejected, and nothing is saved
 
     it.each([
       ['a slot with no letters', [{ word: 'ACTION' }, slot('CAUTION')]],
@@ -1933,37 +1897,57 @@ describe('specs/boards.md — approved changes not yet implemented (current beha
       ['a slot with an empty word', [{ letters: Array.from('ACTION'), word: '' }, slot('CAUTION')]],
       ['a slot that is null', [null, slot('CAUTION')]],
       ['no slots at all', []],
-    ])('known gap (#162): stores a board containing %s', async (_label, slots) => {
-      /**
-       * KNOWN GAP (#162) — pins current behaviour; the maintainer has ruled it wrong.
-       *
-       * Approved: the save path applies the same slot-shape rules as
-       * the repair path? `PUT /api/boards/[id]` rejects every one of these with
-       * `Invalid slot structure detected` (see the "a repair with a malformed
-       * slot" describe above), while `POST` stores them. The two paths disagree
-       * about what a valid slot is.
-       *
-       * This is also what leaves `specs/boards.md § a capture where a word was
-       * never fully worked out` unenforced at the archive: a slot with an empty
-       * word is exactly an unsolved slot.
-       */
-      const insert = requestRecorder();
-      server.use(supabaseSuccess('boards', [storedBoard()], {
-        method: 'post',
-        once: true,
-        onRequest: insert.onRequest,
-      }));
-
+    ])('#162 landed: rejects a board containing %s, and saves nothing', async (_label, slots) => {
       const response = await invokeRoute(POST, {
         method: 'POST',
         url: '/api/boards',
         json: { id: 'CAUTION', slots, language_code: 'en' },
       });
 
-      expect(response.status).toBe(200);
-      expect(insert.captured.body).toMatchObject({ slots });
+      expect(response.status).toBe(400);
+      expect(await readJson<{ code: string }>(response)).toMatchObject({ code: 'INVALID_SLOTS' });
+      expect(unhandledNetworkRequests()).toEqual([]);
+    });
+
+    it('#162 landed: names the board as "ID" when the capture carried no id either', async () => {
+      const response = await invokeRoute(POST, {
+        method: 'POST',
+        url: '/api/boards',
+        json: { slots: [], language_code: 'en' },
+      });
+
+      expect(response.status).toBe(400);
+      expect(await readJson<{ message: string }>(response)).toMatchObject({
+        message: 'Board ID was not saved: its slots are missing letters or a word.',
+      });
+      expect(unhandledNetworkRequests()).toEqual([]);
     });
   });
+});
+
+// ===========================================================================
+// specs/boards.md § Saving a board directly (remaining gap), § Known limitations
+//
+// ANSWERED by the maintainer in review of PR #160. These were open questions;
+// they are now decisions, and the spec has been rewritten to state the approved
+// behaviour rather than the current behaviour.
+// ===========================================================================
+
+describe('specs/boards.md — approved changes not yet implemented (current behaviour under protest)', () => {
+  /**
+   * Every test in this block asserts what WoS+ does **today**, which the
+   * maintainer has now ruled is **wrong**. They are kept, not deleted, and this
+   * is deliberate — per `CLAUDE.md` §2.2 an existing assertion is never removed
+   * to make a change pass.
+   *
+   * Their job has changed. They no longer ask a question; they hold the current
+   * behaviour still so that implementing the approved change cannot happen
+   * silently. Landing #165 *must* turn this red, and the fix is to invert the
+   * assertion in that same PR — not to delete it here first.
+   *
+   * If you are reading this because it just failed: that is the mechanism
+   * working. Check the issue named on the test, and invert it.
+   */
 
   describe('Scenario: the big word disagrees with the last slot', () => {
     // Given a level is being captured

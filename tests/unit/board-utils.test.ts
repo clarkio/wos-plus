@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coerceSlots, findInvalidWords, findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel, wosLanguageIdToCode } from '@/lib/board-utils';
+import { coerceSlots, findInvalidWords, findRedundantWords, hasInvalidWords, hasRedundantWords, isWellFormedSlot, normalizeLanguageCode, normalizeTwitchChannel, validateBoardName, wosLanguageIdToCode } from '@/lib/board-utils';
 
 /**
  * Unit tests for board-utils.ts module (issue #119)
@@ -240,6 +240,72 @@ describe('board-utils module', () => {
       expect(wosLanguageIdToCode(null)).toBeNull();
       expect(wosLanguageIdToCode(undefined)).toBeNull();
       expect(wosLanguageIdToCode({})).toBeNull();
+    });
+  });
+
+  describe('isWellFormedSlot (issue #162)', () => {
+    it('should accept a slot with letters and a non-empty word', () => {
+      expect(isWellFormedSlot({ letters: ['A', 'C', 'T'], word: 'ACT' })).toBe(true);
+    });
+
+    it('should reject a slot with no letters', () => {
+      expect(isWellFormedSlot({ word: 'ACT' })).toBe(false);
+    });
+
+    it('should reject a slot whose letters are not a list', () => {
+      expect(isWellFormedSlot({ letters: 'ACT', word: 'ACT' })).toBe(false);
+    });
+
+    it('should reject a slot with no word', () => {
+      expect(isWellFormedSlot({ letters: ['A', 'C', 'T'] })).toBe(false);
+    });
+
+    it('should reject a slot with an empty word', () => {
+      expect(isWellFormedSlot({ letters: ['A', 'C', 'T'], word: '' })).toBe(false);
+    });
+
+    it('should reject a slot whose word is not text', () => {
+      expect(isWellFormedSlot({ letters: ['A', 'C', 'T'], word: 42 })).toBe(false);
+    });
+
+    it('should reject null and non-object slots', () => {
+      expect(isWellFormedSlot(null)).toBe(false);
+      expect(isWellFormedSlot(undefined)).toBe(false);
+      expect(isWellFormedSlot('ACT')).toBe(false);
+    });
+  });
+
+  describe('validateBoardName (issue #162)', () => {
+    it('should accept a 4-12 letter name', () => {
+      expect(validateBoardName('CAUTION')).toEqual({ cleanId: 'CAUTION' });
+    });
+
+    it('should upper-case and strip whitespace from a valid name', () => {
+      expect(validateBoardName(' c a u t i o n ')).toEqual({ cleanId: 'CAUTION' });
+    });
+
+    it('should reject a name shorter than 4 letters', () => {
+      expect(validateBoardName('CAT')).toEqual({
+        error: 'Invalid board ID length. Must be between 4 and 12 characters.',
+      });
+    });
+
+    it('should reject a name longer than 12 letters', () => {
+      expect(validateBoardName('A'.repeat(13))).toEqual({
+        error: 'Invalid board ID length. Must be between 4 and 12 characters.',
+      });
+    });
+
+    it('should reject a name containing anything other than letters', () => {
+      expect(validateBoardName('CAUT10N')).toEqual({
+        error: 'Invalid board ID format. Only letters are allowed.',
+      });
+    });
+
+    it('should reject a missing or non-string name', () => {
+      expect(validateBoardName(undefined)).toEqual({ error: 'Board ID is required' });
+      expect(validateBoardName('')).toEqual({ error: 'Board ID is required' });
+      expect(validateBoardName(42)).toEqual({ error: 'Board ID is required' });
     });
   });
 

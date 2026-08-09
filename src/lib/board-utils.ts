@@ -98,6 +98,48 @@ export function hasInvalidWords(slots: unknown, bigWord: string): boolean {
   return findInvalidWords(slots, bigWord).length > 0;
 }
 
+/**
+ * True when a single slot has the shape a board write needs: an object with
+ * a `letters` array and a non-empty `word` string. Shared by the repair path
+ * (PUT /api/boards/[id]) and the save path (POST /api/boards, issue #162) so
+ * the two write paths cannot disagree about what a valid slot is.
+ */
+export function isWellFormedSlot(slot: unknown): boolean {
+  return (
+    !!slot &&
+    typeof slot === 'object' &&
+    Array.isArray((slot as { letters?: unknown }).letters) &&
+    typeof (slot as { word?: unknown }).word === 'string' &&
+    (slot as { word: string }).word.length > 0
+  );
+}
+
+/**
+ * Validates and normalizes a board id against the same rules
+ * specs/boards.md § Naming a board enforces on lookup (`validateBoardId` in
+ * `[id].ts`): letters only, 4-12 characters once whitespace is stripped and
+ * the value is upper-cased. Shared with the save path (POST /api/boards,
+ * issue #162) so a board can no longer be filed under a name the lookup path
+ * will then always reject.
+ */
+export function validateBoardName(id: unknown): { cleanId: string } | { error: string } {
+  if (typeof id !== 'string' || id.length === 0) {
+    return { error: 'Board ID is required' };
+  }
+
+  const cleanId = id.replace(/\s+/g, '').toUpperCase();
+
+  if (!/^[A-Z]+$/.test(cleanId)) {
+    return { error: 'Invalid board ID format. Only letters are allowed.' };
+  }
+
+  if (cleanId.length < 4 || cleanId.length > 12) {
+    return { error: 'Invalid board ID length. Must be between 4 and 12 characters.' };
+  }
+
+  return { cleanId };
+}
+
 // Words on Stream supports three word languages. The game's socket events
 // carry the language as a numeric id (e.g. on the "Game Connected" payload);
 // the official wos.gg client resolves that id through its /api/language?id=N
