@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #163 fix
+### The numbers, as of the #171 fix
 
-**663 passing** tests across 19 files, plus 6 deliberate `it.todo`. Coverage
-**91.09% statements / 86.96% branches / 88.2% functions / 91.8% lines**, counting
+**658 passing** tests across 19 files, plus 5 deliberate `it.todo`. Coverage
+**90.98% statements / 86.88% branches / 88.13% functions / 91.68% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -65,11 +65,24 @@ Thirteen issues, all approved by the maintainer:
 [#166](https://github.com/clarkio/wos-plus/issues/166),
 [#164](https://github.com/clarkio/wos-plus/issues/164),
 [#168](https://github.com/clarkio/wos-plus/issues/168),
-[#161](https://github.com/clarkio/wos-plus/issues/161) and
-[#163](https://github.com/clarkio/wos-plus/issues/163) are done** (PR
+[#161](https://github.com/clarkio/wos-plus/issues/161),
+[#163](https://github.com/clarkio/wos-plus/issues/163) and
+[#171](https://github.com/clarkio/wos-plus/issues/171) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
-#166 fix, the #164 fix, the #168 fix, the #161 fix and the #163 fix) — six
-remain.
+#166 fix, the #164 fix, the #168 fix, the #161 fix, the #163 fix and the
+#171 fix) — five remain.
+
+**#171 is done** — the retired client-side word-adding path is gone, not just
+unreachable: `updateWordsDb` in `src/scripts/wos-words.ts` (PATCHed the
+external `clarkio.com/wos-dictionary` URL, had no callers) and the
+commented-out `POST` handler in `src/pages/api/words.ts` are both deleted.
+`/api/words` now exports `GET` and `OPTIONS` only, which is unchanged — the
+route never had a working write path to begin with. The `known gap (#171)`
+`it.todo` in `words.acceptance.test.ts` was replaced with a real assertion
+(the add path no longer exists in the module at all), not deleted, and
+`specs/words.md` § Where new words come from is now ✅ Confirmed rather than
+⚠️. Only *adding* was retired; `GET /api/words` and `loadWordsFromDb` are
+untouched and still back the missed-word fallback and masked-guess recovery.
 
 **#161 is done** — both `POST /api/boards` and the client's `saveBoard` in
 `src/scripts/db-service.ts` now reject a fresh save whose word language is
@@ -155,12 +168,14 @@ covers two independent reasons a board can be broken.
 `specs/boards.md` § Repairing a board that was stored badly is now ✅
 Confirmed rather than ⚠️ for that scenario.
 
-Sharpest next, affecting streamers today: none of the remaining six are
+Sharpest next, affecting streamers today: none of the remaining five are
 flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
 and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below). With #172, #168, #161 and #163 done, the next cleanest picks
-without an overlapping PR are [#162](https://github.com/clarkio/wos-plus/issues/162)
-and [#171](https://github.com/clarkio/wos-plus/issues/171).
+(see below). With #172, #168, #161, #163 and #171 done, the next cleanest pick
+without an overlapping PR is [#162](https://github.com/clarkio/wos-plus/issues/162)
+— it is also the largest of what remains, since it adds real validation logic
+to the board save path rather than deleting dead code or narrowing a display
+bug, so budget more room for it than the last few.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 

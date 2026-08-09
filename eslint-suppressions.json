@@ -72,11 +72,6 @@
       "count": 1
     }
   },
-  "src/scripts/wos-words.ts": {
-    "@typescript-eslint/return-await": {
-      "count": 1
-    }
-  },
   "src/scripts/wos-worker.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 2

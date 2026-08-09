@@ -76,13 +76,13 @@ pnpm run preview
    - Remote dictionary loaded from `https://clarkio.com/wos-dictionary`
    - `findWosWordsByLetters()`: Letter frequency matching algorithm
    - `findAllMissingWords()`: Identifies potentially missed words at level end
-   - **Words are NOT auto-added to the dictionary.** This file used to claim
-     they were, on a correct guess, via PATCH. They are not: `updateWordsDb` —
-     the only add path — `PATCH`es `clarkio.com/wos-dictionary` directly and has
-     **no callers anywhere in `src/`**. `/api/words` exports `GET` and `OPTIONS`
-     only; its `POST` handler is commented out and there is no `PATCH`. Whether
-     adding should be wired up or retired is an open question for the maintainer
-     — see [specs/README.md § Open questions](../specs/README.md) (W1).
+   - **Words are NOT auto-added to the dictionary, and there is no client-side
+     path to add one at all.** `/api/words` exports `GET` and `OPTIONS` only.
+     The former `updateWordsDb` PATCH path and the commented-out `POST`
+     handler were both deleted — new words are derived from boards, in the
+     database layer, as part of the board save flow. See
+     [specs/README.md § Decisions from the #160 review](../specs/README.md)
+     (W1, [#171](https://github.com/clarkio/wos-plus/issues/171)).
 
 4. **API Routes** ([src/pages/api/](../src/pages/api/)) - All require `prerender = false`
    - Access Cloudflare env via `locals.runtime.env` (e.g., `env.SUPABASE_URL`)

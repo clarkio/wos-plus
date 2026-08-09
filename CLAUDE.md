@@ -137,7 +137,7 @@ Prefer a failing build over a paragraph of good advice.
 
 ## 4. Known state (keep current)
 
-- Test suite: **663 passing** Vitest tests across 19 files, plus **6
+- Test suite: **658 passing** Vitest tests across 19 files, plus **5
   `it.todo`**. Every remaining todo is a **known gap with a tracking issue or a
   stated coverage limitation** — none is simply an unwritten test, and none may
   be deleted to tidy the count. The decisions behind them are tabulated in
@@ -150,8 +150,8 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **91.09% statements / 86.96% branches / 88.2% functions /
-  91.8% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **90.98% statements / 86.88% branches / 88.13% functions /
+  91.68% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.
@@ -176,7 +176,7 @@ Prefer a failing build over a paragraph of good advice.
   was reported before untested files were counted at all; 63.45% was the honest
   figure once they were.
 - ESLint 9 flat config (`eslint.config.js`), type-aware, enforced at
-  `--max-warnings 0`. **63** pre-existing violations across 17 files are
+  `--max-warnings 0`. **62** pre-existing violations across 16 files are
   suppressed via `eslint-suppressions.json` (down from 68) and should keep
   being burned down; the
   `no-unsafe-*` family is downgraded repo-wide pending real payload types.

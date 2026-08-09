@@ -66,39 +66,6 @@ export interface Slot {
   length?: number;
 }
 
-export async function updateWordsDb(word: string) {
-  try {
-    // Membership is checked against the lower-cased mirror set so a word that
-    // only differs in case from a known one isn't re-sent to the API.
-    if (wosDictionarySet.has(word.toLowerCase())) {
-      console.log(`Word "${word}" already exists in the WOS dictionary.`);
-      return;
-    }
-
-    const url = 'https://clarkio.com/wos-dictionary';
-    const response = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ word }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
-    }
-
-    console.log(`Successfully updated dictionary with word: ${word}`);
-    wosDictionary.push(word);
-    wosDictionarySet.add(word.toLowerCase());
-    console.log(`WOS Dictionary now contains ${wosDictionary.length} words.`);
-    return response.json();
-  } catch (error) {
-    console.error('Error updating WOS dictionary:', error);
-    throw error;
-  }
-}
-
 export async function loadWordsFromDb() {
   try {
     const url = '/api/words';

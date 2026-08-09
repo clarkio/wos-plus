@@ -19,8 +19,6 @@ type WosWordsModule = typeof import('@scripts/wos-words');
 
 /** Endpoint `loadWordsFromDb()` reads the dictionary from. */
 const WORDS_API_URL = '/api/words';
-/** Endpoint `updateWordsDb()` PATCHes newly discovered words to. */
-const WOS_DICTIONARY_URL = 'https://clarkio.com/wos-dictionary';
 
 /**
  * A tiny hand-picked dictionary used with the letters 'ater'.
@@ -518,62 +516,4 @@ describe('wos-words module', () => {
     });
   });
 
-  describe('updateWordsDb', () => {
-    it('should PATCH an unknown word to the dictionary endpoint', async () => {
-      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
-      fetchMock.mockResolvedValueOnce(okResponse({ ok: true }));
-
-      await wosWords.updateWordsDb('stare');
-
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(fetchMock).toHaveBeenCalledWith(WOS_DICTIONARY_URL, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word: 'stare' }),
-      });
-    });
-
-    it('should add the new word to the in-memory dictionary on success', async () => {
-      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
-      fetchMock.mockResolvedValueOnce(okResponse({ ok: true }));
-
-      await wosWords.updateWordsDb('stare');
-
-      expect(wosWords.isWosWord('stare')).toBe(true);
-    });
-
-    it('should skip a word already present in the dictionary', async () => {
-      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
-
-      await wosWords.updateWordsDb('rate');
-
-      expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('should skip a known word that differs only in case', async () => {
-      // The dictionary is matched case-insensitively everywhere else, so an
-      // already-known word must not be re-sent just because its casing differs.
-      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
-
-      await wosWords.updateWordsDb('RATE');
-
-      expect(fetchMock).not.toHaveBeenCalled();
-    });
-
-    it('should reject when the PATCH returns a non-ok response', async () => {
-      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
-      fetchMock.mockResolvedValueOnce(errorResponse(503, 'Service Unavailable'));
-
-      await expect(wosWords.updateWordsDb('stare')).rejects.toThrow('503');
-      expect(wosWords.isWosWord('stare')).toBe(false);
-    });
-
-    it('should reject when the PATCH request itself fails', async () => {
-      const wosWords = await importModuleWithDictionary(TEST_DICTIONARY);
-      fetchMock.mockRejectedValueOnce(new Error('offline'));
-
-      await expect(wosWords.updateWordsDb('stare')).rejects.toThrow('offline');
-      expect(console.error).toHaveBeenCalled();
-    });
-  });
 });
