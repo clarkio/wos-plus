@@ -20,9 +20,9 @@
  * Where a spec scenario spans both halves, the comment says so and names the
  * other half, rather than this file quietly asserting only the part it can see.
  *
- * The route exports **`GET` and `OPTIONS` only**. See the
- * "Adding a newly seen word" describe below for the write half, which the spec
- * marks ❓ Unconfirmed and which has no implementation here at all.
+ * The route exports **`GET` and `OPTIONS` only**. There is no write half —
+ * see the "Where new words come from" describe below for why: adding a word
+ * client-side is a retired path (#171), not a missing one.
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -322,7 +322,9 @@ describe('specs/words.md — Where new words come from (✅ read-only is the con
    * longer exists is worse than no todo at all.
    *
    * Read-only is therefore no longer an observation about today's code — it is
-   * the contract. The test below asserts it as such.
+   * the contract. The tests below assert it as such: the route exports no
+   * write handler, and the dead `updateWordsDb` add path is gone from
+   * `wos-words.ts` entirely, not just unreachable.
    *
    * Note this retires **adding only**. Reading the list is untouched and still
    * load-bearing: it backs the missed-word fallback and masked-guess recovery.
@@ -344,13 +346,13 @@ describe('specs/words.md — Where new words come from (✅ read-only is the con
     expect(responseHeaders(response)['access-control-allow-methods']).toBe('GET, OPTIONS');
   });
 
-  it.todo(
-    'known gap (#171): the retired add path is still in the tree — `updateWordsDb` in ' +
-    'src/scripts/wos-words.ts PATCHes the external clarkio.com/wos-dictionary URL and has ' +
-    'no callers, and a commented-out POST handler remains in src/pages/api/words.ts. ' +
-    'Both are to be deleted. Not reachable from this route, so it is recorded here rather ' +
-    'than asserted (specs/words.md § Where new words come from)',
-  );
+  it('has no add path left anywhere in the tree (#171)', async () => {
+    // `updateWordsDb` PATCHed the external clarkio.com/wos-dictionary URL and
+    // had no callers; the commented-out POST handler in this route was never
+    // enabled. Both are gone now, not just unreachable from this route.
+    const wosWords = await import('../../src/scripts/wos-words');
+    expect(Object.keys(wosWords)).not.toContain('updateWordsDb');
+  });
 });
 
 describe('/api/words — transport concerns (no spec section; see task owning src/lib/cors.ts)', () => {

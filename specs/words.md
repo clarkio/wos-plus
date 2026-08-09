@@ -188,10 +188,9 @@ reads the list, and the board archive is what grows it.
 - **Then** WoS+ sends nothing to the shared word list — the words reach it later
   by way of the board being saved
 
-> ⚠️ **Approved, not yet implemented** — WoS+ still carries an unused
-> client-side path for adding a word, which reaches an external address and has
-> no callers. Retiring it is tracked by
-> [#171](https://github.com/clarkio/wos-plus/issues/171). Only *adding* is
+> ✅ **Confirmed (maintainer)** — the client-side add path (`updateWordsDb`,
+> and the commented-out `POST` handler on `/api/words`) is deleted, per
+> [#171](https://github.com/clarkio/wos-plus/issues/171). Only *adding* was
 > retired; reading the list stays exactly as it is, and is still what backs the
 > missed-word fallback and masked-guess recovery.
 

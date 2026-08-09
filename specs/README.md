@@ -136,7 +136,6 @@ behaviour, so implementing one forces its test to be inverted deliberately.
 | B1, B2 | The board **save** path must apply the same name, slot and completeness guards as lookup and repair. Today it applies only the repeated-word rule. | [#162](https://github.com/clarkio/wos-plus/issues/162) |
 | B3 | A board is filed under the **longest** word on it, alphabetically last among ties — not the last slot's word. | [#165](https://github.com/clarkio/wos-plus/issues/165) |
 | G2 | An unrecoverable masked guess **counts as a clear**, but **blocks the board save**. Two outcomes, deliberately decoupled. | [#167](https://github.com/clarkio/wos-plus/issues/167) |
-| W1 | The client-side word-adding path is **retired**. New words are derived from boards, in the database layer, as part of the board save flow. Reading the list is untouched. | [#171](https://github.com/clarkio/wos-plus/issues/171) |
 | G6 | On reconnect, rebuild the found-words list from the re-reported slots **only on a level with no masked guesses**. On a masked level the gap stays — a masked guess cannot be recovered after the fact. | [#169](https://github.com/clarkio/wos-plus/issues/169) |
 
 **Confirmed — current behaviour is intended.** No work; the reasoning is
@@ -144,6 +143,7 @@ recorded in the spec so these are not raised again.
 
 | Was | Decision |
 | --- | --- |
+| ~~W1~~ | ~~The client-side word-adding path is **retired**. New words are derived from boards, in the database layer, as part of the board save flow. Reading the list is untouched.~~ **Fixed** — `updateWordsDb` in `wos-words.ts` and the commented-out `POST` handler in `src/pages/api/words.ts` are both deleted. Per [#171](https://github.com/clarkio/wos-plus/issues/171). |
 | B4 | No paging is fine at ~1,600 boards. Revisit with the stored slot shape if the game ever ships thousands. |
 | G4 | A guess for a slot the board lacks **should never happen** — it means WoS+ took up the wrong board data earlier. The display disagreement is a symptom, and tidying it would hide the signal. |
 | G5 | The all-time best waits for the chatbot **during play**; the chatbot is the source of truth there. This does not conflict with C3, which is about connect time. |
