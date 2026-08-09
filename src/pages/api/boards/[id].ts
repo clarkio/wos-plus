@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
-import { findRedundantWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../../../lib/board-utils';
+import { findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../../../lib/board-utils';
 
 export const prerender = false;
 
@@ -87,9 +87,11 @@ export const GET: APIRoute = async ({ params }) => {
   }
 };
 
-// Self-healing update for boards saved with redundant words (issue #119).
-// Only replaces the stored slots when the stored board actually contains the
-// same word in multiple slots AND the incoming slots are clean, so a healthy
+// Self-healing update for boards saved badly: the same word in multiple slots
+// (issue #119), or a word using a letter that is not in the board's big word
+// (issue #163 — the board id itself, since a board is filed under its big
+// word). Only replaces the stored slots when the stored board is actually
+// broken by one of those rules AND the incoming slots are clean, so a healthy
 // board can never be overwritten through this endpoint.
 export const PUT: APIRoute = async ({ params, request }) => {
   const validation = validateBoardId(params.id);
@@ -149,10 +151,12 @@ export const PUT: APIRoute = async ({ params, request }) => {
       throw fetchError;
     }
 
-    if (!hasRedundantWords(existingBoard?.slots)) {
+    const isStoredBoardSound =
+      !hasRedundantWords(existingBoard?.slots) && !hasInvalidWords(existingBoard?.slots, cleanId);
+    if (isStoredBoardSound) {
       return jsonResponse({
         error: 'Board update not allowed',
-        message: `Board ${cleanId} has no redundant words; refusing to overwrite it.`,
+        message: `Board ${cleanId} is already sound; refusing to overwrite it.`,
         code: 'BOARD_UPDATE_NOT_ALLOWED',
       }, 409);
     }

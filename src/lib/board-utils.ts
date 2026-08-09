@@ -3,6 +3,8 @@
 // board whose slots contain the same word more than once is corrupted data
 // (issue #119) and must never be inserted as-is.
 
+import { canFormWord } from '../scripts/wos-words';
+
 /**
  * The `slots` column comes back from the database as a JSON string rather
  * than a parsed array, so redundancy checks against stored boards must parse
@@ -54,6 +56,46 @@ export function findRedundantWords(slots: unknown): string[] {
 
 export function hasRedundantWords(slots: unknown): boolean {
   return findRedundantWords(slots).length > 0;
+}
+
+/**
+ * Valid letters for a board are exactly the letters of its big word (see
+ * specs/boards.md § Repairing a board that was stored badly, issue #163): the
+ * big word uses every real letter on the board, so a slot word containing a
+ * letter the big word lacks — or more of a letter than the big word has —
+ * could never have been played there, and its presence means the stored
+ * board is wrong.
+ *
+ * Returns the offending words (lower-cased, deduplicated). An empty array
+ * means every word on the board is spellable from the big word. Reuses
+ * `canFormWord`'s letter-frequency check from wos-words.ts rather than
+ * re-implementing it. Slots without a usable `word` string are ignored, and a
+ * missing or empty `bigWord` yields no findings, since there is then nothing
+ * to check against.
+ */
+export function findInvalidWords(slots: unknown, bigWord: string): string[] {
+  const slotsArray = coerceSlots(slots);
+  if (!slotsArray || typeof bigWord !== 'string' || bigWord.length === 0) {
+    return [];
+  }
+
+  const bigWordLetters = Array.from(bigWord.toLowerCase());
+  const invalid = new Set<string>();
+  for (const slotEntry of slotsArray) {
+    const word = slotEntry && typeof slotEntry === 'object' ? (slotEntry as { word?: unknown }).word : undefined;
+    if (typeof word !== 'string' || word.length === 0) {
+      continue;
+    }
+    if (!canFormWord(word, bigWordLetters)) {
+      invalid.add(word.toLowerCase());
+    }
+  }
+
+  return [...invalid];
+}
+
+export function hasInvalidWords(slots: unknown, bigWord: string): boolean {
+  return findInvalidWords(slots, bigWord).length > 0;
 }
 
 // Words on Stream supports three word languages. The game's socket events

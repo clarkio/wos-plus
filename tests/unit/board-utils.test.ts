@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coerceSlots, findRedundantWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel, wosLanguageIdToCode } from '@/lib/board-utils';
+import { coerceSlots, findInvalidWords, findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel, wosLanguageIdToCode } from '@/lib/board-utils';
 
 /**
  * Unit tests for board-utils.ts module (issue #119)
@@ -100,6 +100,67 @@ describe('board-utils module', () => {
 
     it('should return true for a JSON-string slots column with duplicates', () => {
       expect(hasRedundantWords(JSON.stringify([{ word: 'test' }, { word: 'test' }]))).toBe(true);
+    });
+  });
+
+  describe('findInvalidWords (issue #163)', () => {
+    it('should return empty array when every word is spellable from the big word', () => {
+      const slots = [{ word: 'ACT' }, { word: 'COAT' }, { word: 'CAUTION' }];
+      expect(findInvalidWords(slots, 'CAUTION')).toEqual([]);
+    });
+
+    it('should detect a word using a letter the big word does not have', () => {
+      // CAUTION has no R, so ACTOR could never have been played on this board.
+      const slots = [{ word: 'ACT' }, { word: 'ACTOR' }, { word: 'CAUTION' }];
+      expect(findInvalidWords(slots, 'CAUTION')).toEqual(['actor']);
+    });
+
+    it('should report each invalid word once, lower-cased', () => {
+      const slots = [{ word: 'ACTOR' }, { word: 'Actor' }, { word: 'CAUTION' }];
+      expect(findInvalidWords(slots, 'CAUTION')).toEqual(['actor']);
+    });
+
+    it('should treat letter frequency, not just membership', () => {
+      // CAUTION has only one A; a word needing two is not buildable from it.
+      const slots = [{ word: 'AA' }, { word: 'CAUTION' }];
+      expect(findInvalidWords(slots, 'CAUTION')).toEqual(['aa']);
+    });
+
+    it('should be case-insensitive against the big word', () => {
+      const slots = [{ word: 'act' }];
+      expect(findInvalidWords(slots, 'caution')).toEqual([]);
+    });
+
+    it('should ignore slots without a usable word', () => {
+      const slots = [{ word: '' }, {}, null, { word: 123 }, { word: 'ACT' }];
+      expect(findInvalidWords(slots, 'CAUTION')).toEqual([]);
+    });
+
+    it('should return empty array for non-array input', () => {
+      expect(findInvalidWords(null, 'CAUTION')).toEqual([]);
+      expect(findInvalidWords(undefined, 'CAUTION')).toEqual([]);
+      expect(findInvalidWords('slots', 'CAUTION')).toEqual([]);
+    });
+
+    it('should return empty array when the big word is missing or empty', () => {
+      const slots = [{ word: 'ACTOR' }];
+      expect(findInvalidWords(slots, '')).toEqual([]);
+      expect(findInvalidWords(slots, undefined as unknown as string)).toEqual([]);
+    });
+
+    it('should detect invalid words in a JSON-string slots column', () => {
+      const stored = JSON.stringify([{ word: 'ACTOR' }, { word: 'CAUTION' }]);
+      expect(findInvalidWords(stored, 'CAUTION')).toEqual(['actor']);
+    });
+  });
+
+  describe('hasInvalidWords (issue #163)', () => {
+    it('should return false for a board whose words are all spellable', () => {
+      expect(hasInvalidWords([{ word: 'ACT' }], 'CAUTION')).toBe(false);
+    });
+
+    it('should return true when a word uses a letter not on the board', () => {
+      expect(hasInvalidWords([{ word: 'ACTOR' }], 'CAUTION')).toBe(true);
     });
   });
 

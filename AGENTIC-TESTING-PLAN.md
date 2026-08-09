@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #161 fix
+### The numbers, as of the #163 fix
 
-**650 passing** tests across 19 files, plus 6 deliberate `it.todo`. Coverage
-**90.99% statements / 86.62% branches / 88.06% functions / 91.69% lines**, counting
+**663 passing** tests across 19 files, plus 6 deliberate `it.todo`. Coverage
+**91.09% statements / 86.96% branches / 88.2% functions / 91.8% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -64,10 +64,12 @@ Thirteen issues, all approved by the maintainer:
 [#170](https://github.com/clarkio/wos-plus/issues/170),
 [#166](https://github.com/clarkio/wos-plus/issues/166),
 [#164](https://github.com/clarkio/wos-plus/issues/164),
-[#168](https://github.com/clarkio/wos-plus/issues/168) and
-[#161](https://github.com/clarkio/wos-plus/issues/161) are done** (PR
+[#168](https://github.com/clarkio/wos-plus/issues/168),
+[#161](https://github.com/clarkio/wos-plus/issues/161) and
+[#163](https://github.com/clarkio/wos-plus/issues/163) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
-#166 fix, the #164 fix, the #168 fix and the #161 fix) — seven remain.
+#166 fix, the #164 fix, the #168 fix, the #161 fix and the #163 fix) — six
+remain.
 
 **#161 is done** — both `POST /api/boards` and the client's `saveBoard` in
 `src/scripts/db-service.ts` now reject a fresh save whose word language is
@@ -140,16 +142,25 @@ boundary test for the longest-valid (12-letter) name; the length assertions
 in `tests/unit/db-service.test.ts` were updated to the new numbers.
 `specs/boards.md` § Naming a board is now ✅ Confirmed rather than ⚠️.
 
-Sharpest next, affecting streamers today: none of the remaining seven are
+**#163 is done** — `PUT /api/boards/[id]` now treats a stored board as broken
+(and eligible for repair) when a slot's word cannot be spelled from the board
+id's letters (the board's big word), not just when a word is repeated.
+`findInvalidWords`/`hasInvalidWords` in `src/lib/board-utils.ts` reuse
+`canFormWord`'s letter-frequency check from `wos-words.ts`, per the issue's own
+note, rather than a third re-implementation. The "sound stored board" guard
+widened to match — a board is sound only if it has *neither* repeated words
+*nor* invalid words — and its refusal message changed from naming redundant
+words specifically to the general "is already sound", since the guard now
+covers two independent reasons a board can be broken.
+`specs/boards.md` § Repairing a board that was stored badly is now ✅
+Confirmed rather than ⚠️ for that scenario.
+
+Sharpest next, affecting streamers today: none of the remaining six are
 flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
 and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below). With #172, #168 and #161 done, the next cleanest pick without an
-overlapping PR is [#163](https://github.com/clarkio/wos-plus/issues/163)
-(a stored board containing a word with letters not on the board is broken and
-repairable) — it doesn't touch the two files #142/#144 are already mid-flight
-on. [#162](https://github.com/clarkio/wos-plus/issues/162) and
-[#171](https://github.com/clarkio/wos-plus/issues/171) are also clear of both
-PRs, but larger in scope.
+(see below). With #172, #168, #161 and #163 done, the next cleanest picks
+without an overlapping PR are [#162](https://github.com/clarkio/wos-plus/issues/162)
+and [#171](https://github.com/clarkio/wos-plus/issues/171).
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 

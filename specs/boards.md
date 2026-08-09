@@ -231,9 +231,15 @@ presence means the stored copy is wrong.
   this board. Left in the archive it is reported to players as a word they
   missed, sending them to type something the game will refuse.
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today only recognises repeated
-> words as a reason to repair. Tracked by
-> [#163](https://github.com/clarkio/wos-plus/issues/163).
+> ✅ **Confirmed (maintainer)** — implemented in
+> [#163](https://github.com/clarkio/wos-plus/issues/163). `PUT
+> /api/boards/[id]` now treats a stored board as broken (and eligible for
+> repair) when a slot's word cannot be spelled from the board id's letters,
+> not just when a word is repeated — `hasInvalidWords` in
+> `src/lib/board-utils.ts` reuses `canFormWord`'s letter-frequency check from
+> `wos-words.ts` rather than a third re-implementation. The "sound stored
+> board" guard below widened accordingly: a board is sound only if it has
+> neither repeated words nor invalid words.
 
 ### Scenario: a corrupted stored board is replaced by a clean capture
 
