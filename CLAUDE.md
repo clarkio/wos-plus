@@ -137,7 +137,7 @@ Prefer a failing build over a paragraph of good advice.
 
 ## 4. Known state (keep current)
 
-- Test suite: **673 passing** Vitest tests across 19 files, plus **4
+- Test suite: **680 passing** Vitest tests across 19 files, plus **4
   `it.todo`**. Every remaining todo is a **known gap with a tracking issue or a
   stated coverage limitation** — none is simply an unwritten test, and none may
   be deleted to tidy the count. The decisions behind them are tabulated in
@@ -150,8 +150,8 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **91.05% statements / 87.17% branches / 88.2% functions /
-  91.75% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **91.23% statements / 87.41% branches / 88.58% functions /
+  91.9% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.

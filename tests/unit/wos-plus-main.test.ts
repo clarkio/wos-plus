@@ -733,6 +733,31 @@ describe('GameSpectator class', () => {
 
       expect(mockSocket.disconnect).toHaveBeenCalled();
     });
+
+    it('registers a reconnect handler distinct from reconnect_attempt (issue #169)', () => {
+      // 'reconnect' only fires after a lost connection recovers, never on the
+      // initial connect — that's what lets a later "Game Connected" event be
+      // told apart from joining a level already in progress for the first
+      // time.
+      spectator.connectToWosGame(VALID_MIRROR_URL);
+
+      const onMock = spectator.wosSocket.on as ReturnType<typeof vi.fn>;
+      const events = onMock.mock.calls.map((call: any[]) => call[0]);
+      expect(events).toContain('reconnect');
+      expect(events).toContain('reconnect_attempt');
+    });
+
+    it('marks a pending reconnect when the socket reports one recovered (issue #169)', () => {
+      spectator.connectToWosGame(VALID_MIRROR_URL);
+
+      const onMock = spectator.wosSocket.on as ReturnType<typeof vi.fn>;
+      const reconnectHandler = onMock.mock.calls.find((call: any[]) => call[0] === 'reconnect')?.[1];
+      expect(reconnectHandler).toBeTruthy();
+
+      reconnectHandler();
+
+      expect((spectator as any).pendingWosReconnect).toBe(true);
+    });
   });
 
   describe('connectToTwitch', () => {
@@ -943,6 +968,56 @@ describe('GameSpectator class', () => {
 
       expect(spectator.currentLevelLetters).toEqual(['a', 'b', 'c']);
       expect(document.getElementById('letters')!.innerText).toBe('A B C');
+    });
+
+    it('does not rebuild the found-words list on a fresh join to a level already in progress (issue #169)', () => {
+      // Joining in progress reports the same shape of slots as a reconnect,
+      // but with isReconnect left at its default (false) the found-words
+      // list should stay untouched.
+      const slots = [
+        { letters: ['t', 'e', 's', 't'], word: '', user: 'alice', hitMax: false },
+      ];
+
+      (spectator as any).handleGameInitialization(5, 12, ['a', 'b', 'c'], slots);
+
+      expect(spectator.currentLevelCorrectWords).toEqual([]);
+    });
+
+    it('rebuilds the found-words list from re-reported slots on reconnect when no guess is masked (issue #169)', () => {
+      const slots = [
+        { letters: ['t', 'e', 's', 't'], word: '', user: 'alice', hitMax: false },
+        { letters: ['.', '.', '.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).handleGameInitialization(5, 12, ['a', 'b', 'c'], slots, true);
+
+      expect(spectator.currentLevelCorrectWords).toEqual(['TEST']);
+    });
+
+    it('leaves the found-words list gap on reconnect when the level has a masked guess (issue #169)', () => {
+      const slots = [
+        { letters: ['t', 'e', 's', 't'], word: '', user: 'alice', hitMax: false },
+        { letters: ['?', '?', '?', '?', '?'], word: '', user: 'bob', hitMax: false },
+      ];
+
+      (spectator as any).handleGameInitialization(5, 12, ['a', 'b', 'c'], slots, true);
+
+      // Neither the recoverable nor the masked slot is added — the whole
+      // level's found-words list keeps its gap rather than being partially
+      // filled, per specs/game-flow.md § reconnecting to a level that has
+      // masked guesses.
+      expect(spectator.currentLevelCorrectWords).toEqual([]);
+    });
+
+    it('does not duplicate an already-known found word when rebuilding after reconnect (issue #169)', () => {
+      spectator.currentLevelCorrectWords = ['TEST'];
+      const slots = [
+        { letters: ['t', 'e', 's', 't'], word: '', user: 'alice', hitMax: false },
+      ];
+
+      (spectator as any).handleGameInitialization(5, 12, ['a', 'b', 'c'], slots, true);
+
+      expect(spectator.currentLevelCorrectWords).toEqual(['TEST']);
     });
   });
 
@@ -1418,6 +1493,43 @@ describe('GameSpectator class', () => {
 
       expect(spectator.personalBest).toBe(47);
       expect(document.getElementById('pb-value')!.innerText).toBe('47');
+    });
+
+    it('rebuilds the found-words list from a Game Connected event after a real reconnect, and only once (issue #169)', async () => {
+      const wosWorker = findWorkerByUrlSubstring('wos-worker');
+      expect(wosWorker).toBeTruthy();
+
+      spectator.connectToWosGame(VALID_MIRROR_URL);
+      const onMock = spectator.wosSocket.on as ReturnType<typeof vi.fn>;
+      const reconnectHandler = onMock.mock.calls.find((call: any[]) => call[0] === 'reconnect')?.[1];
+      reconnectHandler();
+
+      const emitGameConnected = () => wosWorker.emitMessage({
+        type: 'wos_event',
+        wosEventType: 12,
+        wosEventName: 'Game Connected',
+        username: '',
+        letters: ['t', 'e', 's', 't'],
+        hitMax: false,
+        stars: 0,
+        level: 5,
+        falseLetters: [],
+        hiddenLetters: [],
+        slots: [
+          { letters: ['t', 'e', 's', 't'], word: '', user: 'alice', hitMax: false },
+        ],
+        index: 0,
+      });
+
+      await emitGameConnected();
+      expect(spectator.currentLevelCorrectWords).toEqual(['TEST']);
+
+      // The reconnect flag is consumed by the first Game Connected event, so
+      // a second one for the same connection (e.g. a later re-fetch) is a
+      // plain join-in-progress and must not re-rebuild.
+      spectator.currentLevelCorrectWords = [];
+      await emitGameConnected();
+      expect(spectator.currentLevelCorrectWords).toEqual([]);
     });
 
     it('should leave the all-time best alone when a Game Connected event carries no record', async () => {
