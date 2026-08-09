@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
-import { findRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../../../lib/board-utils';
+import { findRedundantWords, isWellFormedSlot, normalizeLanguageCode, normalizeTwitchChannel, validateBoardName } from '../../../lib/board-utils';
 
 export const prerender = false;
 const corsHeaders = {
@@ -53,6 +53,28 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
+  // Guard (issue #162): the save path must apply the same board-name rule
+  // lookup and repair already enforce (specs/boards.md § Naming a board).
+  // Only checked when a name was actually offered — a completely nameless
+  // capture is a different failure (the archive's own not-null constraint,
+  // or another guard below), not a bad name.
+  if (body?.id !== undefined) {
+    const nameValidation = validateBoardName(body.id);
+    if ('error' in nameValidation) {
+      return new Response(
+        JSON.stringify({
+          error: nameValidation.error,
+          message: `Board ${body.id} was not saved: ${nameValidation.error}.`,
+          code: 'INVALID_BOARD_ID',
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  }
+
   // Guard (issue #119): reject boards whose slots contain the same word more
   // than once — that data is corrupted and would need manual cleanup later.
   const redundantWords = findRedundantWords(body?.slots);
@@ -101,6 +123,25 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
   body.language_code = cleanLanguageCode;
+
+  // Guard (issue #162): the save path must apply the same slot-shape rule the
+  // repair path already enforces (PUT /api/boards/[id]) — every slot needs a
+  // `letters` array and a non-empty `word`. This is also what keeps an
+  // incomplete capture (a slot whose word was never fully worked out) out of
+  // the archive, since an unsolved slot is exactly a slot with no word.
+  if (!Array.isArray(body?.slots) || body.slots.length === 0 || !body.slots.every(isWellFormedSlot)) {
+    return new Response(
+      JSON.stringify({
+        error: 'Invalid slot structure detected',
+        message: `Board ${body?.id || 'ID'} was not saved: its slots are missing letters or a word.`,
+        code: 'INVALID_SLOTS',
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  }
 
   try {
     const supabase = createClient(

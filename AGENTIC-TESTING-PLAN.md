@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #171 fix
+### The numbers, as of the #162 fix
 
-**658 passing** tests across 19 files, plus 5 deliberate `it.todo`. Coverage
-**90.98% statements / 86.88% branches / 88.13% functions / 91.68% lines**, counting
+**673 passing** tests across 19 files, plus 4 deliberate `it.todo`. Coverage
+**91.05% statements / 87.17% branches / 88.2% functions / 91.75% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -66,11 +66,30 @@ Thirteen issues, all approved by the maintainer:
 [#164](https://github.com/clarkio/wos-plus/issues/164),
 [#168](https://github.com/clarkio/wos-plus/issues/168),
 [#161](https://github.com/clarkio/wos-plus/issues/161),
-[#163](https://github.com/clarkio/wos-plus/issues/163) and
-[#171](https://github.com/clarkio/wos-plus/issues/171) are done** (PR
+[#163](https://github.com/clarkio/wos-plus/issues/163),
+[#171](https://github.com/clarkio/wos-plus/issues/171) and
+[#162](https://github.com/clarkio/wos-plus/issues/162) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
-#166 fix, the #164 fix, the #168 fix, the #161 fix, the #163 fix and the
-#171 fix) — five remain.
+#166 fix, the #164 fix, the #168 fix, the #161 fix, the #163 fix, the
+#171 fix and the #162 fix) — four remain.
+
+**#162 is done** — `POST /api/boards` now applies the same board-name and
+slot-shape rules that lookup (`GET /api/boards/[id]`) and repair (`PUT
+/api/boards/[id]`) already enforced. Two helpers moved to
+`src/lib/board-utils.ts` so all three routes share one implementation instead
+of three: `validateBoardName` (the 4–12-letters-only rule, previously private
+to `[id].ts`) and `isWellFormedSlot` (the `letters` array + non-empty `word`
+shape check, previously inlined in the `PUT` handler). A save whose id isn't
+present is still let through to the guard that actually explains it (redundant
+words, then language) rather than being blocked by a name check that was never
+the point of those scenarios — matching the existing acceptance tests that
+capture a nameless board on purpose. The slot-shape guard also closes the
+completeness gap noted under "Capturing a board": a slot with an empty word is
+exactly what it rejects, so the `it.todo` there became a real test. The two
+`known gap (#162)` describes in `boards.acceptance.test.ts` were moved into a
+new `specs/boards.md — Saving a board directly` describe and inverted, not
+deleted; `specs/boards.md` § Saving a board directly is now ✅ Confirmed for
+both scenarios.
 
 **#171 is done** — the retired client-side word-adding path is gone, not just
 unreachable: `updateWordsDb` in `src/scripts/wos-words.ts` (PATCHed the
@@ -168,14 +187,27 @@ covers two independent reasons a board can be broken.
 `specs/boards.md` § Repairing a board that was stored badly is now ✅
 Confirmed rather than ⚠️ for that scenario.
 
-Sharpest next, affecting streamers today: none of the remaining five are
+Sharpest next, affecting streamers today: none of the remaining four are
 flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
 and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below). With #172, #168, #161, #163 and #171 done, the next cleanest pick
-without an overlapping PR is [#162](https://github.com/clarkio/wos-plus/issues/162)
-— it is also the largest of what remains, since it adds real validation logic
-to the board save path rather than deleting dead code or narrowing a display
-bug, so budget more room for it than the last few.
+(see below). With #172, #168, #161, #163, #171 and #162 done, the next
+cleanest pick without an overlapping PR is
+[#164](https://github.com/clarkio/wos-plus/issues/164) — small.
+[#169](https://github.com/clarkio/wos-plus/issues/169) (rebuild the found-words
+list on reconnect) is the other option without an overlapping PR, and the
+larger of the two — it touches `GameSpectator`'s reconnect handling in
+`wos-plus-main.ts`, not just a route.
+
+Note: GitHub still shows issue #164 open, but its *behaviour* (strip a leading
+`#` from the channel name on the channel-stats read path) already exists in
+`src/pages/api/channel-stats/[channel].ts`, inline with a comment citing
+#164 — it just reimplements the same regex `normalizeTwitchChannel`
+(`src/lib/board-utils.ts`) already applies to the board path, rather than
+reusing it. That duplication is exactly the kind #133 tracks separately. So
+#164's actual remaining work is small: replace the inline regex with
+`normalizeTwitchChannel`, verify the acceptance test still pins the same
+behaviour, and close the tracking issue — not implement the strip from
+scratch.
 
 **Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
 
