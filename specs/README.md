@@ -134,7 +134,7 @@ behaviour, so implementing one forces its test to be inverted deliberately.
 | Was | Decision | Issue |
 | --- | --- | --- |
 | B1, B2 | The board **save** path must apply the same name, slot and completeness guards as lookup and repair. Today it applies only the repeated-word rule. | [#162](https://github.com/clarkio/wos-plus/issues/162) |
-| B3 | A board is filed under the **longest** word on it, alphabetically last among ties — not the last slot's word. | [#165](https://github.com/clarkio/wos-plus/issues/165) |
+| ~~B3~~ | ~~A board is filed under the **longest** word on it, alphabetically last among ties — not the last slot's word.~~ **Fixed** — `determineBoardId` in `wos-words.ts`, used by `GameSpectator` on both save and lookup. Per [#165](https://github.com/clarkio/wos-plus/issues/165). |
 | G2 | An unrecoverable masked guess **counts as a clear**, but **blocks the board save**. Two outcomes, deliberately decoupled. | [#167](https://github.com/clarkio/wos-plus/issues/167) |
 
 **Confirmed — current behaviour is intended.** No work; the reasoning is

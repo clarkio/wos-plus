@@ -1951,19 +1951,28 @@ describe('specs/boards.md — approved changes not yet implemented (current beha
 
   describe('Scenario: the big word disagrees with the last slot', () => {
     // Given a level is being captured
-    // And the big word WoS+ tracked during the level is not the word in the
-    //     board's last slot
+    // And the level has several anagram big words (e.g. LURING and RULING)
     // When the board is captured
-    // Then the board is filed under the *last slot's* word instead of the
-    //      tracked big word
+    // Then the board is filed under the longest word, and among ties at that
+    //      length, the alphabetically last of them — never a positional guess
+    //      at whichever word happens to sit in the last slot
 
-    it.todo(
-      'known gap (#165): a capture is filed under the last slot word rather than the longest, ' +
-      'alphabetically-last word the maintainer approved as the board identity. ' +
-      'Not reachable from /api/boards: the substitution happens in the capture path in ' +
-      'src/scripts/wos-plus-main.ts before the route is called, and the route stores the id it is ' +
-      'given. Belongs with the game-flow work (specs/game-flow.md)',
-    );
+    it('#165 landed: the id is the alphabetically last anagram, not the last slot\'s word', async () => {
+      // Not reachable from /api/boards: the id is resolved in the capture path
+      // (GameSpectator.determineBoardId, src/scripts/wos-plus-main.ts) before
+      // the route is ever called — the route stores whatever id it is given.
+      // The end-to-end capture is exercised in
+      // tests/acceptance/game-flow.acceptance.test.ts § "Ending a level"
+      // ("captures the board under the alphabetically last big word, not
+      // whichever anagram sits in the last slot (#165)"); this pins the
+      // canonicalization rule itself directly against the module the route
+      // trusts to have already produced the right id.
+      const { determineBoardId } = await import('../../src/scripts/wos-words');
+
+      // LURING sits in the last slot (mirroring the pre-#165 positional bug),
+      // but RULING is the alphabetically last anagram and must win.
+      expect(determineBoardId('LURING', ['ring', 'ruling', 'luring'])).toBe('RULING');
+    });
   });
 
   describe('Scenario: a very large archive', () => {

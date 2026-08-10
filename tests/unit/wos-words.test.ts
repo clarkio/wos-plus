@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { findMissingWordsFromBoard, canFormWord } from '@scripts/wos-words';
+import { findMissingWordsFromBoard, canFormWord, determineBoardId } from '@scripts/wos-words';
 import type { Slot } from '@scripts/wos-words';
 
 /**
@@ -332,6 +332,40 @@ describe('wos-words module', () => {
 
       // Assert
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('determineBoardId', () => {
+    it('should return the big word itself when no other candidates exist', () => {
+      expect(determineBoardId('TESTING')).toBe('TESTING');
+    });
+
+    it('should strip display spaces and uppercase the id', () => {
+      expect(determineBoardId('l u r i n g')).toBe('LURING');
+    });
+
+    it('should return empty string for an empty big word', () => {
+      expect(determineBoardId('')).toBe('');
+      expect(determineBoardId('   ')).toBe('');
+    });
+
+    it('should pick the alphabetically last anagram among extra candidates', () => {
+      expect(determineBoardId('L U R I N G', ['ruling'])).toBe('RULING');
+      // Order of arguments must not matter — RULING wins either way.
+      expect(determineBoardId('RULING', ['luring'])).toBe('RULING');
+    });
+
+    it('should ignore extra candidates that are not anagrams of the big word', () => {
+      expect(determineBoardId('LURING', ['ring', 'unruly', 'zzzzzz'])).toBe('LURING');
+    });
+
+    it('should pick the alphabetically last anagram from the loaded dictionary', async () => {
+      // Seed the module's dictionary the same way production does.
+      const wosWords = await importModuleWithDictionary(['luring', 'ruling', 'unrig', 'ring']);
+
+      // RULING was never guessed nor passed as a candidate, but the
+      // dictionary knows it is an anagram of LURING and it sorts last.
+      expect(wosWords.determineBoardId('L U R I N G')).toBe('RULING');
     });
   });
 

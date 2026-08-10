@@ -390,10 +390,17 @@ must hold to the same rules as every other.
   deterministic tie-break the same board would be filed under a different name
   on different nights, splitting one board into two half-true archive entries.
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today files the capture under the
-> word in the board's *last slot*, which is a positional guess at the same
-> thing. Tracked by [#165](https://github.com/clarkio/wos-plus/issues/165); open
-> PR #142 may already cover part of it.
+> ✅ **Confirmed (maintainer)** — implemented in
+> [#165](https://github.com/clarkio/wos-plus/issues/165). `determineBoardId` in
+> `src/scripts/wos-words.ts` picks the alphabetically last anagram among the
+> tracked big word, the level's filled slot words, and the loaded dictionary,
+> instead of trusting whichever word happens to sit in the board's last slot.
+> `GameSpectator` uses it on both save (`handleLevelResults`) and lookup
+> (`logMissingWords`, retrying under the guessed big word for boards saved
+> before ids were canonicalized). Because a level's tracked big word is always
+> derived from a `hitMax` guess (one that uses every letter), every candidate
+> this compares is already the same, maximal length — so "longest" is
+> structural and the remaining work is exactly the alphabetical tie-break.
 
 ---
 
