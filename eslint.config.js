@@ -22,6 +22,10 @@ export default tseslint.config(
       // Transient Claude Code agent worktrees: full copies of the repo, so
       // linting them double-counts every finding against a throwaway tree.
       '.claude/**',
+      // Stryker's mutation-testing sandboxes: full copies of the repo it
+      // mutates and runs tests against, same reasoning as .claude/** above.
+      '.stryker-tmp/**',
+      'reports/**',
     ],
   },
 
@@ -77,6 +81,24 @@ export default tseslint.config(
       // The WoS event-type switch in wos-worker.ts: a new protocol event must
       // not be silently ignored.
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+    },
+  },
+
+  // ---------------------------------------------------------------------
+  // Change-risk (CRAP-style) guardrail, AGENTIC-TESTING-PLAN.md #154. Combined
+  // with the per-file coverage floors in vitest.config.ts, a function that is
+  // both complex and under-tested is flagged mechanically (complexity here,
+  // low coverage there) instead of relying on reviewer stamina to notice it.
+  // Baselined generously against the codebase's current worst offender —
+  // `saveBoard` in db-service.ts, cyclomatic complexity 31 — so it does not
+  // fail on existing code; ratchet the number down as that function and
+  // GameSpectator's own complex methods (e.g. `updateGameState`, complexity
+  // 29) are decomposed, never raise it to accommodate new complexity.
+  // ---------------------------------------------------------------------
+  {
+    files: ['**/*.ts'],
+    rules: {
+      complexity: ['error', 32],
     },
   },
 

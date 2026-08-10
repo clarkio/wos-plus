@@ -298,3 +298,53 @@ red ⚠️ test is the system working exactly as designed.
 
 The decisions taken so far, with their issues, are tabulated in
 [specs/README.md § Decisions from the #160 review](specs/README.md).
+
+---
+
+## 8. Mutation testing (`stryker.config.json`)
+
+Coverage proves code was *executed*; it does not prove the tests would fail if
+the code were wrong. StrykerJS closes that gap by mutating the source
+(`>` → `>=`, `+` → `-`, boolean flips, …) and checking whether the suite
+notices — AGENTIC-TESTING-PLAN.md Phase 5 / issue #154.
+
+- **Scope is deliberately narrow**: `src/lib/**`, `src/scripts/wos-words.ts`,
+  `src/scripts/mirror-url.ts`, `src/scripts/twitch-channel.ts` — pure-logic
+  modules where a mutant's meaning is unambiguous and runs stay fast.
+  `wos-plus-main.ts` (DOM-coupled orchestration) is explicitly out of scope;
+  mutating it would make runs unusably slow for what it would tell you.
+- **`pnpm run test:mutation`** runs the full scoped suite locally
+  (`stryker run`, ~2.5 minutes). It is **not** part of the §2.4 local gate or
+  the CI `tests.yml` job — a mutation run is much slower than the rest of the
+  gate and would break the fast feedback loop the other checks depend on.
+- **CI** (`.github/workflows/mutation.yml`) runs it two ways, neither a
+  required status check yet: an **incremental** run
+  (`stryker run --incremental`, only mutants on lines a PR touched) on every
+  pull request, using a GitHub Actions cache for the incremental result file
+  so each run builds on the last; and a **full** run on a Monday schedule (or
+  manual dispatch) that uploads the HTML report as a workflow artifact.
+- **Thresholds are measured, not guessed** (`stryker.config.json`
+  `thresholds.break`). The baseline landing with #154 was 79.31% overall
+  (board-utils.ts 94.85, cors.ts 93.18, launch-menu.ts 43.28, mirror-url.ts
+  94.23, twitch-channel.ts 61.11, wos-words.ts 72.19); `break` is set to 79,
+  just below that number, the same ratchet-only policy as coverage in §4 —
+  raise it as survivors get killed, never lower it to get green.
+- **Policy: a surviving mutant on lines a PR touches means that PR's tests
+  don't actually constrain the new code.** Add an assertion that would catch
+  the mutant; do not suppress it, and do not treat "coverage is fine" as a
+  substitute for "the test would fail if this line were wrong."
+- **Change-risk guardrail**: `eslint.config.js` enforces the core `complexity`
+  rule at a generous ceiling of 32 (baselined against `saveBoard` in
+  `db-service.ts`, the codebase's current worst offender at 31) so it doesn't
+  fail on existing code. Combined with the per-file coverage floors in
+  `vitest.config.ts`, a function that is both complex *and* under-tested gets
+  flagged by two independent mechanical signals instead of relying on
+  reviewer stamina. Ratchet the ceiling down as complex methods (this one,
+  and `GameSpectator.updateGameState` at 29) get decomposed — never raise it
+  to accommodate new complexity. **Tracked in
+  [#193](https://github.com/clarkio/wos-plus/issues/193)** — unlike the
+  coverage ratchet (quarterly target above) and the mutation-score ratchet
+  (target ≥70), this one had no tracked goal until #193; that issue is now
+  the source of truth for the decomposition work and the next ceiling number.
+- `reports/` and `.stryker-tmp/` are generated and gitignored; CI publishes
+  the HTML report as an artifact instead of committing it.
