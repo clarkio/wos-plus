@@ -1,0 +1,29 @@
+# gitleaks config for WoS+. Extends the default ruleset; adds an allowlist for
+# the fake Supabase credentials used by the acceptance-test harness so CI
+# doesn't choke on test fixtures. See AGENTIC-TESTING-PLAN.md Phase 7 (#153).
+#
+# This is an allowlist, not a weakened rule: it names the exact known-fake
+# strings, so a real credential landing anywhere else — including in these
+# same files — still trips the scan.
+
+title = "WoS+ gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-fake Supabase credentials used only in test fixtures, and Twitch's own public web Client-Id"
+regexes = [
+  '''stub-key-not-a-real-credential''',
+  '''unused-by-a-liveness-check''',
+  # Twitch's own public web client id (kimne78kx3ncx6brgo4mv6wki5h1ko), used by
+  # twitch.tv's own frontend and widely published/reused by third-party tools
+  # for unauthenticated, read-only gql.twitch.tv lookups. Not a secret — see
+  # the comment above its declaration in src/scripts/twitch-channel.ts.
+  '''kimne78kx3ncx6brgo4mv6wki5h1ko''',
+]
+paths = [
+  '''tests/stubs/cloudflare-workers\.ts''',
+  '''tests/acceptance/health\.acceptance\.test\.ts''',
+  '''src/scripts/twitch-channel\.ts''',
+]

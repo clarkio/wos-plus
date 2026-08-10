@@ -34,10 +34,13 @@ exists today; tick the others as their phases land.
 | Check | Workflow | Job | Status |
 | --- | --- | --- | --- |
 | `build` | `tests.yml` | `build` | **available now** — runs install → check → lint → acceptance → test+coverage → build |
-| `analyze` | `codeql.yml` | — | pending #153 |
-| `dependency-review` | `dependency-review.yml` | — | pending #153 |
+| `analyze` | `codeql.yml` | `analyze` | **available now**, landed with #153 — CodeQL, `javascript-typescript`, on PRs/push to `main`/weekly schedule |
+| `dependency-review` | `dependency-review.yml` | `dependency-review` | **available now**, landed with #153 — fails on high-severity advisories in a PR's dependency diff |
 | `e2e` | e2e workflow | — | pending #152 |
 | acceptance stream | `tests.yml` | `build`, step "Run acceptance tests" | **landed with #151** as a separate *step*, not a separate job — see below |
+
+`security.yml`'s two jobs (`gitleaks`, `pnpm-audit`), also landed with #153, are
+**not** on this required-checks table on purpose — see the next section.
 
 > The single `build` job currently bundles type-check, lint, tests and build.
 > That is fine for enforcement (any failure fails the job) but coarse in the
@@ -76,6 +79,9 @@ trigger stays scoped to `main`. Do not re-add the filter.
 
 ## GitHub-native security settings
 
+**This section requires maintainer/repo-admin action.** None of it can be
+turned on from a pull request.
+
 In **Settings → Code security**:
 
 - **Secret scanning** — on.
@@ -84,8 +90,22 @@ In **Settings → Code security**:
   is the Supabase keys.
 - **Dependabot alerts** — on.
 
-`gitleaks` in CI (pending #153) is defence in depth, not a replacement: it runs
-after the push has already happened.
+`gitleaks` in CI (`security.yml`, landed with #153) is defence in depth, not a
+replacement: it runs after the push has already happened, and it is
+deliberately **not** a required check (see the table above) — it exists to
+catch what push protection missed, not to gate merges on its own. Its
+allowlist (`.gitleaks.toml`) is scoped to two things: the fake Supabase
+credentials the acceptance-test harness uses, and Twitch's own public web
+`Client-Id` (`src/scripts/twitch-channel.ts`) — a widely-published,
+intentionally non-secret identifier, not a leaked credential.
+
+`pnpm audit --prod` also runs in `security.yml` (job `pnpm-audit`), currently
+**non-blocking** (`continue-on-error: true`). As of #153 it reports 7 high /
+7 moderate / 0 critical advisories, all transitive (astro/cloudflare/sentry
+toolchains, socket.io-client) with no patched version yet available within
+this repo's pinned major versions. Revisit periodically — this file makes no
+claim about *when* it becomes blocking, since that depends on upstream fixes
+landing, not on this PR.
 
 ---
 
@@ -100,9 +120,9 @@ already close most of the gap. The remaining human step:
 > package is the real, established artifact** — correct name, expected author,
 > plausible download history and repository — before approving.
 
-`actions/dependency-review-action` (pending #153) automates the
-known-vulnerability half of this. It cannot tell you that a plausible-looking
-package name is the one you actually meant.
+`actions/dependency-review-action` (`dependency-review.yml`, landed with #153)
+automates the known-vulnerability half of this. It cannot tell you that a
+plausible-looking package name is the one you actually meant.
 
 ---
 
