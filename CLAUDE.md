@@ -341,6 +341,10 @@ notices — AGENTIC-TESTING-PLAN.md Phase 5 / issue #154.
   flagged by two independent mechanical signals instead of relying on
   reviewer stamina. Ratchet the ceiling down as complex methods (this one,
   and `GameSpectator.updateGameState` at 29) get decomposed — never raise it
-  to accommodate new complexity.
+  to accommodate new complexity. **Tracked in
+  [#193](https://github.com/clarkio/wos-plus/issues/193)** — unlike the
+  coverage ratchet (quarterly target above) and the mutation-score ratchet
+  (target ≥70), this one had no tracked goal until #193; that issue is now
+  the source of truth for the decomposition work and the next ceiling number.
 - `reports/` and `.stryker-tmp/` are generated and gitignored; CI publishes
   the HTML report as an artifact instead of committing it.

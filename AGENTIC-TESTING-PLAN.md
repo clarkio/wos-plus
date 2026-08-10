@@ -378,6 +378,12 @@ excluding `wos-plus-main.ts`.
   `reports/**` were added to the ESLint `ignores` list alongside the existing
   `.claude/**` entry, for the same reason: both are full generated copies of
   the repo that would otherwise double-count every finding.
+  **[#193](https://github.com/clarkio/wos-plus/issues/193)** tracks ratcheting
+  that ceiling down as `saveBoard` and `updateGameState` get decomposed — the
+  coverage ratchet has a stated quarterly target and the mutation-score
+  ratchet has a stated ≥70 target; the complexity ratchet had only prose
+  intent in `CLAUDE.md` § 8 until this issue gave it the same kind of tracked
+  goal.
 - `reports/` and `.stryker-tmp/` (the HTML report and the incremental-run
   cache) are gitignored — generated artifacts, not source; CI publishes the
   report as an artifact instead of committing it.
