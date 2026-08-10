@@ -304,8 +304,24 @@ word from what that player typed in chat.
 
 - **Given** `clarkio` typed nothing of the right length that could be the word
 - **When** a masked guess from `clarkio` is reported
-- **Then** WoS+ notes it could not work out the word, nothing is added to the
-  found words, and the slot stays empty
+- **Then** WoS+ notes it could not work out the word, and nothing is added to
+  the found words
+- **And** the slot is still recorded as filled by `clarkio`, masked, so the
+  level can still count as a clear — but the word stays unknown, so it is not
+  reported as missed and the slot's word can never enter a saved board
+
+> ✅ **Confirmed (maintainer)**, implemented in
+> [#167](https://github.com/clarkio/wos-plus/issues/167) — a slot filled by an
+> unrecoverable masked guess counts as filled (the clear is credited, the word
+> is not reported missed), but the board is **not** saved or updated, because
+> one of its words is not known. These two outcomes are deliberately decoupled:
+> a player really did fill that slot, so the clear is real, but WoS+ cannot say
+> *which* word filled it, and a board with a blank/masked word must never enter
+> the archive — every future level would read that back as truth. Draft PR #144
+> was closed as superseded; the fix landed as new work on `main` instead
+> (`updateGameState` in `wos-plus-main.ts` records the slot masked rather than
+> dropping it, and `saveBoard`'s existing `?`-bearing-slot guard keeps it out of
+> the boards table).
 
 ### Scenario: only the last messages a player typed are considered
 
@@ -436,26 +452,6 @@ word from what that player typed in chat.
 ---
 
 ## Approved, not yet implemented
-
-### Scenario: a masked guess that cannot be recovered
-
-- **Given** a masked guess arrives that WoS+ cannot match to any chat message
-- **And** it was the last slot on the board to be filled
-- **When** the level ends
-- **Then** the slot counts as filled, so the level counts as a clear, and the
-  word is not reported as missed
-- **And** the board is **not** saved or updated, because one of its words is not
-  known
-
-  These two outcomes are deliberately decoupled. A player really did fill that
-  slot, so the clear is real and must be credited. But WoS+ cannot say *which*
-  word filled it, and a board with a blank word must never enter the archive —
-  every future level would read that blank back as truth.
-
-> ⚠️ **Approved, not yet implemented** — WoS+ today treats the slot as never
-> filled, which loses the clear *and* reports the word as missed. Tracked by
-> [#167](https://github.com/clarkio/wos-plus/issues/167); open PR #144 may
-> already cover part of it.
 
 ### Scenario: a masked guess longer than a word can be
 

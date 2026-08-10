@@ -1815,6 +1815,24 @@ describe('GameSpectator class', () => {
       warnSpy.mockRestore();
     });
 
+    it('#167: records an unrecoverable hidden guess as a masked, user-attributed slot rather than an empty one', () => {
+      // Approved (#167): the slot still counts as filled — so the level can
+      // be a clear and the word is not reported as missed — but the word
+      // itself stays unknown. Recording it masked (rather than resolving to
+      // some guessed word) is what keeps it out of the boards table:
+      // `saveBoard` refuses any slot whose `letters`/`word` still contain '?'.
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+
+      (spectator as any).updateGameState('testuser', ['?', '?', '?', '?'], 0, false);
+
+      expect(spectator.currentLevelSlots[0].user).toBe('testuser');
+      expect(spectator.currentLevelSlots[0].word).toBe('????');
+      expect(spectator.currentLevelSlots[0].letters).toEqual(['?', '?', '?', '?']);
+      // Still not added to the found-words log: the word itself is unknown.
+      expect(spectator.currentLevelCorrectWords).toEqual([]);
+      warnSpy.mockRestore();
+    });
+
     it('should capture a non-hidden guess directly from letters without any chat message (issue #96)', () => {
       // The WoS event carries the full word for non-hidden levels, so a correct
       // guess must be captured even when no Twitch chat message is available

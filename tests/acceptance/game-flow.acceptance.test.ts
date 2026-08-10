@@ -970,13 +970,15 @@ describe('specs/game-flow.md § Masked guesses', () => {
 
     await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 1 }));
 
-    // The game does not accept a word already on the board, so this is not it.
+    // The game does not accept a word already on the board, so this is not
+    // it — the word stays unrecoverable. Per #167, the slot still counts as
+    // filled (masked), but not with the already-placed word.
     expect(foundWords()).toEqual(['ACTION']);
-    expect(spectator.currentLevelSlots[1].user).toBeUndefined();
-    expect(spectator.currentLevelSlots[1].word).toBe('');
+    expect(spectator.currentLevelSlots[1].user).toBe('clarkio');
+    expect(spectator.currentLevelSlots[1].word).toBe('??????');
   });
 
-  it('leaves the slot empty and says so when no chat message can be the word', async () => {
+  it('records the slot masked and says so when no chat message can be the word (#167)', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => { });
     await startTrilbyLevel();
     // Nothing of the right length.
@@ -984,8 +986,12 @@ describe('specs/game-flow.md § Masked guesses', () => {
 
     await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 0 }));
 
+    // The word itself is unrecoverable, so it is not added to the found-words
+    // log — but the slot is still attributed to the player who filled it
+    // rather than left empty (#167).
     expect(foundWords()).toEqual([]);
-    expect(spectator.currentLevelSlots[0].user).toBeUndefined();
+    expect(spectator.currentLevelSlots[0].user).toBe('clarkio');
+    expect(spectator.currentLevelSlots[0].word).toBe('??????');
     expect(warn.mock.calls.flat().join(' ')).toContain(
       'Could not find matching message for clarkio',
     );
@@ -1028,17 +1034,12 @@ describe('specs/game-flow.md § Masked guesses', () => {
     expect(foundWords()).toEqual(['ACTION']);
   });
 
-  it('known gap (#167): treats a slot filled by an unrecoverable masked guess as never filled', async () => {
-    // APPROVED (#167): the slot COUNTS as filled, so the level counts as a clear
-    //                  and the word is not reported as missed — but the board is
-    //                  NOT saved, because one of its words is not known. The
-    //                  maintainer deliberately decoupled those two outcomes.
-    // TODAY:           the slot is treated as never filled, losing the clear AND
-    //                  reporting the word as missed.
-    //
-    // The assertions below pin TODAY. Invert them when #167 lands — and note the
-    // board-capture half must stay blocked, which is the part easiest to miss.
-    // See `specs/game-flow.md § Approved, not yet implemented`.
+  it('#167: an unrecoverable masked guess still counts as a clear, but keeps the board unsaved', async () => {
+    // ✅ Confirmed (#160 review), fixed by #167: the slot COUNTS as filled, so
+    // the level counts as a clear and the word is not reported as missed —
+    // but the board is NOT saved, because one of its words is not known. The
+    // maintainer deliberately decoupled those two outcomes; see
+    // `specs/game-flow.md § Masked guesses`.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => { });
     spectator.isSoundsEnabled = true;
     await startTrilbyLevel([6, 5]);
@@ -1050,11 +1051,16 @@ describe('specs/game-flow.md § Masked guesses', () => {
 
     await playWosEvent(levelResults(2));
 
-    // Both slots were genuinely filled by players, but the level is not a clear
-    // and no board is captured (no POST handler is registered, so an attempted
-    // capture would fail this test).
-    expect(soundsPlayed).not.toContain('/assets/clear.mp3');
-    expect(spectator.currentLevelSlots[1].user).toBeUndefined();
+    // Both slots were genuinely filled by players, so the level is a clear —
+    // even though the second slot's real word was never recovered.
+    expect(soundsPlayed).toContain('/assets/clear.mp3');
+    expect(spectator.currentLevelSlots[1].user).toBe('biocow');
+    // The unrecoverable slot stays masked rather than guessing at a word, so
+    // it can never be mistaken for the real answer.
+    expect(spectator.currentLevelSlots[1].word).toBe('?????');
+    // No board is captured: `saveBoard` refuses any '?'-bearing slot, and no
+    // POST handler is registered here, so an attempted capture would fail
+    // this test regardless of that guard.
     warn.mockRestore();
   });
 

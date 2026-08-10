@@ -638,7 +638,13 @@ export class GameSpectator {
           `[WOS Helper] Could not find matching message for ${lowerUsername}`,
           `[WOS Helper] Chat history: ${JSON.stringify(this.twitchChatLog.get(lowerUsername))}`
         );
-        return; // Skip updating UI if we can't find the word
+        // Approved (#167): the slot still counts as filled — the level can be
+        // a clear and the word is not reported as missed — but the word
+        // itself is unrecoverable, so the slot is recorded masked rather than
+        // left empty. A masked slot's `letters`/`word` still contain '?', so
+        // `saveBoard`'s isMissingWords guard keeps it out of the boards table.
+        this.updateCurrentLevelSlots(username, new Array(letters.length).fill('?'), index, hitMax);
+        return;
       }
     }
 
