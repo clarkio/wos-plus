@@ -250,10 +250,10 @@ the positionally-last guess. The `known gap (#165)` placeholder in
 the fixed rule directly against `determineBoardId`, since the id resolution
 itself happens before `/api/boards` is ever called and isn't otherwise
 reachable from the route. `specs/boards.md` § "which word a board is filed
-under" is now ✅ Confirmed rather than ⚠️. PR #142 itself was left untouched
-(still open, still against its old base) — the fix landed as new work on top
-of current `main` instead of through that branch; #142 can be closed once this
-lands.
+under" is now ✅ Confirmed rather than ⚠️. Draft PR #142 was closed as
+superseded (with an explanatory comment) rather than reconciled — the fix
+landed as new work on top of current `main` instead of through that stale
+branch.
 
 Sharpest next, affecting streamers today: with #172, #168, #161, #163, #171,
 #162, #164, #169 and #165 done, one issue is left —
