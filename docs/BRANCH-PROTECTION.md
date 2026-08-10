@@ -42,6 +42,12 @@ exists today; tick the others as their phases land.
 `security.yml`'s two jobs (`gitleaks`, `pnpm-audit`), also landed with #153, are
 **not** on this required-checks table on purpose — see the next section.
 
+`mutation.yml`'s two jobs (`incremental` on PRs, `full` on a weekly schedule),
+landed with #154, are **also not** required checks, for the same reason as the
+`build` job's coarseness point above: a mutation run is much slower than the
+rest of the gate and exists to surface surviving mutants for a human or agent
+to act on (`CLAUDE.md` § 8), not to block merges yet.
+
 > The single `build` job currently bundles type-check, lint, tests and build.
 > That is fine for enforcement (any failure fails the job) but coarse in the
 > UI. Splitting it into named jobs is worthwhile once there are more of them.

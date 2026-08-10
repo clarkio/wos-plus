@@ -23,7 +23,7 @@ describe intent, not status. This section is the status.
 | 2c — Coverage thresholds + ratchet | [#155](https://github.com/clarkio/wos-plus/issues/155) | ✅ done | PR #175 |
 | 3 — Acceptance-test stream (ATDD) | [#151](https://github.com/clarkio/wos-plus/issues/151) | ✅ done | PR #160 |
 | 4 — Property-based tests (fast-check) | [#150](https://github.com/clarkio/wos-plus/issues/150) | ✅ done | PR #159 |
-| 5 — Mutation testing + change-risk | [#154](https://github.com/clarkio/wos-plus/issues/154) | ⬜ not started | — |
+| 5 — Mutation testing + change-risk | [#154](https://github.com/clarkio/wos-plus/issues/154) | ✅ done | this PR |
 | 6 — Thin Playwright E2E | [#152](https://github.com/clarkio/wos-plus/issues/152) | ⬜ not started | — |
 | 7 — Security & supply-chain gates | [#153](https://github.com/clarkio/wos-plus/issues/153) | ✅ done | this PR |
 | 8 — Branch protection & agent contract | [#156](https://github.com/clarkio/wos-plus/issues/156) | ✅ done | PR #159 + maintainer enabled protection on `main` |
@@ -49,12 +49,13 @@ branches 85, functions 86, lines 90) plus per-file floors for `wos-words.ts` and
 verified by temporarily raising a threshold above measured reality and watching
 the run fail, then reverting.
 
-The **behaviour issues** below (all thirteen from the #160 review) are now done.
-Next: #153 (cheap, workflow files only), then #154. #152 last or never —
-`wrangler dev` may not run in a sandbox at all.
+The **behaviour issues** below (all thirteen from the #160 review) are now done,
+and so are #153 and #154. The only phase left is **#152** (thin Playwright
+E2E), last or never — `wrangler dev` may not run in a sandbox at all.
 
-**Two need maintainer sign-off before starting**, per `CLAUDE.md` §2.3: #152 adds
-Playwright and #154 adds StrykerJS.
+**#152 needs maintainer sign-off before starting**, per `CLAUDE.md` §5: it adds
+Playwright as a new dependency, an architecture-tier change. (#154's own
+sign-off, for adding StrykerJS, was obtained and is recorded below.)
 
 ### The behaviour backlog from the #160 review
 
@@ -340,6 +341,55 @@ No CodeQL or dependency-review run can be verified locally — both only run on
 GitHub — so their YAML was validated with a parser (`python3 -c
 "import yaml; yaml.safe_load(...)"`) rather than eyeballed, per the issue's
 own instruction.
+
+**#154 is done**, with explicit maintainer sign-off obtained before adding the
+new dependency (`CLAUDE.md` §5 — architecture-tier, needs sign-off regardless
+of confidence). `@stryker-mutator/core` and `@stryker-mutator/vitest-runner`
+9.6.1 (exact-pinned) were added, scoped tightly per the issue's own scope list:
+`src/lib/**`, `wos-words.ts`, `mirror-url.ts`, `twitch-channel.ts`, explicitly
+excluding `wos-plus-main.ts`.
+
+- **Measured baseline** (not guessed): a full `pnpm run test:mutation` run
+  took 2 minutes 37 seconds and scored **79.31%** overall — board-utils.ts
+  94.85, cors.ts 93.18, launch-menu.ts 43.28, mirror-url.ts 94.23,
+  twitch-channel.ts 61.11, wos-words.ts 72.19. `stryker.config.json`
+  `thresholds.break` is set to **79**, just below that measured number, per
+  the issue's explicit instruction not to invent a number. The documented
+  target of ≥70 is already cleared by every file except launch-menu.ts and
+  twitch-channel.ts, so `break` tracks the real (higher) floor rather than the
+  aspirational minimum; `low`/`high` are 79/90.
+- **CI wiring** (`.github/workflows/mutation.yml`), deliberately its own
+  workflow rather than a step in `tests.yml` so the slow mutation run never
+  blocks the fast per-PR gate: an **incremental** job
+  (`stryker run --incremental`) on every pull request, using
+  `actions/cache` keyed on `github.run_id` with a `stryker-incremental-`
+  prefix so each run restores the most recent prior incremental result and
+  saves a fresh one; and a **full** job on a Monday 06:00 UTC schedule (plus
+  manual dispatch) that uploads the HTML report as a 90-day workflow artifact.
+  Neither job is a required status check yet — mutation testing here is a
+  signal to act on, not a merge gate.
+- **Change-risk (CRAP-style) analysis**: `eslint.config.js` adds the core
+  `complexity` rule at `['error', 32]`. The ceiling was measured, not
+  guessed either — the codebase's actual worst offender is `saveBoard` in
+  `src/scripts/db-service.ts` at cyclomatic complexity 31
+  (`GameSpectator.updateGameState` in `wos-plus-main.ts` is next at 29) — so
+  32 is baselined just above the real number and the rule passes clean on
+  existing code (`pnpm run lint` verified green). `.stryker-tmp/**` and
+  `reports/**` were added to the ESLint `ignores` list alongside the existing
+  `.claude/**` entry, for the same reason: both are full generated copies of
+  the repo that would otherwise double-count every finding.
+- `reports/` and `.stryker-tmp/` (the HTML report and the incremental-run
+  cache) are gitignored — generated artifacts, not source; CI publishes the
+  report as an artifact instead of committing it.
+- Policy documented in `CLAUDE.md` § 8: a surviving mutant on lines a PR
+  touches means that PR's tests don't actually constrain the new code — add
+  an assertion, never suppress the mutant.
+
+With #154 done, every phase in the table above is closed except **#152**
+(thin Playwright E2E), which also needs maintainer sign-off per `CLAUDE.md`
+§5 and stays last-or-never per the existing sandbox caveat: `wrangler dev`
+may not run in this environment at all, so the day it's picked up should
+start by testing that assumption before writing any spec.
 
 ### Where the rest of the state lives
 

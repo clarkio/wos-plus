@@ -145,3 +145,10 @@ vite.config.ts.timestamp-*
 
 # Claude Code agent worktrees (transient, never committed)
 .claude/worktrees/
+
+# StrykerJS mutation testing (AGENTIC-TESTING-PLAN.md #154): the HTML report
+# and incremental-run cache are generated artifacts, not source. CI publishes
+# the report as a workflow artifact and caches the incremental file instead
+# of committing either.
+reports/
+.stryker-tmp/

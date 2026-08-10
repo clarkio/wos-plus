@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "AGENTIC-TESTING-PLAN.md Phase 5 / issue #154. Scoped deliberately to pure-logic modules where mutants are meaningful and runs stay fast. wos-plus-main.ts (DOM-coupled orchestration) is explicitly excluded per the issue.",
+  "packageManager": "pnpm",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "vitest.config.ts"
+  },
+  "mutate": [
+    "src/lib/**/*.ts",
+    "src/scripts/wos-words.ts",
+    "src/scripts/mirror-url.ts",
+    "src/scripts/twitch-channel.ts"
+  ],
+  "reporters": ["html", "clear-text", "progress"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "incremental": true,
+  "incrementalFile": "reports/stryker-incremental.json",
+  "_thresholds_comment": "Measured baseline (PR landing #154): 79.31% overall (board-utils.ts 94.85, cors.ts 93.18, launch-menu.ts 43.28, mirror-url.ts 94.23, twitch-channel.ts 61.11, wos-words.ts 72.19). break is set just below that measured number, not guessed, per the issue's instruction. Documented target is >=70 on scoped modules; several files are already well past that, so break tracks the real (higher) floor instead of the aspirational minimum. Raise it as coverage improves; never lower it to get green.",
+  "thresholds": {
+    "high": 90,
+    "low": 79,
+    "break": 79
+  },
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": true,
+  "concurrency": 4
+}
