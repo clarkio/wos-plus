@@ -94,6 +94,12 @@ export class GameSpectator {
   // Re-fits the level/records HUD so long (4+ digit) values stay on one row.
   private hudResizeObserver?: ResizeObserver;
   private hudResizeRaf: number = 0;
+  // Set when the WOS socket reports a successful reconnection, and consumed by
+  // the next "Game Connected" event. That event fires identically whether
+  // WoS+ is reconnecting after an outage or joining a level already in
+  // progress for the first time, and only the former should rebuild the
+  // found-words list from the re-reported slots (issue #169).
+  private pendingWosReconnect: boolean = false;
 
   constructor() {
     this.twitchChatLog = new Map();
@@ -231,7 +237,12 @@ export class GameSpectator {
         }
 
         if (wosEventType === 1 || wosEventType === 12) {
-          this.handleGameInitialization(level, wosEventType, letters, slots);
+          // Consumed here rather than read directly inside
+          // handleGameInitialization so a Level Started event (which can't be
+          // a reconnect) never accidentally inherits a stale flag.
+          const isReconnect = wosEventType === 12 && this.pendingWosReconnect;
+          this.pendingWosReconnect = false;
+          this.handleGameInitialization(level, wosEventType, letters, slots, isReconnect);
           if (wosEventType === 12 && typeof record === 'number') {
             // The game holds the real history for the all-time best; WoS+'s
             // stored copy is only a cache of it, so on connect the game's
@@ -472,7 +483,7 @@ export class GameSpectator {
     return chosen.message;
   }
 
-  private handleGameInitialization(level: any, wosEventType: any, letters: any, slots: any) {
+  private handleGameInitialization(level: any, wosEventType: any, letters: any, slots: any, isReconnect: boolean = false) {
     if (wosEventType === 1) {
       this.clearBoard();
       console.log('[WOS Helper] Game Initialized with slots:', slots);
@@ -489,6 +500,38 @@ export class GameSpectator {
     if (letters.length > 0) {
       this.currentLevelLetters = letters;
       document.getElementById('letters')!.innerText = letters.join(' ').toUpperCase();
+    }
+    if (isReconnect) {
+      this.rebuildFoundWordsAfterReconnect(slots);
+    }
+  }
+
+  // On reconnect, the re-reported slots are the only record of what was
+  // guessed during the outage — the found-words list built incrementally from
+  // chat/guess events has a gap for that stretch. Rebuild it from the slots,
+  // unless the level has a masked guess: a masked slot's letters are reported
+  // as '?' with no way to recover the real word after the fact, so the whole
+  // level's gap is left in place rather than partially filled (issue #169).
+  private rebuildFoundWordsAfterReconnect(slots: Slots[]) {
+    const filledSlots = slots.filter(slot => slot && slot.user);
+    const hasMaskedGuess = filledSlots.some(slot => Array.isArray(slot.letters) && slot.letters.includes('?'));
+    if (hasMaskedGuess) {
+      this.log('Reconnected level has masked guesses; found-words list keeps its gap', this.wosGameLogId);
+      return;
+    }
+
+    const alreadyFound = new Set(
+      this.currentLevelCorrectWords.map(word => word.replace('*', '').toLowerCase())
+    );
+
+    for (const slot of filledSlots) {
+      const word = (typeof slot.word === 'string' && slot.word.length > 0
+        ? slot.word
+        : (slot.letters ?? []).join('')
+      ).toLowerCase();
+      if (!word || alreadyFound.has(word)) continue;
+      alreadyFound.add(word);
+      this.updateCorrectWordsDisplayed(word.toUpperCase());
     }
   }
 
@@ -1043,6 +1086,16 @@ export class GameSpectator {
     this.wosSocket.on('reconnect_attempt', () => {
       this.wosSocket.io.opts.query.uid = this.getMirrorCode(mirrorUrl);
       this.log('Attempting to reconnect to WOS game: ' + this.getMirrorCode(mirrorUrl), this.wosGameLogId);
+    });
+
+    // Only fires after a previous connection was lost and automatically
+    // recovered — never on the initial connect — so it is what tells a
+    // genuine reconnect apart from joining a level already in progress for
+    // the first time (issue #169). The next "Game Connected" event consumes
+    // this flag.
+    this.wosSocket.on('reconnect', () => {
+      this.pendingWosReconnect = true;
+      this.log('Reconnected to WOS game: ' + gameCode, this.wosGameLogId);
     });
 
     this.wosSocket.on('connect_error', (error: string) => {

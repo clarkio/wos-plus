@@ -116,10 +116,13 @@ Related: [boards.md](boards.md) covers what happens to a captured board;
   **word** fills it are two separate facts, and WoS+ can know the first without
   the second.
 
-> ⚠️ **Approved, not yet implemented** — WoS+ today does not tell a reconnection
-> apart from joining a game in progress: both arrive as the same "level in
-> progress" event and are handled identically, so the found-words list keeps its
-> gap in *both* cases. Tracked by
+> ✅ **Confirmed (maintainer)** — WoS+ now tells a reconnection apart from
+> joining a game in progress for the first time: the WOS socket reporting a
+> recovered connection marks the next "level in progress" event as a genuine
+> reconnect, and only that case rebuilds the found-words list from the
+> re-reported slots. Joining a level already in progress on the very first
+> connect still leaves the found-words list empty, since there is nothing to
+> rebuild it from. Fixed per
 > [#169](https://github.com/clarkio/wos-plus/issues/169).
 
 ### Scenario: the game's word language is noticed

@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #162 fix
+### The numbers, as of the #169 fix
 
-**673 passing** tests across 19 files, plus 4 deliberate `it.todo`. Coverage
-**91.05% statements / 87.17% branches / 88.2% functions / 91.75% lines**, counting
+**680 passing** tests across 19 files, plus 4 deliberate `it.todo`. Coverage
+**91.23% statements / 87.41% branches / 88.58% functions / 91.9% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -67,11 +67,30 @@ Thirteen issues, all approved by the maintainer:
 [#168](https://github.com/clarkio/wos-plus/issues/168),
 [#161](https://github.com/clarkio/wos-plus/issues/161),
 [#163](https://github.com/clarkio/wos-plus/issues/163),
-[#171](https://github.com/clarkio/wos-plus/issues/171) and
-[#162](https://github.com/clarkio/wos-plus/issues/162) are done** (PR
+[#171](https://github.com/clarkio/wos-plus/issues/171),
+[#162](https://github.com/clarkio/wos-plus/issues/162) and
+[#169](https://github.com/clarkio/wos-plus/issues/169) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
 #166 fix, the #164 fix, the #168 fix, the #161 fix, the #163 fix, the
-#171 fix and the #162 fix) — three remain.
+#171 fix, the #162 fix and the #169 fix) — two remain, both overlapping open
+draft PRs (see below).
+
+**#169 is done** — the WOS socket's `reconnect` event (fired by socket.io only
+after a previously-connected socket recovers, never on the initial connect)
+now marks the next "Game Connected" event as a genuine reconnect rather than a
+first-time join to a level already in progress — the two cases the game
+reports identically on the wire. Only a confirmed reconnect rebuilds
+`currentLevelCorrectWords` from the re-reported slots
+(`rebuildFoundWordsAfterReconnect` in `wos-plus-main.ts`), and only when none
+of the filled slots is masked (`letters` containing `'?'`) — a masked guess's
+word can't be recovered after the outage, so that level's found-words list
+keeps its gap rather than being partially filled. The reconnect flag is
+consumed by the first "Game Connected" event after it is set, so a later
+join-in-progress on the same connection doesn't re-trigger a rebuild. Covered
+by new unit tests in `tests/unit/wos-plus-main.test.ts` (no acceptance test:
+this is client/game-flow behavior, not an API route). `specs/game-flow.md` §
+reconnecting to a level that has masked guesses is now ✅ Confirmed rather
+than ⚠️.
 
 **#162 is done** — `POST /api/boards` now applies the same board-name and
 slot-shape rules that lookup (`GET /api/boards/[id]`) and repair (`PUT
@@ -203,16 +222,27 @@ have been an unrelated behaviour change. No acceptance test changed; the
 written the way a streamer would type it") already pinned the correct
 behaviour and stays green, unchanged.
 
-Sharpest next, affecting streamers today: none of the remaining three are
-flagged as urgent on their own — [#165](https://github.com/clarkio/wos-plus/issues/165)
-and [#167](https://github.com/clarkio/wos-plus/issues/167) overlap open PRs
-(see below). With #172, #168, #161, #163, #171, #162 and #164 done, the
-remaining pick without an overlapping PR is
-[#169](https://github.com/clarkio/wos-plus/issues/169) (rebuild the found-words
-list on reconnect) — it touches `GameSpectator`'s reconnect handling in
-`wos-plus-main.ts`, not just a route.
+Sharpest next, affecting streamers today: with #172, #168, #161, #163, #171,
+#162, #164 and #169 done, both issues left —
+[#165](https://github.com/clarkio/wos-plus/issues/165) and
+[#167](https://github.com/clarkio/wos-plus/issues/167) — overlap open **draft**
+PRs rather than being a clean pick. Neither PR has been reconciled against its
+issue's precise approved rule yet, so that reconciliation is the next step, not
+a fresh implementation from scratch.
 
-**Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165) overlaps open PR #142, and [#167](https://github.com/clarkio/wos-plus/issues/167) overlaps open PR #144. For #144 especially — recording a slot as solved *without* also blocking the board save would put an unknown word into the archive, the exact failure #167 rules out.
+**Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165)
+overlaps open PR #142 ("fix: key boards by the alphabetically last big word") —
+#165's own text asks that #142 be checked against the *longest-then-alphabetical*
+rule specifically (not just alphabetical) before either is merged; close #165 as
+a duplicate only if #142 already implements exactly that. [#167](https://github.com/clarkio/wos-plus/issues/167)
+overlaps open PR #144 ("Record unrecoverable hidden mobile guesses as solved,
+not missed") — #167 asks that #144 be checked for whether it blocks the board
+save as well as counting the clear (the PR's own description describes a
+`saveBoard` guard that appears to do this, but per #167 that needs explicit
+confirmation, not an assumption, before merging or closing as duplicate). For
+#144 especially — recording a slot as solved *without* also blocking the board
+save would put an unknown word into the archive, the exact failure #167 rules
+out.
 
 ### Where the rest of the state lives
 
