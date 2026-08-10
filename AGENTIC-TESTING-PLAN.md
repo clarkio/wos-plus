@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #165 fix
+### The numbers, as of the #167 fix
 
-**691 passing** tests across 19 files, plus 3 deliberate `it.todo`. Coverage
-**91.4% statements / 87.77% branches / 88.94% functions / 92.07% lines**, counting
+**692 passing** tests across 19 files, plus 3 deliberate `it.todo`. Coverage
+**91.41% statements / 87.77% branches / 88.94% functions / 92.08% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -49,9 +49,9 @@ branches 85, functions 86, lines 90) plus per-file floors for `wos-words.ts` and
 verified by temporarily raising a threshold above measured reality and watching
 the run fail, then reverting.
 
-Next: the **behaviour issues** below, which include live defects. Then #153 (cheap,
-workflow files only), then #154. #152 last or never — `wrangler dev` may not run in
-a sandbox at all.
+The **behaviour issues** below (all thirteen from the #160 review) are now done.
+Next: #153 (cheap, workflow files only), then #154. #152 last or never —
+`wrangler dev` may not run in a sandbox at all.
 
 **Two need maintainer sign-off before starting**, per `CLAUDE.md` §2.3: #152 adds
 Playwright and #154 adds StrykerJS.
@@ -72,8 +72,10 @@ Thirteen issues, all approved by the maintainer:
 [#169](https://github.com/clarkio/wos-plus/issues/169) are done** (PR
 [#176](https://github.com/clarkio/wos-plus/pull/176), the #170 fix, the
 #166 fix, the #164 fix, the #168 fix, the #161 fix, the #163 fix, the
-#171 fix, the #162 fix and the #169 fix) — two remain, both overlapping open
-draft PRs (see below).
+#171 fix, the #162 fix and the #169 fix). **[#165](https://github.com/clarkio/wos-plus/issues/165)
+and [#167](https://github.com/clarkio/wos-plus/issues/167) are also done** —
+the two that overlapped stale open draft PRs (#142 and #144 respectively; see
+below). All thirteen issues from the #160 review are now closed.
 
 **#169 is done** — the WOS socket's `reconnect` event (fired by socket.io only
 after a previously-connected socket recovers, never on the initial connect)
@@ -255,22 +257,47 @@ superseded (with an explanatory comment) rather than reconciled — the fix
 landed as new work on top of current `main` instead of through that stale
 branch.
 
-Sharpest next, affecting streamers today: with #172, #168, #161, #163, #171,
-#162, #164, #169 and #165 done, one issue is left —
-[#167](https://github.com/clarkio/wos-plus/issues/167) — and it overlaps an
-open **draft** PR rather than being a clean pick. That PR has not been
-reconciled against the issue's precise approved rule yet, so that
-reconciliation is the next step, not a fresh implementation from scratch.
+**#167 is done** — all thirteen issues from the #160 review are now closed.
+`updateGameState` in `src/scripts/wos-plus-main.ts` no longer drops an
+unrecoverable masked guess: it still records the slot via
+`updateCurrentLevelSlots`, but with masked (`'?'`-filled) `letters`/`word`
+rather than a resolved word. That single change gets both approved outcomes
+for free, because of how they were already wired: `slot.user` being truthy
+is what `currentLevelSlots.every(slot => slot.user)` (clear detection) and
+`findMissingWordsFromBoard`'s `!currentSlot.user` check (missed-word
+exclusion) both key off, and `saveBoard`'s existing
+`slot.letters.includes('?')` guard (`db-service.ts`) already refuses to
+persist a masked slot — so the board-capture block needed no new code at
+all, only for the slot to stop being silently dropped. Two other acceptance
+scenarios that incidentally asserted `slot.user` stayed `undefined` after an
+unresolved masked guess (`does not choose a word that is already on the
+board`, and the renamed `records the slot masked and says so when no chat
+message can be the word (#167)`) were updated in the same PR, since they
+encoded the same pre-#167 behaviour without being marked as the `known gap`.
+Covered by a new unit test in `tests/unit/wos-plus-main.test.ts` §
+`updateGameState` and the inverted acceptance test in
+`tests/acceptance/game-flow.acceptance.test.ts` § Masked guesses.
+`specs/game-flow.md` § "no matching chat message" is now ✅ Confirmed rather
+than the removed ⚠️ "a masked guess that cannot be recovered" scenario.
 
-**Check before merging the older PR:** [#167](https://github.com/clarkio/wos-plus/issues/167)
-overlaps open PR #144 ("Record unrecoverable hidden mobile guesses as solved,
-not missed") — #167 asks that #144 be checked for whether it blocks the board
-save as well as counting the clear (the PR's own description describes a
-`saveBoard` guard that appears to do this, but per #167 that needs explicit
-confirmation, not an assumption, before merging or closing as duplicate). For
-#144 especially — recording a slot as solved *without* also blocking the board
-save would put an unknown word into the archive, the exact failure #167 rules
-out.
+Draft PR #144 ("Record unrecoverable hidden mobile guesses as solved, not
+missed") was the open PR #167 pointed at for reconciliation. Its description
+already outlined the same `saveBoard`-guard approach, but the branch was
+opened against a much older `main` (July 18) and never rebased — the same
+staleness #165 hit with PR #142. Rather than reconcile it, the fix landed as
+new work directly on current `main`, and #144 was closed as superseded with
+an explanatory comment, mirroring how #142 was handled. #144's broader mobile
+scope (issue #143 — masked guesses from `play.wos.gg`, and reconciling a
+masked slot once WoS reveals it) was **not** re-implemented; only the #167
+slice (decoupling clear detection from board capture) was in scope here. If
+#143's wider mobile-guess handling is still wanted, it needs a fresh issue or
+PR against current `main`, not a revival of #144.
+
+With all thirteen #160-review issues closed, the next open items are #153
+(security & supply-chain gates — cheap, workflow files only) and #154
+(mutation testing, needs maintainer sign-off for the StrykerJS dependency per
+`CLAUDE.md` §2.3). #152 (Playwright E2E) stays last or never, per the
+existing sandbox caveat below.
 
 ### Where the rest of the state lives
 
