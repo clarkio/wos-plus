@@ -1,0 +1,33 @@
+# Flags known-vulnerable and newly-introduced dependencies on a PR diff. Part
+# of AGENTIC-TESTING-PLAN.md Phase 7 (#153) — the primary mechanical defense
+# against a hallucinated or malicious package entering via an agent PR (it
+# cannot tell you a plausible-looking name is the wrong one; that stays a
+# human review step, see docs/BRANCH-PROTECTION.md § Dependency policy).
+#
+# Job is named `dependency-review` on purpose — docs/BRANCH-PROTECTION.md's
+# required-checks table matches on job name and already reserves this name.
+
+name: Dependency Review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: dependency-review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: always

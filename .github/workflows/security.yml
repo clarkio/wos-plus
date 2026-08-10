@@ -1,0 +1,61 @@
+# Secret scanning (defense in depth) and dependency audit. Part of
+# AGENTIC-TESTING-PLAN.md Phase 7 (#153).
+#
+# Neither job here is listed as a required check in docs/BRANCH-PROTECTION.md:
+# gitleaks backstops GitHub's native secret scanning + push protection (a
+# maintainer-only repo setting, documented there — this workflow runs *after*
+# a push already happened, so it is defense in depth, not the primary gate),
+# and pnpm-audit starts non-blocking (see the job below for why).
+
+name: Security
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  pnpm-audit:
+    name: pnpm-audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      # Non-blocking for now: as of the #153 audit, `pnpm audit --prod` reports
+      # 7 high / 7 moderate / 0 critical, all in transitive build/runtime
+      # tooling (astro/cloudflare/sentry toolchains, socket.io-client), none
+      # with a patched version available yet within this repo's pinned major
+      # versions. Report the output here, triage against upstream fixes, and
+      # flip this to blocking (drop continue-on-error, or gate on severity)
+      # once the current findings are resolved or explicitly accepted.
+      - name: Audit production dependencies
+        run: pnpm audit --prod
+        continue-on-error: true

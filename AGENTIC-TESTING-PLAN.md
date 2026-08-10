@@ -25,7 +25,7 @@ describe intent, not status. This section is the status.
 | 4 — Property-based tests (fast-check) | [#150](https://github.com/clarkio/wos-plus/issues/150) | ✅ done | PR #159 |
 | 5 — Mutation testing + change-risk | [#154](https://github.com/clarkio/wos-plus/issues/154) | ⬜ not started | — |
 | 6 — Thin Playwright E2E | [#152](https://github.com/clarkio/wos-plus/issues/152) | ⬜ not started | — |
-| 7 — Security & supply-chain gates | [#153](https://github.com/clarkio/wos-plus/issues/153) | ⬜ not started | — |
+| 7 — Security & supply-chain gates | [#153](https://github.com/clarkio/wos-plus/issues/153) | ✅ done | this PR |
 | 8 — Branch protection & agent contract | [#156](https://github.com/clarkio/wos-plus/issues/156) | ✅ done | PR #159 + maintainer enabled protection on `main` |
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
@@ -298,6 +298,48 @@ With all thirteen #160-review issues closed, the next open items are #153
 (mutation testing, needs maintainer sign-off for the StrykerJS dependency per
 `CLAUDE.md` §2.3). #152 (Playwright E2E) stays last or never, per the
 existing sandbox caveat below.
+
+**#153 is done.** Four workflow files, no source/test/build-config changes,
+per its scoped acceptance criteria:
+
+- `.github/workflows/codeql.yml` — CodeQL, `javascript-typescript`, job named
+  `analyze` (matches `docs/BRANCH-PROTECTION.md`'s required-checks table), on
+  PRs, pushes to `main`, and a weekly schedule.
+- `.github/workflows/dependency-review.yml` — `actions/dependency-review-action`
+  on PRs, job named `dependency-review`, failing on high-severity advisories.
+  This is the mechanical defense against a hallucinated or malicious package
+  entering via an agent PR.
+- `.github/workflows/security.yml` — two non-required jobs, defense in depth
+  rather than primary gates: `gitleaks` (blocking; scans full git history on
+  every PR/push) and `pnpm-audit` (`pnpm audit --prod`, currently
+  `continue-on-error: true`).
+- `.gitleaks.toml` — an allowlist, not a weakened rule. A first local run
+  (`gitleaks git --config .gitleaks.toml -v .`) found one flagged string:
+  `TWITCH_PUBLIC_CLIENT_ID` in `src/scripts/twitch-channel.ts`
+  (`kimne78kx3ncx6brgo4mv6wki5h1ko`), which is Twitch's own published public
+  web `Client-Id` for unauthenticated `gql.twitch.tv` lookups — reused openly
+  by third-party Twitch tools, not a secret. That string plus the acceptance
+  harness's known-fake Supabase credentials are allowlisted by exact value and
+  path; nothing else is excluded, so a real credential anywhere else — even in
+  those same files — still trips the scan. After the allowlist, the scan is
+  clean (`no leaks found`, 97 commits).
+- `pnpm audit --prod`, run locally for this PR: **7 high, 7 moderate, 0
+  critical**, all transitive (astro/cloudflare/sentry toolchains,
+  socket.io-client), none with a patched version available yet within this
+  repo's pinned major versions. Left non-blocking per the issue, with the
+  reasoning recorded in the workflow file and in
+  `docs/BRANCH-PROTECTION.md`.
+- `docs/BRANCH-PROTECTION.md` updated: the required-checks table now marks
+  `analyze` and `dependency-review` available (job names matched what the
+  table already reserved for them); a new paragraph explains why `gitleaks`
+  and `pnpm-audit` are deliberately *not* required checks; the GitHub-native
+  secret scanning / push protection section is now explicitly marked as
+  needing maintainer/repo-admin action, which was implicit before.
+
+No CodeQL or dependency-review run can be verified locally — both only run on
+GitHub — so their YAML was validated with a parser (`python3 -c
+"import yaml; yaml.safe_load(...)"`) rather than eyeballed, per the issue's
+own instruction.
 
 ### Where the rest of the state lives
 
