@@ -30,10 +30,10 @@ describe intent, not status. This section is the status.
 
 Epic tracker: [#157](https://github.com/clarkio/wos-plus/issues/157).
 
-### The numbers, as of the #169 fix
+### The numbers, as of the #165 fix
 
-**680 passing** tests across 19 files, plus 4 deliberate `it.todo`. Coverage
-**91.23% statements / 87.41% branches / 88.58% functions / 91.9% lines**, counting
+**691 passing** tests across 19 files, plus 3 deliberate `it.todo`. Coverage
+**91.4% statements / 87.77% branches / 88.94% functions / 92.07% lines**, counting
 every file under `src/**/*.ts` so an untested module shows as 0% rather than being
 invisible. `src/scripts/wos-widget.ts` is the one module no test imports.
 
@@ -222,19 +222,47 @@ have been an unrelated behaviour change. No acceptance test changed; the
 written the way a streamer would type it") already pinned the correct
 behaviour and stays green, unchanged.
 
-Sharpest next, affecting streamers today: with #172, #168, #161, #163, #171,
-#162, #164 and #169 done, both issues left —
-[#165](https://github.com/clarkio/wos-plus/issues/165) and
-[#167](https://github.com/clarkio/wos-plus/issues/167) — overlap open **draft**
-PRs rather than being a clean pick. Neither PR has been reconciled against its
-issue's precise approved rule yet, so that reconciliation is the next step, not
-a fresh implementation from scratch.
+**#165 is done** — the reconciliation this section used to point at as the next
+step. Draft PR #142 ("fix: key boards by the alphabetically last big word") was
+checked against #165's precise approved rule — longest, then alphabetically
+last among ties — and found to already implement it correctly: `hitMax` (the
+WoS event flag that sets `currentLevelBigWord`) is only ever true for a guess
+that uses every letter in the level, so every candidate `determineBoardId`
+compares is already the same, maximal length by construction. The "longest"
+half of the rule is therefore structural, not something the implementation
+needed to compute separately — the only real work was the alphabetical
+tie-break, which PR #142 already had right. Rather than reconcile the stale
+draft branch (opened against a much older `main`) via rebase, the fix was
+re-applied directly onto current `main`: `determineBoardId(bigWord,
+extraCandidates)` in `src/scripts/wos-words.ts` picks the alphabetically last
+anagram among the tracked big word, the level's filled slot words, and the
+loaded dictionary; `GameSpectator` (`src/scripts/wos-plus-main.ts`) uses it on
+both save (`handleLevelResults`) and lookup (`logMissingWords`, which retries
+under the guessed big word for boards saved before ids were canonicalized);
+`db-scripts/fix-board-ids.mjs` was updated to target the same canonical id for
+a one-off data migration. Covered by new unit tests in
+`tests/unit/wos-words.test.ts` and `tests/unit/wos-plus-main.test.ts`, and a
+new end-to-end acceptance scenario in `tests/acceptance/game-flow.acceptance.test.ts`
+§ "Ending a level" that guesses two anagrams (RULING, then LURING landing in
+the level's last slot) and asserts the board is captured under `RULING`, not
+the positionally-last guess. The `known gap (#165)` placeholder in
+`tests/acceptance/boards.acceptance.test.ts` was inverted (not deleted) to pin
+the fixed rule directly against `determineBoardId`, since the id resolution
+itself happens before `/api/boards` is ever called and isn't otherwise
+reachable from the route. `specs/boards.md` § "which word a board is filed
+under" is now ✅ Confirmed rather than ⚠️. PR #142 itself was left untouched
+(still open, still against its old base) — the fix landed as new work on top
+of current `main` instead of through that branch; #142 can be closed once this
+lands.
 
-**Check before merging the older PRs:** [#165](https://github.com/clarkio/wos-plus/issues/165)
-overlaps open PR #142 ("fix: key boards by the alphabetically last big word") —
-#165's own text asks that #142 be checked against the *longest-then-alphabetical*
-rule specifically (not just alphabetical) before either is merged; close #165 as
-a duplicate only if #142 already implements exactly that. [#167](https://github.com/clarkio/wos-plus/issues/167)
+Sharpest next, affecting streamers today: with #172, #168, #161, #163, #171,
+#162, #164, #169 and #165 done, one issue is left —
+[#167](https://github.com/clarkio/wos-plus/issues/167) — and it overlaps an
+open **draft** PR rather than being a clean pick. That PR has not been
+reconciled against the issue's precise approved rule yet, so that
+reconciliation is the next step, not a fresh implementation from scratch.
+
+**Check before merging the older PR:** [#167](https://github.com/clarkio/wos-plus/issues/167)
 overlaps open PR #144 ("Record unrecoverable hidden mobile guesses as solved,
 not missed") — #167 asks that #144 be checked for whether it blocks the board
 save as well as counting the clear (the PR's own description describes a

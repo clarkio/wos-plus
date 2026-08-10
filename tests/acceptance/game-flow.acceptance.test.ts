@@ -1262,6 +1262,33 @@ describe('specs/game-flow.md § Ending a level', () => {
     expect(capture.posted[0]).toMatchObject({ language_code: 'fr' });
   });
 
+  it('captures the board under the alphabetically last big word, not whichever anagram sits in the last slot (#165)', async () => {
+    // LURING and RULING are anagrams of the same 6 letters, so either one can
+    // report hitMax:true (the actual per-slot completion flag) depending on
+    // which slot gets solved. RULING is guessed first (setting the tracked big
+    // word), then LURING is guessed second — landing in the level's *last*
+    // slot and re-tracking the big word as LURING. The pre-#165 behaviour
+    // trusted whichever word ended up in the last slot; the approved rule is
+    // deterministic regardless of slot order: the longest word, and among
+    // ties, the alphabetically last — RULING, not LURING.
+    const capture = boardCaptureRecorder();
+    server.use(boardNotArchived(), capture.handler);
+
+    await playWosEvent(levelStarted({
+      level: 3,
+      letters: ['l', 'u', 'r', 'i', 'n', 'g'],
+      slotLengths: [4, 6, 6],
+    }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'ring', index: 0 }));
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'ruling', index: 1, hitMax: true }));
+    await playWosEvent(correctGuess({ user: 'smc_may_i', word: 'luring', index: 2, hitMax: true }));
+
+    await playWosEvent(levelResults(5));
+
+    expect(capture.posted).toHaveLength(1);
+    expect(capture.posted[0]).toMatchObject({ id: 'RULING' });
+  });
+
   it('treats five stars as a clear even with a slot nobody filled', async () => {
     server.use(boardNotArchived());
 
