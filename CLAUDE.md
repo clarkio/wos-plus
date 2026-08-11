@@ -31,6 +31,7 @@ The shape you need to know before touching code:
 | API routes | `src/pages/api/**` | Must `export const prerender = false`; env via `locals.runtime.env` |
 | Shared helpers | `src/lib/**` | e.g. `cors.ts`, `board-utils.ts`, `launch-menu.ts` |
 | Tests | `tests/unit/`, `tests/acceptance/`, `tests/property/` | Vitest 4 + happy-dom; setup in `tests/setup.ts`. Two streams — see §7 |
+| E2E smoke | `tests/e2e/` | Playwright, against a real `wrangler dev` runtime. Separate from Vitest — see §9 |
 | Behavioural contract | `specs/` | Human-owned. Acceptance tests cite it; open questions indexed in [specs/README.md](specs/README.md) |
 | **Where the quality plan stands** | [AGENTIC-TESTING-PLAN.md § Where this stands](AGENTIC-TESTING-PLAN.md) | Phase-by-phase status, what to do next, and the 13-issue behaviour backlog. **Start here if picking the work up cold.** |
 
@@ -348,3 +349,56 @@ notices — AGENTIC-TESTING-PLAN.md Phase 5 / issue #154.
   the source of truth for the decomposition work and the next ceiling number.
 - `reports/` and `.stryker-tmp/` are generated and gitignored; CI publishes
   the HTML report as an artifact instead of committing it.
+
+---
+
+## 9. Thin E2E smoke layer (`tests/e2e/`, `playwright.config.ts`)
+
+The last layer of the Testing Trophy (AGENTIC-TESTING-PLAN.md Phase 6 /
+issue #152): a handful of Playwright tests against a real production build
+running under `wrangler dev` — the only layer that catches `prerender =
+false` / `locals.runtime.env` misconfigurations, since unit and acceptance
+tests invoke route handlers directly and never touch an actual Workers
+runtime.
+
+- **`pnpm run test:e2e`** runs the suite (`playwright test`). It is **not**
+  part of the §2.4 local gate — like mutation testing, it's a separate,
+  slower layer with its own CI job (`.github/workflows/e2e.yml`, job `e2e`),
+  not bundled into `build`.
+- **Deliberately narrow, per the plan's "thin E2E" framing**: page loads for
+  `/`, `/player`, `/streamer` without unexpected console errors; `/api/health`
+  returning 200 through the real Workers runtime; the settings dialog opening
+  when required query params are missing; and the dialog's Save flow
+  round-tripping values into URL params. WoS WebSocket and Twitch chat
+  connections are explicitly **out of scope** — that protocol handling is
+  already covered deterministically by the fixture-driven worker tests
+  (`tests/unit/wos-worker.test.ts`, `tests/unit/twitch-chat-worker.test.ts`).
+- **Hermetic by the same convention as the acceptance stream** (§7): zero
+  reliance on real third-party network reachability. `tests/e2e/e2e-harness.ts`
+  aborts Google Fonts and Twitch's GQL lookup (`blockExternalNetwork`) rather
+  than depending on whether those hosts happen to be reachable in a given CI
+  or sandbox network policy.
+- **A named, not hidden, gap**: `e2e.yml` provisions no Supabase credentials,
+  so `/player`/`/streamer`'s in-page word-dictionary and channel-stats
+  fetches fail the same way they would locally without `.dev.vars` — the
+  routes already catch and log rather than throw, so pages still render.
+  `e2e-harness.ts`'s console-error filter names this exact known gap (by
+  message shape — Chrome's own resource-failure console messages carry no
+  URL) instead of silently swallowing all console errors. Wiring real or
+  sandboxed Supabase credentials into the CI job is future work; it isn't
+  required for this suite to be a meaningful gate, since its actual target is
+  Workers-runtime wiring and page/dialog behavior, not Supabase-backed data.
+- **Browser**: `@playwright/test` 1.62.1, exact-pinned. `playwright.config.ts`
+  uses `127.0.0.1` rather than `localhost` for `baseURL` and the `webServer`
+  health-check URL — `wrangler dev` only binds IPv4, and some sandboxes
+  resolve `localhost` to `::1` first, which hangs. Locally, set
+  `PLAYWRIGHT_CHROMIUM_PATH` to reuse a preinstalled Chromium instead of
+  downloading one (this also gates `--no-sandbox`, needed only when Chromium
+  runs as root); CI installs its own via
+  `pnpm exec playwright install --with-deps chromium` and leaves that env var
+  unset.
+- `playwright-report/` and `test-results/` are generated and gitignored; CI
+  uploads the HTML report as a workflow artifact on failure instead of
+  committing it.
+- `docs/BRANCH-PROTECTION.md`'s `e2e` row is available but not yet a required
+  status check — same maintainer action as the other rows in that table.

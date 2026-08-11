@@ -24,7 +24,7 @@ describe intent, not status. This section is the status.
 | 3 — Acceptance-test stream (ATDD) | [#151](https://github.com/clarkio/wos-plus/issues/151) | ✅ done | PR #160 |
 | 4 — Property-based tests (fast-check) | [#150](https://github.com/clarkio/wos-plus/issues/150) | ✅ done | PR #159 |
 | 5 — Mutation testing + change-risk | [#154](https://github.com/clarkio/wos-plus/issues/154) | ✅ done | this PR |
-| 6 — Thin Playwright E2E | [#152](https://github.com/clarkio/wos-plus/issues/152) | ⬜ not started | — |
+| 6 — Thin Playwright E2E | [#152](https://github.com/clarkio/wos-plus/issues/152) | ✅ done | this PR |
 | 7 — Security & supply-chain gates | [#153](https://github.com/clarkio/wos-plus/issues/153) | ✅ done | this PR |
 | 8 — Branch protection & agent contract | [#156](https://github.com/clarkio/wos-plus/issues/156) | ✅ done | PR #159 + maintainer enabled protection on `main` |
 
@@ -50,12 +50,48 @@ verified by temporarily raising a threshold above measured reality and watching
 the run fail, then reverting.
 
 The **behaviour issues** below (all thirteen from the #160 review) are now done,
-and so are #153 and #154. The only phase left is **#152** (thin Playwright
-E2E), last or never — `wrangler dev` may not run in a sandbox at all.
+and so are #153, #154, and #152. **Every phase in the table above is now done**
+— #157 (the epic) is the only thing left open, and only as a tracking issue.
 
-**#152 needs maintainer sign-off before starting**, per `CLAUDE.md` §5: it adds
-Playwright as a new dependency, an architecture-tier change. (#154's own
-sign-off, for adding StrykerJS, was obtained and is recorded below.)
+**#152 is done**, with explicit maintainer sign-off obtained before adding the
+new dependency, per `CLAUDE.md` §5 (architecture-tier — same policy #154's
+StrykerJS addition went through). `@playwright/test` 1.62.1 (exact-pinned) was
+added, scoped to a thin smoke layer per the issue's own scope:
+
+- `wrangler dev` **does run in this sandbox** — the open question the plan
+  flagged going in. `curl http://127.0.0.1:8788/` and `/api/health` both
+  answer 200 against a real `astro build` + `wrangler dev`. Two environment
+  quirks needed working around, not signs the approach doesn't work: `wrangler
+  dev` only binds IPv4, so Chromium resolving `localhost` to `::1` first hangs
+  — `playwright.config.ts` uses `127.0.0.1` explicitly; and Chromium refuses
+  to start its own sandbox as root (this sandbox's user), worked around with
+  `--no-sandbox` in `launchOptions.args`, gated on `PLAYWRIGHT_CHROMIUM_PATH`
+  being set so a normal non-root CI runner is unaffected.
+- **Scope**: `tests/e2e/smoke.spec.ts` covers `/`, `/player`, `/streamer`
+  loading without unexpected console errors; `/api/health` returning 200
+  through the real Workers runtime; and the settings dialog opening when
+  required query params are missing (both `/player` and `/streamer`).
+  `tests/e2e/settings-dialog.spec.ts` covers the settings dialog's URL-param
+  round trip. WoS WebSocket and Twitch chat connections stay out of scope, per
+  the issue — `tests/e2e/e2e-harness.ts`'s `blockExternalNetwork` aborts
+  Google Fonts and Twitch's GQL lookup so the suite stays hermetic (same "zero
+  real network" convention the acceptance stream already uses), and the
+  URL-round-trip test doesn't assert on console output at all, since Save
+  fires a real (out-of-scope) connection attempt to the live WoS mirror socket.
+- **A real, known gap, not swept under the rug**: `e2e.yml` provisions no
+  Supabase secrets, so `/player` and `/streamer`'s in-page word-dictionary and
+  channel-stats fetches fail there the same way they would locally without
+  `.dev.vars` — already caught and logged by the routes rather than thrown, so
+  the page still renders. `e2e-harness.ts`'s console-error filter names this
+  gap explicitly (by message shape, since Chrome's own resource-failure
+  console messages carry no URL) rather than silently absorbing it; wiring
+  real or sandboxed credentials into the job is future work, out of scope for
+  a suite whose actual target is `prerender = false` /
+  `locals.runtime.env` misconfiguration and page-load/dialog behaviour.
+- `docs/BRANCH-PROTECTION.md`'s `e2e` row is now marked available (job `e2e`
+  in `.github/workflows/e2e.yml`), with the Supabase-secrets gap noted there
+  too; it is not yet ticked as a required check — that's a maintainer action,
+  same as the other rows in that table.
 
 ### The behaviour backlog from the #160 review
 
@@ -391,11 +427,10 @@ excluding `wos-plus-main.ts`.
   touches means that PR's tests don't actually constrain the new code — add
   an assertion, never suppress the mutant.
 
-With #154 done, every phase in the table above is closed except **#152**
-(thin Playwright E2E), which also needs maintainer sign-off per `CLAUDE.md`
-§5 and stays last-or-never per the existing sandbox caveat: `wrangler dev`
-may not run in this environment at all, so the day it's picked up should
-start by testing that assumption before writing any spec.
+**With #152 done, every phase in the table above is closed.** #157 (the epic)
+is the only tracking issue still open. `wrangler dev` turned out to run fine
+in the sandbox this landed in — see § What to do next, and why for how that
+was verified and what #152's implementation covers.
 
 ### Where the rest of the state lives
 

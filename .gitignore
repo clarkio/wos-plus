@@ -152,3 +152,9 @@ vite.config.ts.timestamp-*
 # of committing either.
 reports/
 .stryker-tmp/
+
+# Playwright E2E (AGENTIC-TESTING-PLAN.md #152): generated report and
+# per-run artifacts (traces, screenshots), not source. CI uploads the report
+# as a workflow artifact on failure instead of committing it.
+playwright-report/
+test-results/
