@@ -51,13 +51,32 @@ export async function blockExternalNetwork(page: Page): Promise<void> {
 // provision — the same gap applies in CI until a maintainer wires up secrets
 // for the e2e job. Both routes already catch and log the failure rather than
 // throwing, so the page still renders; it's a known environment limitation,
-// not a page defect.
-const EXPECTED_500_PATHS = ['/api/words', '/api/channel-stats/'];
+// not a page defect. `/api/channel-stats/` keeps its trailing slash so it
+// only matches the route's own `/[channel]` segment, not a hypothetical
+// `/api/channel-stats-anything` route.
+const EXPECTED_EXACT_PATHS = ['/api/words'];
+const EXPECTED_PATH_PREFIXES = ['/api/channel-stats/'];
 
-const isKnownExpectedFailureUrl = (url: string): boolean =>
-  BLOCKED_HOSTS.some((host) => url.includes(host)) ||
-  url === BLOCKED_TWITCH_GQL ||
-  EXPECTED_500_PATHS.some((path) => url.includes(path));
+// Matched against the *parsed* URL's hostname/pathname rather than substrings
+// of the raw URL string — `url.includes(...)` would also match an unrelated
+// host containing a blocked one (e.g. `evil-fonts.googleapis.com.example`) or
+// an unrelated path merely containing a known one as a substring (e.g.
+// `/api/words-backup`, or a query string like `/?next=/api/words`).
+const isKnownExpectedFailureUrl = (rawUrl: string): boolean => {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  return (
+    BLOCKED_HOSTS.includes(parsed.hostname) ||
+    rawUrl === BLOCKED_TWITCH_GQL ||
+    EXPECTED_EXACT_PATHS.includes(parsed.pathname) ||
+    EXPECTED_PATH_PREFIXES.some((prefix) => parsed.pathname.startsWith(prefix))
+  );
+};
 
 // Chrome's own "resource failed to load" console messages are generic and
 // carry no URL (`msg.text()` is just one of the two strings below, regardless
