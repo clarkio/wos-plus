@@ -72,22 +72,28 @@ added, scoped to a thin smoke layer per the issue's own scope:
   through the real Workers runtime; and the settings dialog opening when
   required query params are missing (both `/player` and `/streamer`).
   `tests/e2e/settings-dialog.spec.ts` covers the settings dialog's URL-param
-  round trip. WoS WebSocket and Twitch chat connections stay out of scope, per
-  the issue — `tests/e2e/e2e-harness.ts`'s `blockExternalNetwork` aborts
-  Google Fonts and Twitch's GQL lookup so the suite stays hermetic (same "zero
-  real network" convention the acceptance stream already uses), and the
-  URL-round-trip test doesn't assert on console output at all, since Save
-  fires a real (out-of-scope) connection attempt to the live WoS mirror socket.
+  round trip. Twitch chat connections stay out of scope, per the issue —
+  `tests/e2e/e2e-harness.ts`'s `blockExternalNetwork` aborts Google Fonts and
+  Twitch's GQL lookup over HTTP, and mocks the WoS mirror WebSocket
+  (`wos2.gartic.es`, opened by Save via socket.io's `transports: ['websocket']`
+  — `page.route` can't intercept that, only `page.routeWebSocket` can) so the
+  suite stays hermetic (same "zero real network" convention the acceptance
+  stream already uses) even though the URL-round-trip test doesn't itself
+  assert on console output.
 - **A real, known gap, not swept under the rug**: `e2e.yml` provisions no
   Supabase secrets, so `/player` and `/streamer`'s in-page word-dictionary and
   channel-stats fetches fail there the same way they would locally without
   `.dev.vars` — already caught and logged by the routes rather than thrown, so
   the page still renders. `e2e-harness.ts`'s console-error filter names this
-  gap explicitly (by message shape, since Chrome's own resource-failure
-  console messages carry no URL) rather than silently absorbing it; wiring
-  real or sandboxed credentials into the job is future work, out of scope for
-  a suite whose actual target is `prerender = false` /
-  `locals.runtime.env` misconfiguration and page-load/dialog behaviour.
+  gap explicitly, scoped to the specific request URLs it expects to fail
+  (`/api/words`, `/api/channel-stats/*`, plus the blocked hosts above) rather
+  than by generic message text — Chrome's own resource-failure console
+  messages carry no URL, so the filter tracks `requestfailed`/`response`
+  events by URL and only forgives that many generic messages, leaving an
+  unrelated failure visible. Wiring real or sandboxed credentials into the
+  job is future work, out of scope for a suite whose actual target is
+  `prerender = false` / `locals.runtime.env` misconfiguration and
+  page-load/dialog behaviour.
 - `docs/BRANCH-PROTECTION.md`'s `e2e` row is now marked available (job `e2e`
   in `.github/workflows/e2e.yml`), with the Supabase-secrets gap noted there
   too; it is not yet ticked as a required check — that's a maintainer action,

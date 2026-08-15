@@ -53,9 +53,11 @@ in-page word-dictionary and channel-stats fetches are therefore expected to
 fail there, the same as they would locally without `.dev.vars` — the routes
 already catch and log that rather than throwing, so the pages still render,
 and `tests/e2e/e2e-harness.ts` filters that specific known gap out of its
-console-error assertions rather than masking a real regression class. Wiring
-real (or sandboxed) Supabase credentials into the job is future work, not
-required for this suite to be a meaningful gate: it targets `prerender =
+console-error assertions by matching the exact failing request URLs
+(`/api/words`, `/api/channel-stats/*`) rather than generic message text, so
+an unrelated failure elsewhere still surfaces rather than being masked.
+Wiring real (or sandboxed) Supabase credentials into the job is future work,
+not required for this suite to be a meaningful gate: it targets `prerender =
 false` / `locals.runtime.env` misconfigurations and page-load/dialog
 behaviour, not Supabase-backed data.
 

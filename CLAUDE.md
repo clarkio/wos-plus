@@ -375,19 +375,28 @@ runtime.
   (`tests/unit/wos-worker.test.ts`, `tests/unit/twitch-chat-worker.test.ts`).
 - **Hermetic by the same convention as the acceptance stream** (§7): zero
   reliance on real third-party network reachability. `tests/e2e/e2e-harness.ts`
-  aborts Google Fonts and Twitch's GQL lookup (`blockExternalNetwork`) rather
-  than depending on whether those hosts happen to be reachable in a given CI
-  or sandbox network policy.
+  aborts Google Fonts and Twitch's GQL lookup over HTTP (`blockExternalNetwork`),
+  and separately mocks the WoS mirror socket (`wos2.gartic.es`) via
+  `page.routeWebSocket` — the settings dialog's Save flow opens that
+  connection as a raw WebSocket (socket.io with `transports: ['websocket']`,
+  no HTTP fallback), which `page.route` cannot intercept. Neither depends on
+  whether those hosts happen to be reachable in a given CI or sandbox network
+  policy.
 - **A named, not hidden, gap**: `e2e.yml` provisions no Supabase credentials,
   so `/player`/`/streamer`'s in-page word-dictionary and channel-stats
   fetches fail the same way they would locally without `.dev.vars` — the
   routes already catch and log rather than throw, so pages still render.
-  `e2e-harness.ts`'s console-error filter names this exact known gap (by
-  message shape — Chrome's own resource-failure console messages carry no
-  URL) instead of silently swallowing all console errors. Wiring real or
-  sandboxed Supabase credentials into the CI job is future work; it isn't
-  required for this suite to be a meaningful gate, since its actual target is
-  Workers-runtime wiring and page/dialog behavior, not Supabase-backed data.
+  `e2e-harness.ts`'s console-error filter names this exact known gap, scoped
+  by URL rather than by message text: Chrome's own resource-failure console
+  messages are generic and carry no URL, so the harness instead watches the
+  network layer (`requestfailed` / `response`) to learn which specific
+  request URLs (the blocked hosts above, `/api/words`, `/api/channel-stats/*`)
+  are expected to fail, and only forgives that many generic console
+  messages — an unrelated failing script or route still surfaces as an
+  unexpected error. Wiring real or sandboxed Supabase credentials into the CI
+  job is future work; it isn't required for this suite to be a meaningful
+  gate, since its actual target is Workers-runtime wiring and page/dialog
+  behavior, not Supabase-backed data.
 - **Browser**: `@playwright/test` 1.62.1, exact-pinned. `playwright.config.ts`
   uses `127.0.0.1` rather than `localhost` for `baseURL` and the `webServer`
   health-check URL — `wrangler dev` only binds IPv4, and some sandboxes
