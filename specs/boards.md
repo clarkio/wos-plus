@@ -249,10 +249,11 @@ presence means the stored copy is wrong.
 
 ### Scenario: a corrupted stored board is replaced by a clean capture
 
-- **Given** the stored board `CAUTION` has the same word in two slots
+- **Given** the stored board `CAUTION` has the same word in two slots, or has a
+  word that cannot be formed from the letters in `CAUTION`
 - **And** WoS+ has just captured `CAUTION` cleanly, with every slot a different
   word
-- **When** WoS+ offers the clean capture as a repair
+- **When** WoS+ saves the clean capture
 - **Then** the stored board's slots are replaced by the clean ones
 
 ### Scenario: a repair also fills in a missing channel and language

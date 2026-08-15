@@ -480,6 +480,44 @@ describe('db-service module', () => {
         );
       });
 
+      it('should update the existing board when the stored version has a word that cannot be formed from the board letters', async () => {
+        const cleanCautionSlots: Slot[] = [
+          { letters: ['a', 'c', 't'], user: 'a', hitMax: false, word: 'act' },
+          { letters: ['c', 'o', 'i', 'n'], user: 'b', hitMax: false, word: 'coin' },
+        ];
+        const storedCorruptBoard = {
+          id: 'CAUTION',
+          slots: [
+            { letters: ['a', 'c', 't', 'o', 'r'], user: 'a', hitMax: false, word: 'actor' },
+            { letters: ['c', 'o', 'i', 'n'], user: 'b', hitMax: false, word: 'coin' },
+          ],
+          created_at: '2024-01-01T00:00:00Z',
+        };
+        const updatedBoard = [{ id: 'CAUTION', slots: cleanCautionSlots }];
+
+        global.fetch = vi.fn()
+          .mockImplementationOnce(() => mockFetchResponse(storedCorruptBoard))
+          .mockImplementationOnce(() => mockFetchResponse(updatedBoard));
+
+        const result = await saveBoard('CAUTION', cleanCautionSlots);
+
+        expect(global.fetch).toHaveBeenNthCalledWith(
+          2,
+          '/api/boards/CAUTION',
+          expect.objectContaining({
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ slots: cleanCautionSlots, language_code: 'en' }),
+          })
+        );
+        expect(result).toEqual(updatedBoard);
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          'Board CAUTION exists with invalid words; updating it with the clean version.'
+        );
+      });
+
       it('should self-heal when the stored slots column is a JSON string with redundant words', async () => {
         const storedCorruptBoard = {
           id: 'TEST',
@@ -506,9 +544,13 @@ describe('db-service module', () => {
       });
 
       it('should not update the existing board when the stored slots column is a clean JSON string', async () => {
+        const cleanTestSlots: Slot[] = [
+          validSlots[0],
+          { letters: ['s', 'e', 't'], user: 'anotheruser', hitMax: true, word: 'set' },
+        ];
         const storedCleanBoard = {
           id: 'TEST',
-          slots: JSON.stringify(validSlots),
+          slots: JSON.stringify(cleanTestSlots),
           created_at: '2024-01-01T00:00:00Z',
         };
 
@@ -523,9 +565,13 @@ describe('db-service module', () => {
       });
 
       it('should not update the existing board when the stored version is clean', async () => {
+        const cleanTestSlots: Slot[] = [
+          validSlots[0],
+          { letters: ['s', 'e', 't'], user: 'anotheruser', hitMax: true, word: 'set' },
+        ];
         const storedCleanBoard = {
           id: 'TEST',
-          slots: validSlots,
+          slots: cleanTestSlots,
           created_at: '2024-01-01T00:00:00Z',
         };
 
