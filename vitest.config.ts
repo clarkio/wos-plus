@@ -83,6 +83,10 @@ export default defineConfig({
       '.idea',
       '.git',
       '.cache',
+      // Playwright specs (tests/e2e/**), run via `pnpm run test:e2e`, not
+      // Vitest — they use @playwright/test's own `test`/`expect`, which
+      // collides with Vitest's globals if picked up here.
+      'tests/e2e',
     ],
   },
 

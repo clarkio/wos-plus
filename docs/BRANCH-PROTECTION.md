@@ -36,7 +36,7 @@ exists today; tick the others as their phases land.
 | `build` | `tests.yml` | `build` | **available now** — runs install → check → lint → acceptance → test+coverage → build |
 | `analyze` | `codeql.yml` | `analyze` | **available now**, landed with #153 — CodeQL, `javascript-typescript`, on PRs/push to `main`/weekly schedule |
 | `dependency-review` | `dependency-review.yml` | `dependency-review` | **available now**, landed with #153 — fails on high-severity advisories in a PR's dependency diff |
-| `e2e` | e2e workflow | — | pending #152 |
+| `e2e` | `e2e.yml` | `e2e` | **available now**, landed with #152 — thin Playwright smoke suite against a real `wrangler dev` runtime, on PRs/push to `main` |
 | acceptance stream | `tests.yml` | `build`, step "Run acceptance tests" | **landed with #151** as a separate *step*, not a separate job — see below |
 
 `security.yml`'s two jobs (`gitleaks`, `pnpm-audit`), also landed with #153, are
@@ -47,6 +47,19 @@ landed with #154, are **also not** required checks, for the same reason as the
 `build` job's coarseness point above: a mutation run is much slower than the
 rest of the gate and exists to surface surviving mutants for a human or agent
 to act on (`CLAUDE.md` § 8), not to block merges yet.
+
+`e2e.yml` does not provision Supabase secrets. `/player` and `/streamer`'s
+in-page word-dictionary and channel-stats fetches are therefore expected to
+fail there, the same as they would locally without `.dev.vars` — the routes
+already catch and log that rather than throwing, so the pages still render,
+and `tests/e2e/e2e-harness.ts`'s `collectUnexpectedFailures` checks for that
+specific known gap by the exact failing request URLs (`/api/words`,
+`/api/channel-stats/*`), independently of the generic (unattributable)
+console-error text, so an unrelated failure elsewhere still surfaces rather
+than being masked. Wiring real (or sandboxed) Supabase credentials into the job is future work,
+not required for this suite to be a meaningful gate: it targets `prerender =
+false` / `locals.runtime.env` misconfigurations and page-load/dialog
+behaviour, not Supabase-backed data.
 
 > The single `build` job currently bundles type-check, lint, tests and build.
 > That is fine for enforcement (any failure fails the job) but coarse in the
