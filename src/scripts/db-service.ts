@@ -1,4 +1,4 @@
-import { findRedundantWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../lib/board-utils';
+import { findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../lib/board-utils';
 
 export interface ChannelStats {
   allTimePersonalBest: number;
@@ -101,9 +101,9 @@ async function fetchExistingBoard(boardId: string): Promise<{ exists: boolean; b
   }
 }
 
-// Replaces the slots of an already-stored board that was saved with redundant
-// words (issue #119). The server only accepts this update when the stored
-// board is actually corrupted, so a clean board can never be overwritten.
+// Replaces the slots of an already-stored board that was saved with corrupted
+// words (issues #119 and #195). The server only accepts this update when the
+// stored board is actually corrupted, so a clean board can never be overwritten.
 async function updateBoardSlots(boardId: string, slots: Slot[], twitchChannel: string | null, languageCode: string) {
   try {
     const response = await fetch(`/api/boards/${encodeURIComponent(boardId)}`, {
@@ -136,6 +136,13 @@ async function updateBoardSlots(boardId: string, slots: Slot[], twitchChannel: s
   } catch (error) {
     console.error('Error updating board with clean slots:', error);
   }
+}
+
+function storedBoardCorruptionReason(board: Board | null, boardId: string): 'redundant words' | 'invalid words' | null {
+  if (!board) return null;
+  if (hasRedundantWords(board.slots)) return 'redundant words';
+  if (hasInvalidWords(board.slots, boardId)) return 'invalid words';
+  return null;
 }
 
 export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: string, languageCode?: string) {
@@ -220,11 +227,12 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
   try {
     const { exists, board: existingBoard } = await fetchExistingBoard(cleanBoardId);
     if (exists) {
-      // Self-healing (issue #119): if the stored copy of this board was saved
-      // with redundant words, replace its slots with this clean capture
-      // instead of skipping the save.
-      if (existingBoard && hasRedundantWords(existingBoard.slots)) {
-        console.warn(`Board ${cleanBoardId} exists with redundant words; updating it with the clean version.`);
+      // Self-healing (issues #119 and #195): if the stored copy of this board
+      // has redundant or impossible words, replace its slots with this clean
+      // capture instead of skipping the save.
+      const corruptionReason = storedBoardCorruptionReason(existingBoard, cleanBoardId);
+      if (corruptionReason) {
+        console.warn(`Board ${cleanBoardId} exists with ${corruptionReason}; updating it with the clean version.`);
         return await updateBoardSlots(cleanBoardId, slots, cleanTwitchChannel, requestedLanguageCode ?? 'en');
       }
 
