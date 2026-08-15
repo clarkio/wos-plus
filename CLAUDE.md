@@ -386,14 +386,21 @@ runtime.
   so `/player`/`/streamer`'s in-page word-dictionary and channel-stats
   fetches fail the same way they would locally without `.dev.vars` — the
   routes already catch and log rather than throw, so pages still render.
-  `e2e-harness.ts`'s console-error filter names this exact known gap, scoped
-  by URL rather than by message text: Chrome's own resource-failure console
-  messages are generic and carry no URL, so the harness instead watches the
-  network layer (`requestfailed` / `response`) to learn which specific
-  request URLs (the blocked hosts above, `/api/words`, `/api/channel-stats/*`)
-  are expected to fail, and only forgives that many generic console
-  messages — an unrelated failing script or route still surfaces as an
-  unexpected error. Wiring real or sandboxed Supabase credentials into the CI
+  `e2e-harness.ts`'s `collectUnexpectedFailures` names this exact known gap,
+  scoped by URL rather than by message text: Chrome's own resource-failure
+  console messages are generic and carry no URL, and console events aren't
+  guaranteed to arrive in a correlated order with the network events that do
+  carry one, so the two are judged independently rather than one "forgiving"
+  a count against the other — a page-global counter was tried and rejected in
+  review (PR #194) for exactly that ordering risk (an unrelated failure could
+  consume budget left over from an earlier expected one and go unreported).
+  Generic resource-failure console text is dropped outright since it can't be
+  attributed to a URL; `unexpectedRequestFailures` is the real check, built
+  from `requestfailed`/`response` events (which do carry a URL) against the
+  known-expected list (the blocked hosts above, `/api/words`,
+  `/api/channel-stats/*`) — an unrelated failing request still surfaces there
+  regardless of what else failed first. Wiring real or sandboxed Supabase
+  credentials into the CI
   job is future work; it isn't required for this suite to be a meaningful
   gate, since its actual target is Workers-runtime wiring and page/dialog
   behavior, not Supabase-backed data.

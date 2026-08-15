@@ -84,13 +84,21 @@ added, scoped to a thin smoke layer per the issue's own scope:
   Supabase secrets, so `/player` and `/streamer`'s in-page word-dictionary and
   channel-stats fetches fail there the same way they would locally without
   `.dev.vars` — already caught and logged by the routes rather than thrown, so
-  the page still renders. `e2e-harness.ts`'s console-error filter names this
-  gap explicitly, scoped to the specific request URLs it expects to fail
-  (`/api/words`, `/api/channel-stats/*`, plus the blocked hosts above) rather
-  than by generic message text — Chrome's own resource-failure console
-  messages carry no URL, so the filter tracks `requestfailed`/`response`
-  events by URL and only forgives that many generic messages, leaving an
-  unrelated failure visible. Wiring real or sandboxed credentials into the
+  the page still renders. `e2e-harness.ts`'s `collectUnexpectedFailures` names
+  this gap explicitly via a dedicated, URL-attributed check
+  (`unexpectedRequestFailures`, built from `requestfailed`/`response` events
+  against the known-expected list: `/api/words`, `/api/channel-stats/*`, plus
+  the blocked hosts above) rather than trying to pattern-match generic
+  console text, which carries no URL. An earlier version tracked expected
+  failures as a single page-global counter decremented against generic
+  console messages; review on PR #194 caught that console and network events
+  aren't guaranteed to arrive in a correlated order, so an unrelated failure
+  could silently consume budget left over from an earlier expected one. The
+  fix judges the two independently instead: generic resource-failure console
+  text is dropped outright (unattributable), and the URL-based network check
+  is what actually catches an unrelated failure, regardless of what else
+  failed first — covered by a regression test in `tests/e2e/smoke.spec.ts`.
+  Wiring real or sandboxed credentials into the
   job is future work, out of scope for a suite whose actual target is
   `prerender = false` / `locals.runtime.env` misconfiguration and
   page-load/dialog behaviour.

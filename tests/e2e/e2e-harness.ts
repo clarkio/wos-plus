@@ -50,19 +50,27 @@ export async function blockExternalNetwork(page: Page): Promise<void> {
 // require live Supabase credentials, which this E2E environment does not
 // provision — the same gap applies in CI until a maintainer wires up secrets
 // for the e2e job. Both routes already catch and log the failure rather than
-// throwing, so the page still renders; it's filtered out of the
-// console-error assertion below as a known environment limitation, not a
-// page defect.
+// throwing, so the page still renders; it's a known environment limitation,
+// not a page defect.
 const EXPECTED_500_PATHS = ['/api/words', '/api/channel-stats/'];
 
+const isKnownExpectedFailureUrl = (url: string): boolean =>
+  BLOCKED_HOSTS.some((host) => url.includes(host)) ||
+  url === BLOCKED_TWITCH_GQL ||
+  EXPECTED_500_PATHS.some((path) => url.includes(path));
+
 // Chrome's own "resource failed to load" console messages are generic and
-// carry no URL (`msg.text()` is just one of the two strings below,
-// regardless of which request failed), so they can't be attributed to a
-// specific request by text alone. `collectUnexpectedConsoleErrors` instead
-// tracks the network layer directly (`requestfailed` / `response`) to learn
-// *which* URLs are expected to fail, and only forgives that many generic
-// console messages — an unrelated failing script, stylesheet, or route still
-// surfaces as an unexpected error, since nothing decrements the count for it.
+// carry no URL (`msg.text()` is just one of the two strings below, regardless
+// of which request failed) — Playwright's `console` and `requestfailed`/
+// `response` events also aren't guaranteed to arrive in a correlated order,
+// so a per-page counter of "how many failures are expected right now" can't
+// be attributed to a specific message without risking exactly the failure
+// mode this suite exists to catch: an unrelated failure consuming budget left
+// over from an earlier *expected* one and going unreported. Rather than
+// guess, `collectUnexpectedFailures` drops these generic messages from the
+// console-error list entirely and answers "did anything unexpected fail?"
+// from the network layer instead, where every event carries its own URL and
+// there is nothing left to correlate.
 const GENERIC_RESOURCE_FAILURE = /^Failed to load resource: (net::ERR_FAILED|the server responded with a status of 5\d\d)/;
 
 // Produced by our own code (wos-words.ts / streamer channel-stats handling),
@@ -70,43 +78,37 @@ const GENERIC_RESOURCE_FAILURE = /^Failed to load resource: (net::ERR_FAILED|the
 // correlation needed.
 const EXPECTED_APP_LOG_NOISE = /Error (loading WOS dictionary|fetching channel stats)/;
 
-const isKnownExpectedFailureUrl = (url: string): boolean =>
-  BLOCKED_HOSTS.some((host) => url.includes(host)) ||
-  url === BLOCKED_TWITCH_GQL ||
-  EXPECTED_500_PATHS.some((path) => url.includes(path));
+export interface UnexpectedFailures {
+  /** Console `error` messages and uncaught page errors, excluding the unattributable generic resource-load noise (see `GENERIC_RESOURCE_FAILURE`) and known app-log noise. */
+  consoleErrors: string[];
+  /** URLs of failed requests / 4xx+5xx responses that aren't one of the known expected failures (`isKnownExpectedFailureUrl`) — the precise, URL-attributed check `consoleErrors` can't provide on its own. */
+  unexpectedRequestFailures: string[];
+}
 
-/** Starts collecting console errors and uncaught page errors on `page`. Call `blockExternalNetwork` first so aborted-resource noise isn't double counted. */
-export function collectUnexpectedConsoleErrors(page: Page): string[] {
-  const errors: string[] = [];
-  let expectedFailures = 0;
+/** Starts collecting console/page errors and unexpected network failures on `page`. Call `blockExternalNetwork` first so aborted-resource noise isn't double counted. */
+export function collectUnexpectedFailures(page: Page): UnexpectedFailures {
+  const result: UnexpectedFailures = { consoleErrors: [], unexpectedRequestFailures: [] };
 
-  page.on('requestfailed', (request) => {
-    if (isKnownExpectedFailureUrl(request.url())) expectedFailures++;
-  });
+  const noteIfUnexpected = (url: string) => {
+    if (!isKnownExpectedFailureUrl(url)) result.unexpectedRequestFailures.push(url);
+  };
 
+  page.on('requestfailed', (request) => { noteIfUnexpected(request.url()); });
   page.on('response', (response) => {
-    if (response.status() >= 400 && isKnownExpectedFailureUrl(response.url())) {
-      expectedFailures++;
-    }
+    if (response.status() >= 400) noteIfUnexpected(response.url());
   });
 
   page.on('console', (msg) => {
     if (msg.type() !== 'error') return;
     const text = msg.text();
-
     if (EXPECTED_APP_LOG_NOISE.test(text)) return;
-
-    if (GENERIC_RESOURCE_FAILURE.test(text) && expectedFailures > 0) {
-      expectedFailures--;
-      return;
-    }
-
-    errors.push(text);
+    if (GENERIC_RESOURCE_FAILURE.test(text)) return;
+    result.consoleErrors.push(text);
   });
 
   page.on('pageerror', (err) => {
-    errors.push(String(err));
+    result.consoleErrors.push(String(err));
   });
 
-  return errors;
+  return result;
 }
