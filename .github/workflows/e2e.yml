@@ -7,9 +7,17 @@ on:
   # stacked PR targeting another feature branch must still get a real run.
   pull_request:
 
+# Least-privilege GITHUB_TOKEN, matching codeql.yml and security.yml: this
+# job only checks out code, builds, and runs tests — it never needs to write
+# to the repo or call any other API.
+permissions:
+  contents: read
+
 jobs:
   e2e:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -27,8 +35,9 @@ jobs:
       # Builds and starts `wrangler dev` itself via playwright.config.ts's
       # `webServer`. No Supabase secrets are provisioned here, so /player and
       # /streamer's dictionary/channel-stats fetches are expected to fail
-      # gracefully — tests/e2e/e2e-harness.ts filters that known gap out of
-      # the console-error assertions rather than treating it as a regression.
+      # gracefully — tests/e2e/e2e-harness.ts's collectUnexpectedFailures
+      # checks for that known gap by URL rather than treating it as a
+      # regression.
       - name: Run E2E smoke suite
         run: pnpm run test:e2e
       - name: Upload Playwright report
