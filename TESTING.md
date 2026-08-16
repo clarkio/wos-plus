@@ -430,7 +430,7 @@ disappearing from the report. Current numbers are in `CLAUDE.md` §4.
 **Thresholds are enforced in `vitest.config.ts`, not aspirational.**
 `pnpm run test:coverage` fails the build below:
 
-- **Global floor**: statements 90%, branches 85%, functions 86%, lines 90%
+- **Global floor**: statements 90%, branches 85%, functions 87%, lines 90%
   (set just below the measured baseline so ordinary churn doesn't trip it).
 - **Per-file floors** for the crown jewels, checked against every matching
   file individually (not aggregated): `src/scripts/wos-words.ts` (statements

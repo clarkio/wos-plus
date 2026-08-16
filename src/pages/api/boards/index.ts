@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
+import { jsonResponse } from '../../../lib/api-utils';
 import { findRedundantWords, isWellFormedSlot, normalizeLanguageCode, normalizeTwitchChannel, validateBoardName } from '../../../lib/board-utils';
-import { createCorsPreflightResponse, getCorsHeaders } from '../../../lib/cors';
+import { createCorsPreflightResponse } from '../../../lib/cors';
+import { getSupabaseClient } from '../../../lib/supabase';
 
 export const prerender = false;
 const ALLOWED_METHODS = ['GET', 'POST', 'OPTIONS'] as const;
@@ -12,31 +13,21 @@ export const OPTIONS: APIRoute = ({ request }) =>
   createCorsPreflightResponse(request, env, ALLOWED_METHODS);
 
 export const GET: APIRoute = async ({ request }) => {
-  const corsHeaders = getCorsHeaders(request, env, ALLOWED_METHODS);
   try {
-    const supabase = createClient(
-      env.SUPABASE_URL,
-      env.SUPABASE_KEY
-    );
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('boards')
       .select('*');
     if (error) throw error;
 
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse(data, request, ALLOWED_METHODS);
   } catch (error: any) {
     console.error('Error fetching boards:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error.message }, request, ALLOWED_METHODS, 500);
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
-  const corsHeaders = getCorsHeaders(request, env, ALLOWED_METHODS);
   // An unreadable body must be answered, not thrown: an uncaught parse error
   // escapes the handler and becomes an Astro error page with no CORS headers,
   // which a browser caller can only see as an opaque network failure. The
@@ -47,10 +38,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     body = await request.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Invalid JSON body' }, request, ALLOWED_METHODS, 400);
   }
 
   // Guard (issue #162): the save path must apply the same board-name rule
@@ -61,17 +49,11 @@ export const POST: APIRoute = async ({ request }) => {
   if (body?.id !== undefined) {
     const nameValidation = validateBoardName(body.id);
     if ('error' in nameValidation) {
-      return new Response(
-        JSON.stringify({
-          error: nameValidation.error,
-          message: `Board ${body.id} was not saved: ${nameValidation.error}.`,
-          code: 'INVALID_BOARD_ID',
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      return jsonResponse({
+        error: nameValidation.error,
+        message: `Board ${body.id} was not saved: ${nameValidation.error}.`,
+        code: 'INVALID_BOARD_ID',
+      }, request, ALLOWED_METHODS, 400);
     }
   }
 
@@ -79,17 +61,11 @@ export const POST: APIRoute = async ({ request }) => {
   // than once — that data is corrupted and would need manual cleanup later.
   const redundantWords = findRedundantWords(body?.slots);
   if (redundantWords.length > 0) {
-    return new Response(
-      JSON.stringify({
-        error: 'Redundant words in board slots',
-        message: `Board ${body?.id || 'ID'} contains redundant words: ${redundantWords.join(', ')}.`,
-        code: 'REDUNDANT_WORDS',
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return jsonResponse({
+      error: 'Redundant words in board slots',
+      message: `Board ${body?.id || 'ID'} contains redundant words: ${redundantWords.join(', ')}.`,
+      code: 'REDUNDANT_WORDS',
+    }, request, ALLOWED_METHODS, 400);
   }
 
   // The twitch channel is informational metadata: store the normalized value
@@ -110,17 +86,11 @@ export const POST: APIRoute = async ({ request }) => {
   // outright rather than silently substituting English.
   const cleanLanguageCode = normalizeLanguageCode(body?.language_code);
   if (!cleanLanguageCode) {
-    return new Response(
-      JSON.stringify({
-        error: 'Unsupported or missing word language',
-        message: `Board ${body?.id || 'ID'} was not saved: a supported word language (en, pt or fr) is required.`,
-        code: 'INVALID_LANGUAGE',
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return jsonResponse({
+      error: 'Unsupported or missing word language',
+      message: `Board ${body?.id || 'ID'} was not saved: a supported word language (en, pt or fr) is required.`,
+      code: 'INVALID_LANGUAGE',
+    }, request, ALLOWED_METHODS, 400);
   }
   body.language_code = cleanLanguageCode;
 
@@ -130,24 +100,15 @@ export const POST: APIRoute = async ({ request }) => {
   // incomplete capture (a slot whose word was never fully worked out) out of
   // the archive, since an unsolved slot is exactly a slot with no word.
   if (!Array.isArray(body?.slots) || body.slots.length === 0 || !body.slots.every(isWellFormedSlot)) {
-    return new Response(
-      JSON.stringify({
-        error: 'Invalid slot structure detected',
-        message: `Board ${body?.id || 'ID'} was not saved: its slots are missing letters or a word.`,
-        code: 'INVALID_SLOTS',
-      }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return jsonResponse({
+      error: 'Invalid slot structure detected',
+      message: `Board ${body?.id || 'ID'} was not saved: its slots are missing letters or a word.`,
+      code: 'INVALID_SLOTS',
+    }, request, ALLOWED_METHODS, 400);
   }
 
   try {
-    const supabase = createClient(
-      env.SUPABASE_URL,
-      env.SUPABASE_KEY
-    );
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('boards')
       .insert(body)
@@ -159,30 +120,19 @@ export const POST: APIRoute = async ({ request }) => {
         /duplicate key value/i.test(error.message || '');
 
       if (isDuplicateBoard) {
-        return new Response(
-          JSON.stringify({
-            error: 'Board already exists',
-            message: `Board ${body?.id || 'ID'} has already been saved.`,
-            code: 'BOARD_EXISTS',
-          }),
-          {
-            status: 409,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
+        return jsonResponse({
+          error: 'Board already exists',
+          message: `Board ${body?.id || 'ID'} has already been saved.`,
+          code: 'BOARD_EXISTS',
+        }, request, ALLOWED_METHODS, 409);
       }
 
       throw error;
     }
 
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse(data, request, ALLOWED_METHODS);
   } catch (error: any) {
     console.error('Error creating board:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error.message }, request, ALLOWED_METHODS, 500);
   }
 };

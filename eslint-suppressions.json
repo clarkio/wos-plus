@@ -27,11 +27,6 @@
       "count": 1
     }
   },
-  "src/pages/api/health.ts": {
-    "@typescript-eslint/require-await": {
-      "count": 1
-    }
-  },
   "src/pages/api/words.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 2
