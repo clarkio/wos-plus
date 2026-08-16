@@ -18,7 +18,7 @@ test('GET /api/health returns 200 through the real Workers runtime', async ({ re
   expect(body).toMatchObject({ status: 'ok' });
 });
 
-for (const path of ['/', '/player', '/streamer']) {
+for (const path of ['/', '/player', '/streamer', '/bot', '/bot/setup']) {
   test(`${path} loads without unexpected console errors`, async ({ page }) => {
     await blockExternalNetwork(page);
     const { consoleErrors, unexpectedRequestFailures } = collectUnexpectedFailures(page);
