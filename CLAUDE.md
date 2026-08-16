@@ -177,7 +177,7 @@ Prefer a failing build over a paragraph of good advice.
   was reported before untested files were counted at all; 63.45% was the honest
   figure once they were.
 - ESLint 9 flat config (`eslint.config.js`), type-aware, enforced at
-  `--max-warnings 0`. **62** pre-existing violations across 16 files are
+ `--max-warnings 0`. **61** pre-existing violations across 15 files are
   suppressed via `eslint-suppressions.json` (down from 68) and should keep
   being burned down; the
   `no-unsafe-*` family is downgraded repo-wide pending real payload types.
