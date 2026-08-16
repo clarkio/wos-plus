@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
-import { getCorsHeaders, createCorsPreflightResponse } from '../../lib/cors';
 import { env } from 'cloudflare:workers';
+import { jsonResponse } from '../../lib/api-utils';
+import { createCorsPreflightResponse } from '../../lib/cors';
+import { getSupabaseClient } from '../../lib/supabase';
 
 export const prerender = false;
 
@@ -11,9 +12,8 @@ export const OPTIONS: APIRoute = async ({ request }) => {
 };
 
 export const GET: APIRoute = async ({ request }) => {
-  const corsHeaders = getCorsHeaders(request, env);
   try {
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_KEY);
+    const supabase = getSupabaseClient();
 
     // Fetch all words using pagination to avoid Supabase's row limit
     const allWords: string[] = [];
@@ -38,14 +38,16 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }
 
-    return new Response(JSON.stringify(allWords), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return jsonResponse(allWords, {
+      request,
+      env,
     });
   } catch (error: any) {
     console.error('Error fetching words:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return jsonResponse({ error: error.message }, {
+      request,
+      env,
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 };

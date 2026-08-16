@@ -1,12 +1,22 @@
 import type { APIRoute } from 'astro';
-export const prerender = false;
+import { env } from 'cloudflare:workers';
+import { jsonResponse } from '../../lib/api-utils';
+import { createCorsPreflightResponse } from '../../lib/cors';
 
-export const GET: APIRoute = async () => {
+export const prerender = false;
+const ALLOWED_METHODS = ['GET', 'OPTIONS'] as const;
+
+export const OPTIONS: APIRoute = ({ request }) =>
+  createCorsPreflightResponse(request, env, ALLOWED_METHODS);
+
+export const GET: APIRoute = ({ request }) => {
   console.log('Health check requested');
-  return new Response(JSON.stringify({
+  return jsonResponse({
     status: 'ok',
-    timestamp: Date.now()
-  }), {
-    headers: { 'Content-Type': 'application/json' }
+    timestamp: Date.now(),
+  }, {
+    request,
+    env,
+    allowedMethods: ALLOWED_METHODS,
   });
 };

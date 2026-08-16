@@ -1,4 +1,4 @@
-type CorsEnv = {
+export type CorsEnv = {
   CORS_ALLOWED_ORIGINS?: unknown;
 };
 

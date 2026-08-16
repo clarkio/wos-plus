@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
-import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
+import { jsonResponse } from '../../../lib/api-utils';
 import { cleanTwitchChannel } from '../../../lib/board-utils';
-import { createCorsPreflightResponse, getCorsHeaders } from '../../../lib/cors';
+import { createCorsPreflightResponse } from '../../../lib/cors';
+import { getSupabaseClient } from '../../../lib/supabase';
 
 export const prerender = false;
 
@@ -13,13 +14,14 @@ export const OPTIONS: APIRoute = ({ request }) =>
   createCorsPreflightResponse(request, env, ALLOWED_METHODS);
 
 export const GET: APIRoute = async ({ params, request }) => {
-  const corsHeaders = getCorsHeaders(request, env, ALLOWED_METHODS);
   const { channel } = params;
 
   if (!channel) {
-    return new Response(JSON.stringify({ error: 'Channel name is required' }), {
+    return jsonResponse({ error: 'Channel name is required' }, {
+      request,
+      env,
+      allowedMethods: ALLOWED_METHODS,
       status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
@@ -30,24 +32,25 @@ export const GET: APIRoute = async ({ params, request }) => {
   const cleanChannel = cleanTwitchChannel(channel);
 
   if (!/^[a-z0-9_]+$/.test(cleanChannel)) {
-    return new Response(JSON.stringify({ error: 'Invalid channel name format. Only lowercase letters, numbers, and underscores are allowed.' }), {
+    return jsonResponse({ error: 'Invalid channel name format. Only lowercase letters, numbers, and underscores are allowed.' }, {
+      request,
+      env,
+      allowedMethods: ALLOWED_METHODS,
       status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
   if (cleanChannel.length < 1 || cleanChannel.length > 50) {
-    return new Response(JSON.stringify({ error: 'Invalid channel name length. Must be between 1 and 50 characters.' }), {
+    return jsonResponse({ error: 'Invalid channel name length. Must be between 1 and 50 characters.' }, {
+      request,
+      env,
+      allowedMethods: ALLOWED_METHODS,
       status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
   try {
-    const supabase = createClient(
-      env.SUPABASE_URL,
-      env.SUPABASE_KEY
-    );
+    const supabase = getSupabaseClient();
 
     const todayUtc = new Date().toISOString().slice(0, 10);
 
@@ -99,9 +102,11 @@ export const GET: APIRoute = async ({ params, request }) => {
     // and a refresh may only ever raise the on-screen numbers, so a phantom
     // zero could never be corrected by a later real read (issue #173).
     if (isGenuineReadFailure(allTimeResult.error) || isGenuineReadFailure(dailyResult.error)) {
-      return new Response(JSON.stringify({ error: 'Failed to read channel records' }), {
+      return jsonResponse({ error: 'Failed to read channel records' }, {
+        request,
+        env,
+        allowedMethods: ALLOWED_METHODS,
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -113,19 +118,23 @@ export const GET: APIRoute = async ({ params, request }) => {
     const chatbotEnabled =
       !userResult.error && Array.isArray(userResult.data) && userResult.data.length > 0;
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       allTimePersonalBest,
       dailyBest,
       dailyClears,
       chatbotEnabled,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    }, {
+      request,
+      env,
+      allowedMethods: ALLOWED_METHODS,
     });
   } catch (error: any) {
     console.error('Error fetching channel stats:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return jsonResponse({ error: error.message }, {
+      request,
+      env,
+      allowedMethods: ALLOWED_METHODS,
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 };

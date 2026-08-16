@@ -29,7 +29,7 @@ The shape you need to know before touching code:
 | Web Workers | `src/scripts/wos-worker.ts`, `src/scripts/twitch-chat-worker.ts` | `postMessage` only; no DOM, no shared state |
 | Dictionary / word matching | `src/scripts/wos-words.ts` | The crown jewels. Highest-risk module, lowest coverage. |
 | API routes | `src/pages/api/**` | Must `export const prerender = false`; env via `locals.runtime.env`; CORS via `src/lib/cors.ts` |
-| Shared helpers | `src/lib/**` | e.g. `cors.ts`, `board-utils.ts`, `launch-menu.ts` |
+| Shared helpers | `src/lib/**` | API responses in `api-utils.ts`; Supabase clients in `supabase.ts`; CORS in `cors.ts` |
 | Tests | `tests/unit/`, `tests/acceptance/`, `tests/property/` | Vitest 4 + happy-dom; setup in `tests/setup.ts`. Two streams — see §7 |
 | E2E smoke | `tests/e2e/` | Playwright, against a real `wrangler dev` runtime. Separate from Vitest — see §9 |
 | Behavioural contract | `specs/` | Human-owned. Acceptance tests cite it; open questions indexed in [specs/README.md](specs/README.md) |
