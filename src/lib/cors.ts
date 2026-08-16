@@ -80,6 +80,7 @@ export function getCorsHeaders(
     // Spread rather than assigned, so that with no configured origins the key
     // is absent instead of carrying the string "undefined". See getCorsOrigin.
     ...(allowOrigin === undefined ? {} : { 'Access-Control-Allow-Origin': allowOrigin }),
+    'Vary': 'Origin',
     'Access-Control-Allow-Methods': allowedMethods.join(', '),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400', // 24 hours
