@@ -11,6 +11,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import * as healthRoute from '../../src/pages/api/health';
 import { GET } from '../../src/pages/api/health';
 import { invokeRoute, readJson, responseHeaders } from './api-harness';
 import { setupNetworkMocking, unhandledNetworkRequests } from './network-mock';
@@ -69,5 +70,42 @@ describe('specs/game-flow.md — Is WoS+ itself up?', () => {
       expect(response.status).toBe(200);
       expect(unhandledNetworkRequests()).toEqual([]);
     });
+  });
+});
+
+describe('/api/health — transport concerns (no spec section)', () => {
+  const allowedOrigin = 'https://wosplus.com';
+
+  it('uses the configured CORS policy on its JSON response', async () => {
+    const response = await invokeRoute(GET, {
+      url: '/api/health',
+      headers: { origin: allowedOrigin },
+      workerEnv: { CORS_ALLOWED_ORIGINS: allowedOrigin },
+    });
+
+    expect(responseHeaders(response)).toMatchObject({
+      'access-control-allow-origin': allowedOrigin,
+      'access-control-allow-methods': 'GET, OPTIONS',
+      'vary': 'Origin',
+    });
+  });
+
+  it('exports and answers the OPTIONS handler its CORS headers advertise', async () => {
+    const exportedHandlers = Object.keys(healthRoute)
+      .filter((name) => /^[A-Z]+$/.test(name))
+      .sort();
+
+    expect(exportedHandlers).toEqual(['GET', 'OPTIONS']);
+
+    const response = await invokeRoute(healthRoute.OPTIONS, {
+      method: 'OPTIONS',
+      url: '/api/health',
+      headers: { origin: allowedOrigin },
+      workerEnv: { CORS_ALLOWED_ORIGINS: allowedOrigin },
+    });
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+    expect(responseHeaders(response)['access-control-allow-origin']).toBe(allowedOrigin);
   });
 });
