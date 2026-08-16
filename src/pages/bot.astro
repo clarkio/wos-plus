@@ -15,6 +15,7 @@ import Twitch from "../components/Icons/Twitch.astro";
       <nav class="sp-nav-links">
         <a href="/">Home</a>
         <a href="#features">Features</a>
+        <a href="/bot/setup">Setup</a>
         <a href="#commands" class="sp-nav-launch">Add Bot</a>
       </nav>
     </header>
@@ -89,10 +90,11 @@ import Twitch from "../components/Icons/Twitch.astro";
 
         <div class="sp-feature sp-feature-yellow">
           <div class="sp-feature-icon">⚡</div>
-          <h3>Zero configuration</h3>
+          <h3>Quick setup</h3>
           <p>
-            Authorize once and the bot auto-joins your channel. No setup
-            files, no config, no maintenance required.
+            Authorize once and the bot auto-joins your channel. Two chat
+            commands connect it to your game &mdash; no setup files, no
+            maintenance. <a href="/bot/setup">See the setup steps</a>.
           </p>
         </div>
       </div>
@@ -149,10 +151,10 @@ import Twitch from "../components/Icons/Twitch.astro";
         </div>
         <div class="sp-step sp-step-2">
           <div class="sp-step-num">2</div>
-          <div class="sp-step-label">Bot joins your channel</div>
+          <div class="sp-step-label">Mod the bot &amp; connect your game</div>
           <p class="sp-step-desc">
-            After authorization, WoS+ Bot automatically joins your Twitch
-            chat. No extra setup needed.
+            In your chat, run <code>/mod WoSPlusBot</code>, then send your
+            Words on Stream mirror link with <code>!mirror set</code>.
           </p>
         </div>
         <div class="sp-step sp-step-3">
@@ -164,6 +166,9 @@ import Twitch from "../components/Icons/Twitch.astro";
           </p>
         </div>
       </div>
+      <p class="sp-steps-footer">
+        <a href="/bot/setup">Full setup instructions →</a>
+      </p>
     </section>
 
     <!-- ===================== CTA ===================== -->
@@ -631,6 +636,32 @@ import Twitch from "../components/Icons/Twitch.astro";
     line-height: 1.5;
     color: rgba(22, 2, 39, 0.65);
     margin: 0;
+  }
+
+  .sp-step-desc code {
+    background: rgba(22, 2, 39, 0.08);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    overflow-wrap: anywhere;
+  }
+
+  .sp-steps-footer {
+    margin: 28px 0 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .sp-steps-footer a {
+    color: var(--sp-cyan);
+    text-decoration: none;
+  }
+
+  .sp-feature-yellow p a {
+    color: var(--sp-bg-deep);
+    font-weight: 700;
   }
 
   /* ===================== CTA ===================== */

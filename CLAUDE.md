@@ -366,7 +366,9 @@ runtime.
   slower layer with its own CI job (`.github/workflows/e2e.yml`, job `e2e`),
   not bundled into `build`.
 - **Deliberately narrow, per the plan's "thin E2E" framing**: page loads for
-  `/`, `/player`, `/streamer` without unexpected console errors; `/api/health`
+  `/`, `/player`, `/streamer`, `/bot`, `/bot/setup` without unexpected console
+  errors; the post-authorization chatbot setup steps on `/bot/setup`
+  (issue [#178](https://github.com/clarkio/wos-plus/issues/178)); `/api/health`
   returning 200 through the real Workers runtime; the settings dialog opening
   when required query params are missing; and the dialog's Save flow
   round-tripping values into URL params. WoS WebSocket and Twitch chat

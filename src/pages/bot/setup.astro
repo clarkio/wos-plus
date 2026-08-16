@@ -1,0 +1,574 @@
+---
+import WosBaseLayout from "../../layouts/WosBaseLayout.astro";
+import Twitch from "../../components/Icons/Twitch.astro";
+
+// The page the bot service redirects to after a successful Twitch
+// authorization (issue #178). It is also linked from /bot so a streamer who
+// authorized earlier — or who lost the redirect — can find the same steps
+// again; nothing on it depends on having arrived from the OAuth callback.
+---
+
+<WosBaseLayout
+  title="Set up WoS+ Bot | Twitch Chatbot for Words on Stream"
+  description="You authorized WoS+ Bot. Follow these steps to finish setting it up in your Twitch stream: verify the bot, mod it, and connect your Words on Stream mirror link."
+  keywords="words on stream, wos, chatbot, twitch bot, wos plus bot, setup, mirror link, mod the bot"
+>
+  <div class="sp-bot">
+    <!-- ===================== Nav ===================== -->
+    <header class="sp-nav">
+      <a href="/" class="sp-brand">WoS<span class="sp-brand-plus">+</span></a>
+      <nav class="sp-nav-links">
+        <a href="/">Home</a>
+        <a href="/bot">Bot</a>
+        <a href="/bot#commands" class="sp-nav-launch">Commands</a>
+      </nav>
+    </header>
+
+    <!-- ===================== Hero ===================== -->
+    <section class="sp-hero">
+      <div class="sp-hero-content">
+        <span class="sp-hero-badge">
+          <Twitch width={16} height={16} />
+          Authorization complete
+        </span>
+        <h1 class="sp-hero-title">
+          FINISH <span class="sp-hero-accent">SETUP</span>
+        </h1>
+        <p class="sp-hero-sub">
+          WoS+ Bot is authorized for your channel. Three short steps in your
+          own Twitch chat and it will start tracking your Words on Stream
+          games.
+        </p>
+      </div>
+    </section>
+
+    <!-- ===================== Steps ===================== -->
+    <section class="sp-section" data-setup-steps>
+      <ol class="sp-setup">
+        <li class="sp-setup-item sp-setup-1">
+          <div class="sp-setup-num">1</div>
+          <div class="sp-setup-body">
+            <h2>Check the bot is in your chat</h2>
+            <p>
+              Go to your own Twitch chat and send <code>!ping</code>. WoS+ Bot
+              should reply with <code>Pong!</code> within a second or two.
+            </p>
+            <p class="sp-setup-note">
+              No reply? Give it a minute and try again &mdash; the bot joins
+              shortly after you authorize. If it still says nothing, re-run
+              <a href="/bot">Add Bot to Your Channel</a>.
+            </p>
+          </div>
+        </li>
+
+        <li class="sp-setup-item sp-setup-2">
+          <div class="sp-setup-num">2</div>
+          <div class="sp-setup-body">
+            <h2>Give the bot moderator permissions</h2>
+            <p>
+              In your chat, send <code>/mod WoSPlusBot</code>. This matters for
+              two reasons:
+            </p>
+            <ul class="sp-setup-list">
+              <li>
+                <strong>Rate limits.</strong> Twitch throttles ordinary
+                accounts that send a lot of chat messages. Without mod, the bot
+                gets rate-limited during busy games and its replies stop
+                arriving.
+              </li>
+              <li>
+                <strong>Links.</strong> The bot posts links (game boards, word
+                lists). If your AutoMod or a moderation bot blocks links from
+                non-mods, WoS+ Bot will get timed out or banned in your own
+                channel. Modding it &mdash; or explicitly permitting it to post
+                links in your moderation setup &mdash; prevents that.
+              </li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="sp-setup-item sp-setup-3">
+          <div class="sp-setup-num">3</div>
+          <div class="sp-setup-body">
+            <h2>Copy your Words on Stream mirror link</h2>
+            <p>
+              In Words on Stream, open the <strong>settings menu</strong> (the
+              gear icon) and find the <strong>mirror link</strong> &mdash; the
+              spectator link for your game. Copy it to your clipboard.
+            </p>
+            <p class="sp-setup-note">
+              It looks like
+              <code>https://wos.gg/#/mirror/&lt;code&gt;</code>. This is the
+              link that lets WoS+ follow along with your game.
+            </p>
+          </div>
+        </li>
+
+        <li class="sp-setup-item sp-setup-4">
+          <div class="sp-setup-num">4</div>
+          <div class="sp-setup-body">
+            <h2>Send the mirror link to the bot</h2>
+            <p>
+              Back in your Twitch chat, send the mirror command with the link
+              you just copied:
+            </p>
+            <pre class="sp-setup-code"><code>!mirror set &lt;your mirror link&gt;</code></pre>
+            <p>
+              Replace <code>&lt;your mirror link&gt;</code> entirely &mdash;
+              angle brackets included &mdash; with the link from step 3.
+            </p>
+            <p class="sp-setup-note">
+              WoS+ Bot replies in chat confirming the mirror link was set. If
+              you see that confirmation, you are done: play as usual and the
+              bot tracks the session.
+            </p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ===================== CTA ===================== -->
+    <section class="sp-cta">
+      <div class="sp-cta-content">
+        <h2 class="sp-cta-title">Something not working?</h2>
+        <p class="sp-cta-sub">
+          Check the command list, or re-authorize the bot for your channel.
+        </p>
+        <div class="sp-cta-row">
+          <a href="/bot#commands" class="sp-btn sp-btn-yellow">See Commands →</a>
+          <a
+            href="https://wos-plus-bot.onrender.com/auth"
+            class="sp-btn sp-btn-cyan"
+            target="_blank"
+            rel="noopener"
+          >
+            <Twitch width={18} height={18} />
+            Re-authorize
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== Footer ===================== -->
+    <footer class="sp-footer">
+      <a href="/" class="sp-footer-brand">WoS<span class="sp-footer-plus">+</span></a>
+      <div class="sp-footer-links">
+        <a href="/">Home</a>
+        <a href="/bot">Bot</a>
+        <a href="/streamer">Streamer View</a>
+        <a href="https://wos.gg" target="_blank" rel="noopener">Words on Stream</a>
+      </div>
+      <div class="sp-footer-by">
+        Made with 💜 by
+        <a href="https://twitch.tv/clarkio" target="_blank" rel="noopener">clarkio</a>
+      </div>
+    </footer>
+  </div>
+</WosBaseLayout>
+
+<style>
+  .sp-bot {
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: var(--sp-bg);
+    font-family: var(--font-ui);
+    color: var(--sp-ink);
+  }
+
+  /* ===================== Nav ===================== */
+  .sp-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    background: var(--sp-cyan);
+    color: var(--sp-cyan-ink);
+  }
+
+  .sp-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--sp-bg-deep);
+    text-decoration: none;
+  }
+
+  .sp-brand-plus {
+    color: var(--sp-purple);
+  }
+
+  .sp-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .sp-nav-links a {
+    color: var(--sp-cyan-ink);
+    text-decoration: none;
+  }
+
+  .sp-nav-launch {
+    padding: 9px 20px;
+    border-radius: 999px;
+    background: var(--sp-bg-deep);
+    color: #fff !important;
+    box-shadow: 3px 3px 0 var(--sp-cyan-shadow);
+    transition: transform 0.12s ease;
+  }
+
+  .sp-nav-launch:hover {
+    transform: translate(-1px, -1px);
+  }
+
+  /* ===================== Hero ===================== */
+  .sp-hero {
+    padding: 54px 32px 20px;
+    max-width: 1240px;
+    margin: 0 auto;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sp-hero-content {
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sp-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: var(--sp-purple);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 22px;
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .sp-hero-badge :global(svg) {
+    fill: #fff;
+  }
+
+  .sp-hero-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 68px;
+    line-height: 0.95;
+    letter-spacing: -2px;
+    color: #fff;
+    text-shadow: 5px 5px 0 var(--sp-purple);
+  }
+
+  .sp-hero-accent {
+    color: var(--sp-yellow);
+    text-shadow: 5px 5px 0 var(--sp-bg-deep);
+  }
+
+  .sp-hero-sub {
+    margin: 26px 0 0;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--sp-ink-muted);
+    max-width: 560px;
+    font-weight: 500;
+  }
+
+  /* ===================== Steps ===================== */
+  .sp-section {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 40px 32px 20px;
+  }
+
+  .sp-setup {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .sp-setup-item {
+    display: flex;
+    gap: 20px;
+    padding: 26px 28px;
+    border-radius: 18px;
+    background: #fff;
+    color: var(--sp-bg-deep);
+    text-align: left;
+  }
+
+  .sp-setup-1 { box-shadow: 5px 5px 0 var(--sp-purple); }
+  .sp-setup-2 { box-shadow: 5px 5px 0 var(--sp-pink); }
+  .sp-setup-3 { box-shadow: 5px 5px 0 var(--sp-cyan); }
+  .sp-setup-4 { box-shadow: 5px 5px 0 var(--sp-yellow); }
+
+  .sp-setup-num {
+    flex: 0 0 auto;
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--sp-purple);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .sp-setup-2 .sp-setup-num { background: var(--sp-pink); }
+  .sp-setup-3 .sp-setup-num { background: var(--sp-cyan); color: var(--sp-cyan-ink); }
+  .sp-setup-4 .sp-setup-num { background: var(--sp-yellow-shadow); color: var(--sp-bg-deep); }
+
+  .sp-setup-body {
+    min-width: 0;
+  }
+
+  .sp-setup-body h2 {
+    margin: 6px 0 10px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 22px;
+  }
+
+  .sp-setup-body p {
+    margin: 0 0 10px;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: rgba(22, 2, 39, 0.78);
+  }
+
+  .sp-setup-list {
+    margin: 0 0 10px;
+    padding-left: 20px;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: rgba(22, 2, 39, 0.78);
+  }
+
+  .sp-setup-list li {
+    margin-bottom: 8px;
+  }
+
+  .sp-setup-note {
+    font-size: 0.92rem !important;
+    color: rgba(22, 2, 39, 0.6) !important;
+  }
+
+  .sp-setup-body code {
+    background: rgba(120, 60, 220, 0.12);
+    color: var(--sp-purple-deep);
+    padding: 0.125rem 0.4rem;
+    border-radius: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    overflow-wrap: anywhere;
+  }
+
+  .sp-setup-code {
+    margin: 0 0 10px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--sp-bg-deep);
+    overflow-x: auto;
+  }
+
+  .sp-setup-code code {
+    background: none;
+    color: var(--sp-yellow);
+    font-size: 1rem;
+    padding: 0;
+  }
+
+  .sp-setup-body a {
+    color: var(--sp-purple);
+    font-weight: 600;
+  }
+
+  /* ===================== Buttons ===================== */
+  .sp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 30px;
+    border-radius: 14px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+
+  .sp-btn:hover {
+    transform: translate(-1px, -1px);
+  }
+
+  .sp-btn:active {
+    transform: translate(2px, 2px);
+  }
+
+  .sp-btn-cyan {
+    background: var(--sp-cyan);
+    color: var(--sp-cyan-ink);
+    box-shadow: 5px 5px 0 var(--sp-cyan-shadow);
+  }
+
+  .sp-btn-cyan :global(svg) {
+    fill: var(--sp-cyan-ink);
+  }
+
+  .sp-btn-yellow {
+    background: var(--sp-yellow);
+    color: var(--sp-bg-deep);
+    box-shadow: 5px 5px 0 var(--sp-yellow-shadow);
+  }
+
+  /* ===================== CTA ===================== */
+  .sp-cta {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 20px 32px 70px;
+  }
+
+  .sp-cta-content {
+    text-align: center;
+    padding: 50px 34px;
+    background: var(--sp-purple);
+    border-radius: 24px;
+    box-shadow: 8px 8px 0 var(--sp-bg-deep);
+  }
+
+  .sp-cta-title {
+    margin: 0 0 12px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 34px;
+    color: #fff;
+  }
+
+  .sp-cta-sub {
+    margin: 0 0 28px;
+    font-size: 17px;
+    color: #e3d4ff;
+  }
+
+  .sp-cta-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* ===================== Footer ===================== */
+  .sp-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 26px 34px;
+    background: var(--sp-bg-darkest);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .sp-footer-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 20px;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  .sp-footer-plus {
+    color: var(--sp-cyan);
+  }
+
+  .sp-footer-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .sp-footer-links a {
+    color: var(--sp-ink-muted);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sp-footer-links a:hover {
+    color: var(--sp-cyan);
+  }
+
+  .sp-footer-by {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--sp-ink-dim);
+  }
+
+  .sp-footer-by a {
+    color: var(--sp-cyan);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  /* ===================== Responsive ===================== */
+  @media (max-width: 760px) {
+    .sp-hero {
+      padding: 36px 22px 12px;
+    }
+
+    .sp-hero-title {
+      font-size: 46px;
+    }
+
+    .sp-nav {
+      padding: 16px 20px;
+    }
+
+    .sp-nav-links {
+      gap: 14px;
+      font-size: 14px;
+    }
+
+    .sp-setup-item {
+      flex-direction: column;
+      gap: 12px;
+      padding: 22px 20px;
+    }
+
+    .sp-cta-title {
+      font-size: 26px;
+    }
+
+    .sp-footer {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .sp-btn {
+      justify-content: center;
+    }
+  }
+</style>
