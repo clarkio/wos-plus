@@ -19,12 +19,7 @@ function validateBoardId(id: string | undefined, request: Request): { cleanId: s
   const result = validateBoardName(id);
   if ('error' in result) {
     return {
-      errorResponse: jsonResponse({ error: result.error }, {
-        request,
-        env,
-        allowedMethods: ALLOWED_METHODS,
-        status: 400,
-      }),
+      errorResponse: jsonResponse({ error: result.error }, request, ALLOWED_METHODS, 400),
     };
   }
   return result;
@@ -54,29 +49,15 @@ export const GET: APIRoute = async ({ params, request }) => {
     if (error) {
       if (error.code === 'PGRST116') {
         // No rows returned
-        return jsonResponse({ error: 'Board not found' }, {
-          request,
-          env,
-          allowedMethods: ALLOWED_METHODS,
-          status: 404,
-        });
+        return jsonResponse({ error: 'Board not found' }, request, ALLOWED_METHODS, 404);
       }
       throw error;
     }
 
-    return jsonResponse(data, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-    });
+    return jsonResponse(data, request, ALLOWED_METHODS);
   } catch (error: any) {
     console.error('Error fetching board:', error);
-    return jsonResponse({ error: error.message }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 500,
-    });
+    return jsonResponse({ error: error.message }, request, ALLOWED_METHODS, 500);
   }
 };
 
@@ -97,31 +78,16 @@ export const PUT: APIRoute = async ({ params, request }) => {
   try {
     body = await request.json();
   } catch {
-    return jsonResponse({ error: 'Invalid JSON body' }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    return jsonResponse({ error: 'Invalid JSON body' }, request, ALLOWED_METHODS, 400);
   }
 
   const slots = body?.slots;
   if (!Array.isArray(slots) || slots.length === 0) {
-    return jsonResponse({ error: 'slots must be a non-empty array' }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    return jsonResponse({ error: 'slots must be a non-empty array' }, request, ALLOWED_METHODS, 400);
   }
 
   if (!slots.every(isWellFormedSlot)) {
-    return jsonResponse({ error: 'Invalid slot structure detected' }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    return jsonResponse({ error: 'Invalid slot structure detected' }, request, ALLOWED_METHODS, 400);
   }
 
   const redundantWords = findRedundantWords(slots);
@@ -130,12 +96,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       error: 'Redundant words in board slots',
       message: `Board ${cleanId} update contains redundant words: ${redundantWords.join(', ')}.`,
       code: 'REDUNDANT_WORDS',
-    }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    }, request, ALLOWED_METHODS, 400);
   }
 
   try {
@@ -149,12 +110,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     if (fetchError) {
       if (fetchError.code === 'PGRST116') {
-        return jsonResponse({ error: 'Board not found' }, {
-          request,
-          env,
-          allowedMethods: ALLOWED_METHODS,
-          status: 404,
-        });
+        return jsonResponse({ error: 'Board not found' }, request, ALLOWED_METHODS, 404);
       }
       throw fetchError;
     }
@@ -166,12 +122,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
         error: 'Board update not allowed',
         message: `Board ${cleanId} is already sound; refusing to overwrite it.`,
         code: 'BOARD_UPDATE_NOT_ALLOWED',
-      }, {
-        request,
-        env,
-        allowedMethods: ALLOWED_METHODS,
-        status: 409,
-      });
+      }, request, ALLOWED_METHODS, 409);
     }
 
     // Also record (or back-fill) the channel the clean capture came from when
@@ -200,18 +151,9 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     if (error) throw error;
 
-    return jsonResponse(data ?? [], {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-    });
+    return jsonResponse(data ?? [], request, ALLOWED_METHODS);
   } catch (error: any) {
     console.error('Error updating board:', error);
-    return jsonResponse({ error: error.message }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 500,
-    });
+    return jsonResponse({ error: error.message }, request, ALLOWED_METHODS, 500);
   }
 };

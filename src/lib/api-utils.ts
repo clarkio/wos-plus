@@ -1,23 +1,14 @@
-import { getCorsHeaders, type CorsEnv } from './cors';
-
-type JsonResponseOptions = {
-  request: Request;
-  env?: CorsEnv;
-  allowedMethods?: readonly string[];
-  status?: number;
-};
+import { env } from 'cloudflare:workers';
+import { getCorsHeaders } from './cors';
 
 /**
  * Creates a JSON response with the API's shared CORS policy.
  */
 export function jsonResponse(
   body: unknown,
-  {
-    request,
-    env,
-    allowedMethods,
-    status = 200,
-  }: JsonResponseOptions,
+  request: Request,
+  allowedMethods?: readonly string[],
+  status = 200,
 ): Response {
   return new Response(JSON.stringify(body), {
     status,

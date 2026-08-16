@@ -14,9 +14,5 @@ export const GET: APIRoute = ({ request }) => {
   return jsonResponse({
     status: 'ok',
     timestamp: Date.now(),
-  }, {
-    request,
-    env,
-    allowedMethods: ALLOWED_METHODS,
-  });
+  }, request, ALLOWED_METHODS);
 };

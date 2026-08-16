@@ -17,12 +17,7 @@ export const GET: APIRoute = async ({ params, request }) => {
   const { channel } = params;
 
   if (!channel) {
-    return jsonResponse({ error: 'Channel name is required' }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    return jsonResponse({ error: 'Channel name is required' }, request, ALLOWED_METHODS, 400);
   }
 
   // Streamers write channel names both with and without a leading '#'; strip
@@ -32,21 +27,21 @@ export const GET: APIRoute = async ({ params, request }) => {
   const cleanChannel = cleanTwitchChannel(channel);
 
   if (!/^[a-z0-9_]+$/.test(cleanChannel)) {
-    return jsonResponse({ error: 'Invalid channel name format. Only lowercase letters, numbers, and underscores are allowed.' }, {
+    return jsonResponse(
+      { error: 'Invalid channel name format. Only lowercase letters, numbers, and underscores are allowed.' },
       request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+      ALLOWED_METHODS,
+      400,
+    );
   }
 
   if (cleanChannel.length < 1 || cleanChannel.length > 50) {
-    return jsonResponse({ error: 'Invalid channel name length. Must be between 1 and 50 characters.' }, {
+    return jsonResponse(
+      { error: 'Invalid channel name length. Must be between 1 and 50 characters.' },
       request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+      ALLOWED_METHODS,
+      400,
+    );
   }
 
   try {
@@ -102,12 +97,12 @@ export const GET: APIRoute = async ({ params, request }) => {
     // and a refresh may only ever raise the on-screen numbers, so a phantom
     // zero could never be corrected by a later real read (issue #173).
     if (isGenuineReadFailure(allTimeResult.error) || isGenuineReadFailure(dailyResult.error)) {
-      return jsonResponse({ error: 'Failed to read channel records' }, {
+      return jsonResponse(
+        { error: 'Failed to read channel records' },
         request,
-        env,
-        allowedMethods: ALLOWED_METHODS,
-        status: 500,
-      });
+        ALLOWED_METHODS,
+        500,
+      );
     }
 
     const allTimePersonalBest = allTimeResult.data?.all_time_highest_level_reached ?? 0;
@@ -123,18 +118,9 @@ export const GET: APIRoute = async ({ params, request }) => {
       dailyBest,
       dailyClears,
       chatbotEnabled,
-    }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-    });
+    }, request, ALLOWED_METHODS);
   } catch (error: any) {
     console.error('Error fetching channel stats:', error);
-    return jsonResponse({ error: error.message }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 500,
-    });
+    return jsonResponse({ error: error.message }, request, ALLOWED_METHODS, 500);
   }
 };

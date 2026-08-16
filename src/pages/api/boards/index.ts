@@ -20,19 +20,10 @@ export const GET: APIRoute = async ({ request }) => {
       .select('*');
     if (error) throw error;
 
-    return jsonResponse(data, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-    });
+    return jsonResponse(data, request, ALLOWED_METHODS);
   } catch (error: any) {
     console.error('Error fetching boards:', error);
-    return jsonResponse({ error: error.message }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 500,
-    });
+    return jsonResponse({ error: error.message }, request, ALLOWED_METHODS, 500);
   }
 };
 
@@ -47,12 +38,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     body = await request.json();
   } catch {
-    return jsonResponse({ error: 'Invalid JSON body' }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    return jsonResponse({ error: 'Invalid JSON body' }, request, ALLOWED_METHODS, 400);
   }
 
   // Guard (issue #162): the save path must apply the same board-name rule
@@ -67,12 +53,7 @@ export const POST: APIRoute = async ({ request }) => {
         error: nameValidation.error,
         message: `Board ${body.id} was not saved: ${nameValidation.error}.`,
         code: 'INVALID_BOARD_ID',
-      }, {
-        request,
-        env,
-        allowedMethods: ALLOWED_METHODS,
-        status: 400,
-      });
+      }, request, ALLOWED_METHODS, 400);
     }
   }
 
@@ -84,12 +65,7 @@ export const POST: APIRoute = async ({ request }) => {
       error: 'Redundant words in board slots',
       message: `Board ${body?.id || 'ID'} contains redundant words: ${redundantWords.join(', ')}.`,
       code: 'REDUNDANT_WORDS',
-    }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    }, request, ALLOWED_METHODS, 400);
   }
 
   // The twitch channel is informational metadata: store the normalized value
@@ -114,12 +90,7 @@ export const POST: APIRoute = async ({ request }) => {
       error: 'Unsupported or missing word language',
       message: `Board ${body?.id || 'ID'} was not saved: a supported word language (en, pt or fr) is required.`,
       code: 'INVALID_LANGUAGE',
-    }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    }, request, ALLOWED_METHODS, 400);
   }
   body.language_code = cleanLanguageCode;
 
@@ -133,12 +104,7 @@ export const POST: APIRoute = async ({ request }) => {
       error: 'Invalid slot structure detected',
       message: `Board ${body?.id || 'ID'} was not saved: its slots are missing letters or a word.`,
       code: 'INVALID_SLOTS',
-    }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 400,
-    });
+    }, request, ALLOWED_METHODS, 400);
   }
 
   try {
@@ -158,29 +124,15 @@ export const POST: APIRoute = async ({ request }) => {
           error: 'Board already exists',
           message: `Board ${body?.id || 'ID'} has already been saved.`,
           code: 'BOARD_EXISTS',
-        }, {
-          request,
-          env,
-          allowedMethods: ALLOWED_METHODS,
-          status: 409,
-        });
+        }, request, ALLOWED_METHODS, 409);
       }
 
       throw error;
     }
 
-    return jsonResponse(data, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-    });
+    return jsonResponse(data, request, ALLOWED_METHODS);
   } catch (error: any) {
     console.error('Error creating board:', error);
-    return jsonResponse({ error: error.message }, {
-      request,
-      env,
-      allowedMethods: ALLOWED_METHODS,
-      status: 500,
-    });
+    return jsonResponse({ error: error.message }, request, ALLOWED_METHODS, 500);
   }
 };

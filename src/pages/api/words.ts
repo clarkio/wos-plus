@@ -5,10 +5,11 @@ import { createCorsPreflightResponse } from '../../lib/cors';
 import { getSupabaseClient } from '../../lib/supabase';
 
 export const prerender = false;
+const ALLOWED_METHODS = ['GET', 'OPTIONS'] as const;
 
 // Handle CORS preflight requests
 export const OPTIONS: APIRoute = async ({ request }) => {
-  return createCorsPreflightResponse(request, env);
+  return createCorsPreflightResponse(request, env, ALLOWED_METHODS);
 };
 
 export const GET: APIRoute = async ({ request }) => {
@@ -38,16 +39,9 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }
 
-    return jsonResponse(allWords, {
-      request,
-      env,
-    });
+    return jsonResponse(allWords, request, ALLOWED_METHODS);
   } catch (error: any) {
     console.error('Error fetching words:', error);
-    return jsonResponse({ error: error.message }, {
-      request,
-      env,
-      status: 500,
-    });
+    return jsonResponse({ error: error.message }, request, ALLOWED_METHODS, 500);
   }
 };
