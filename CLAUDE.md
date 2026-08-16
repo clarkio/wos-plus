@@ -28,7 +28,7 @@ The shape you need to know before touching code:
 | Game state orchestration | `src/scripts/wos-plus-main.ts` | `GameSpectator` class; slot-based level state |
 | Web Workers | `src/scripts/wos-worker.ts`, `src/scripts/twitch-chat-worker.ts` | `postMessage` only; no DOM, no shared state |
 | Dictionary / word matching | `src/scripts/wos-words.ts` | The crown jewels. Highest-risk module, lowest coverage. |
-| API routes | `src/pages/api/**` | Must `export const prerender = false`; env via `locals.runtime.env` |
+| API routes | `src/pages/api/**` | Must `export const prerender = false`; env via `locals.runtime.env`; CORS via `src/lib/cors.ts` |
 | Shared helpers | `src/lib/**` | e.g. `cors.ts`, `board-utils.ts`, `launch-menu.ts` |
 | Tests | `tests/unit/`, `tests/acceptance/`, `tests/property/` | Vitest 4 + happy-dom; setup in `tests/setup.ts`. Two streams — see §7 |
 | E2E smoke | `tests/e2e/` | Playwright, against a real `wrangler dev` runtime. Separate from Vitest — see §9 |
@@ -138,7 +138,7 @@ Prefer a failing build over a paragraph of good advice.
 
 ## 4. Known state (keep current)
 
-- Test suite: **692 passing** Vitest tests across 19 files, plus **3
+- Test suite: **695 passing** Vitest tests across 19 files, plus **3
   `it.todo`**. Every remaining todo is a **known gap with a tracking issue or a
   stated coverage limitation** — none is simply an unwritten test, and none may
   be deleted to tidy the count. The decisions behind them are tabulated in
@@ -151,8 +151,8 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **91.41% statements / 87.77% branches / 88.94% functions /
-  92.08% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **91.49% statements / 87.86% branches / 89% functions /
+ 92.16% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.

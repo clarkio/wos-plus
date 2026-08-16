@@ -13,14 +13,12 @@
  * to cite above them.
  *
  * ---------------------------------------------------------------------------
- * Who uses this, and who does not
+ * Who uses this
  * ---------------------------------------------------------------------------
  *
- * Only `/api/words` imports it. Both board routes and
- * `/api/channel-stats/[channel]` ship a hardcoded
- * `Access-Control-Allow-Origin: *` instead, so nothing in this file affects
- * them. That split is itself worth knowing: a change here reaches exactly one
- * route today.
+ * Every API route imports this helper so origin policy is configured once.
+ * Routes with write methods pass their complete method set; read-only routes
+ * use the default `GET, OPTIONS` set.
  *
  * ---------------------------------------------------------------------------
  * The defect these tests were written for
@@ -214,6 +212,7 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
 
       expect(headers).toEqual({
         'Access-Control-Allow-Origin': SECONDARY,
+        'Vary': 'Origin',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '86400',
@@ -229,10 +228,21 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
 
       expect(rejected).toMatchObject({
         'Access-Control-Allow-Origin': PRIMARY,
+        'Vary': 'Origin',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '86400',
       });
+    });
+
+    it('advertises the complete method set supplied by a write route', () => {
+      const headers = getCorsHeaders(
+        requestFrom(SECONDARY),
+        { CORS_ALLOWED_ORIGINS: BOTH },
+        ['GET', 'POST', 'OPTIONS'],
+      );
+
+      expect(headers['Access-Control-Allow-Methods']).toBe('GET, POST, OPTIONS');
     });
 
     it.each([
@@ -261,6 +271,7 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
         // The rest of the set still goes out, so the route keeps working and
         // only the origin grant is withheld.
         expect(headers).toEqual({
+          'Vary': 'Origin',
           'Access-Control-Allow-Methods': 'GET, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
           'Access-Control-Max-Age': '86400',
@@ -310,10 +321,21 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
       expect(response.body).toBeNull();
       expect(responseHeaders(response)).toMatchObject({
         'access-control-allow-origin': SECONDARY,
+        'vary': 'Origin',
         'access-control-allow-methods': 'GET, OPTIONS',
         'access-control-allow-headers': 'Content-Type',
         'access-control-max-age': '86400',
       });
+    });
+
+    it('uses the method set supplied by a write route', () => {
+      const response = createCorsPreflightResponse(
+        requestFrom(SECONDARY),
+        { CORS_ALLOWED_ORIGINS: BOTH },
+        ['GET', 'PUT', 'OPTIONS'],
+      );
+
+      expect(response.headers.get('access-control-allow-methods')).toBe('GET, PUT, OPTIONS');
     });
 
     it('answers a preflight without an origin grant when nothing is configured', () => {
@@ -321,12 +343,13 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
 
       expect(response.status).toBe(204);
       expect(response.headers.get('access-control-allow-origin')).toBeNull();
+      expect(response.headers.get('vary')).toBe('Origin');
     });
   });
 });
 
 // ===========================================================================
-// The one route that uses the helper
+// A route using the helper
 // ===========================================================================
 
 describe('src/lib/cors.ts — as /api/words actually serves it', () => {

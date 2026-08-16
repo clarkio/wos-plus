@@ -87,6 +87,7 @@ pnpm run preview
 4. **API Routes** ([src/pages/api/](../src/pages/api/)) - All require `prerender = false`
    - Access Cloudflare env via `locals.runtime.env` (e.g., `env.SUPABASE_URL`)
    - Supabase client created per-request in each handler
+   - CORS headers and preflight responses come from `src/lib/cors.ts`; pass the route's complete method set for write routes
 
 ### Key Data Flows
 
@@ -271,6 +272,7 @@ const groupedWords = sortedWords.reduce((map, word) => {
 1. Create file in `src/pages/api/` with `.ts` extension
 2. Add `export const prerender = false;` at top
 3. Access env via `const { env } = locals.runtime;`
+4. Use `getCorsHeaders` and `createCorsPreflightResponse` from `src/lib/cors.ts`
 
 ## External Dependencies
 

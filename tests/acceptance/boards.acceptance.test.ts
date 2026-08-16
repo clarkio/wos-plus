@@ -76,6 +76,8 @@ const REDUNDANT_SLOTS = [slot('ACTION'), slot('ACTION'), slot('CAUTION')];
 /** A corrupted board: `ACTOR` uses an `R`, which `CAUTION` does not have. */
 const INVALID_SLOTS = [slot('ACT'), slot('ACTOR'), slot('CAUTION')];
 
+const ALLOWED_ORIGIN = 'https://wosplus.com';
+
 /** A stored archive row for `CAUTION`. */
 function storedBoard(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -1019,23 +1021,22 @@ describe('specs/boards.md — Repairing a board that was stored with repeated wo
 describe('/api/boards/[id] — transport concerns (no spec section)', () => {
   /**
    * CORS is not described in `specs/boards.md` — it is a transport detail
-   * rather than game behaviour. Unlike `/api/words`, this route does **not**
-   * use `getCorsOrigin` from `src/lib/cors.ts`: it ships a fixed
-   * `Access-Control-Allow-Origin: *`. The `cors.ts` `"undefined"` defect
-   * therefore cannot surface here, and nothing below depends on it.
+   * rather than game behaviour. Every API route uses `src/lib/cors.ts`, so
+   * this route follows the same configured allow-list as `/api/words`.
    */
 
-  it('allows any origin on every answer it gives', async () => {
+  it('grants an origin from the configured allow-list', async () => {
     server.use(supabaseSuccess('boards', storedBoard()));
 
     const response = await invokeRoute(GET_BOARD, {
       url: '/api/boards/CAUTION',
       params: { id: 'CAUTION' },
-      headers: { origin: 'https://wosplus.com' },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(responseHeaders(response)).toMatchObject({
-      'access-control-allow-origin': '*',
+      'access-control-allow-origin': ALLOWED_ORIGIN,
       'access-control-allow-methods': 'GET, PUT, OPTIONS',
     });
   });
@@ -1046,10 +1047,12 @@ describe('/api/boards/[id] — transport concerns (no spec section)', () => {
     const response = await invokeRoute(GET_BOARD, {
       url: '/api/boards/CAUT10N',
       params: { id: 'CAUT10N' },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(response.status).toBe(400);
-    expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
+    expect(responseHeaders(response)['access-control-allow-origin']).toBe(ALLOWED_ORIGIN);
   });
 
   it('exports the OPTIONS handler its Access-Control-Allow-Methods promises (fixed #172)', async () => {
@@ -1072,12 +1075,14 @@ describe('/api/boards/[id] — transport concerns (no spec section)', () => {
       method: 'OPTIONS',
       url: '/api/boards/CAUTION',
       params: { id: 'CAUTION' },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(response.status).toBe(204);
     expect(await response.text()).toBe('');
     expect(responseHeaders(response)).toMatchObject({
-      'access-control-allow-origin': '*',
+      'access-control-allow-origin': ALLOWED_ORIGIN,
       'access-control-allow-methods': 'GET, PUT, OPTIONS',
     });
   });
@@ -1755,13 +1760,14 @@ describe('specs/boards.md — a capture that cannot be stored', () => {
       url: '/api/boards',
       headers: { 'content-type': 'application/json' },
       body,
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(response.status).toBe(400);
     expect(await readJson(response)).toEqual({ error: 'Invalid JSON body' });
     // The CORS headers are the point of answering rather than throwing: without
     // them a browser cannot read the reason it was rejected.
-    expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
+    expect(responseHeaders(response)['access-control-allow-origin']).toBe(ALLOWED_ORIGIN);
     expect(unhandledNetworkRequests()).toEqual([]);
   });
 });
@@ -1771,16 +1777,17 @@ describe('specs/boards.md — a capture that cannot be stored', () => {
 // ===========================================================================
 
 describe('/api/boards — transport concerns (no spec section)', () => {
-  it('allows any origin on every answer it gives', async () => {
+  it('grants an origin from the configured allow-list', async () => {
     server.use(supabaseSuccess('boards', [storedBoard()]));
 
     const response = await invokeRoute(GET_BOARDS, {
       url: '/api/boards',
-      headers: { origin: 'https://wosplus.com' },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(responseHeaders(response)).toMatchObject({
-      'access-control-allow-origin': '*',
+      'access-control-allow-origin': ALLOWED_ORIGIN,
       'access-control-allow-methods': 'GET, POST, OPTIONS',
     });
   });
@@ -1790,10 +1797,12 @@ describe('/api/boards — transport concerns (no spec section)', () => {
       method: 'POST',
       url: '/api/boards',
       json: { id: 'CAUTION', slots: REDUNDANT_SLOTS },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(response.status).toBe(400);
-    expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
+    expect(responseHeaders(response)['access-control-allow-origin']).toBe(ALLOWED_ORIGIN);
   });
 
   it('exports the OPTIONS handler its Access-Control-Allow-Methods promises (fixed #172)', async () => {
@@ -1815,12 +1824,14 @@ describe('/api/boards — transport concerns (no spec section)', () => {
     const response = await invokeRoute(boardsRoute.OPTIONS, {
       method: 'OPTIONS',
       url: '/api/boards',
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(response.status).toBe(204);
     expect(await response.text()).toBe('');
     expect(responseHeaders(response)).toMatchObject({
-      'access-control-allow-origin': '*',
+      'access-control-allow-origin': ALLOWED_ORIGIN,
       'access-control-allow-methods': 'GET, POST, OPTIONS',
     });
   });

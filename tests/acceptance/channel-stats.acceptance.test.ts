@@ -60,6 +60,8 @@ const ALL_TIME = 'wos_channel_all_time_records';
 const DAILY = 'wos_channel_daily_achievements';
 const USERS = 'users';
 
+const ALLOWED_ORIGIN = 'https://wosplus.com';
+
 /** The answer the route gives a channel it knows nothing at all about. */
 const NO_RECORDS = {
   allTimePersonalBest: 0,
@@ -881,23 +883,22 @@ describe('specs/channel-stats.md — approved changes, some still not implemente
 describe('/api/channel-stats/[channel] — transport concerns (no spec section)', () => {
   /**
    * CORS is not described in `specs/channel-stats.md` — it is a transport
-   * detail rather than game behaviour. Like the board routes and unlike
-   * `/api/words`, this route does **not** use `getCorsOrigin` from
-   * `src/lib/cors.ts`: it ships a fixed `Access-Control-Allow-Origin: *`.
-   * Nothing below depends on the helper.
+   * detail rather than game behaviour. Every API route uses `src/lib/cors.ts`,
+   * so this route follows the same configured allow-list as `/api/words`.
    */
 
-  it('allows any origin on every answer it gives', async () => {
+  it('grants an origin from the configured allow-list', async () => {
     archiveHas();
 
     const response = await invokeRoute(GET, {
       url: '/api/channel-stats/clarkio',
       params: { channel: 'clarkio' },
-      headers: { origin: 'https://wosplus.com' },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(responseHeaders(response)).toMatchObject({
-      'access-control-allow-origin': '*',
+      'access-control-allow-origin': ALLOWED_ORIGIN,
       'access-control-allow-methods': 'GET, OPTIONS',
     });
   });
@@ -908,10 +909,12 @@ describe('/api/channel-stats/[channel] — transport concerns (no spec section)'
     const response = await invokeRoute(GET, {
       url: '/api/channel-stats/clark.io',
       params: { channel: 'clark.io' },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(response.status).toBe(400);
-    expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
+    expect(responseHeaders(response)['access-control-allow-origin']).toBe(ALLOWED_ORIGIN);
   });
 
   it('sends CORS headers on a failure too', async () => {
@@ -920,11 +923,16 @@ describe('/api/channel-stats/[channel] — transport concerns (no spec section)'
     const response = await invokeRoute(GET, {
       url: '/api/channel-stats/clarkio',
       params: { channel: 'clarkio' },
-      workerEnv: { SUPABASE_URL: undefined, SUPABASE_KEY: undefined },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: {
+        CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN,
+        SUPABASE_URL: undefined,
+        SUPABASE_KEY: undefined,
+      },
     });
 
     expect(response.status).toBe(500);
-    expect(responseHeaders(response)['access-control-allow-origin']).toBe('*');
+    expect(responseHeaders(response)['access-control-allow-origin']).toBe(ALLOWED_ORIGIN);
   });
 
   it('exports the OPTIONS handler its Access-Control-Allow-Methods promises (fixed #172)', async () => {
@@ -947,12 +955,14 @@ describe('/api/channel-stats/[channel] — transport concerns (no spec section)'
       method: 'OPTIONS',
       url: '/api/channel-stats/clarkio',
       params: { channel: 'clarkio' },
+      headers: { origin: ALLOWED_ORIGIN },
+      workerEnv: { CORS_ALLOWED_ORIGINS: ALLOWED_ORIGIN },
     });
 
     expect(response.status).toBe(204);
     expect(await response.text()).toBe('');
     expect(responseHeaders(response)).toMatchObject({
-      'access-control-allow-origin': '*',
+      'access-control-allow-origin': ALLOWED_ORIGIN,
       'access-control-allow-methods': 'GET, OPTIONS',
     });
   });
