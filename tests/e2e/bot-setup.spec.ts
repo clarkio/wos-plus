@@ -18,6 +18,10 @@ test('/bot/setup lists the post-authorization steps', async ({ page }) => {
   expect(response?.status()).toBe(200);
 
   const steps = page.locator('[data-setup-steps]');
+  // The hero counts the steps in prose ("Four short steps"), which silently
+  // goes stale if a step is added or merged. Pin the rendered count so the
+  // two can't drift apart unnoticed.
+  await expect(steps.locator('li.sp-setup-item')).toHaveCount(4);
   await expect(steps).toContainText('!ping');
   await expect(steps).toContainText('/mod WoSPlusBot');
   await expect(steps).toContainText('!mirror set');
