@@ -2,19 +2,18 @@ import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
 import { cleanTwitchChannel } from '../../../lib/board-utils';
+import { createCorsPreflightResponse, getCorsHeaders } from '../../../lib/cors';
 
 export const prerender = false;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+const ALLOWED_METHODS = ['GET', 'OPTIONS'] as const;
 
 // Handle CORS preflight requests (issue #172).
-export const OPTIONS: APIRoute = () => new Response(null, { status: 204, headers: corsHeaders });
+export const OPTIONS: APIRoute = ({ request }) =>
+  createCorsPreflightResponse(request, env, ALLOWED_METHODS);
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, request }) => {
+  const corsHeaders = getCorsHeaders(request, env, ALLOWED_METHODS);
   const { channel } = params;
 
   if (!channel) {

@@ -2,19 +2,19 @@ import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
 import { findRedundantWords, hasInvalidWords, hasRedundantWords, isWellFormedSlot, normalizeLanguageCode, normalizeTwitchChannel, validateBoardName } from '../../../lib/board-utils';
+import { createCorsPreflightResponse, getCorsHeaders } from '../../../lib/cors';
 
 export const prerender = false;
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-}
+const ALLOWED_METHODS = ['GET', 'PUT', 'OPTIONS'] as const;
 
-const jsonResponse = (body: object, status = 200) =>
+const jsonResponse = (request: Request, body: object, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: {
+      ...getCorsHeaders(request, env, ALLOWED_METHODS),
+      'Content-Type': 'application/json',
+    },
   });
 
 // Security validation: sanitize and validate board ID.
@@ -23,19 +23,21 @@ const jsonResponse = (body: object, status = 200) =>
 // The rules themselves live in `validateBoardName` (src/lib/board-utils.ts),
 // shared with the POST save path (issue #162); this just shapes the result
 // into the Response this route's callers expect.
-function validateBoardId(id: string | undefined): { cleanId: string } | { errorResponse: Response } {
+function validateBoardId(id: string | undefined, request: Request): { cleanId: string } | { errorResponse: Response } {
   const result = validateBoardName(id);
   if ('error' in result) {
-    return { errorResponse: jsonResponse({ error: result.error }, 400) };
+    return { errorResponse: jsonResponse(request, { error: result.error }, 400) };
   }
   return result;
 }
 
 // Handle CORS preflight requests (issue #172).
-export const OPTIONS: APIRoute = () => new Response(null, { status: 204, headers: corsHeaders });
+export const OPTIONS: APIRoute = ({ request }) =>
+  createCorsPreflightResponse(request, env, ALLOWED_METHODS);
 
-export const GET: APIRoute = async ({ params }) => {
-  const validation = validateBoardId(params.id);
+export const GET: APIRoute = async ({ params, request }) => {
+  const corsHeaders = getCorsHeaders(request, env, ALLOWED_METHODS);
+  const validation = validateBoardId(params.id, request);
   if ('errorResponse' in validation) {
     return validation.errorResponse;
   }
@@ -84,7 +86,7 @@ export const GET: APIRoute = async ({ params }) => {
 // broken by one of those rules AND the incoming slots are clean, so a healthy
 // board can never be overwritten through this endpoint.
 export const PUT: APIRoute = async ({ params, request }) => {
-  const validation = validateBoardId(params.id);
+  const validation = validateBoardId(params.id, request);
   if ('errorResponse' in validation) {
     return validation.errorResponse;
   }
@@ -94,21 +96,21 @@ export const PUT: APIRoute = async ({ params, request }) => {
   try {
     body = await request.json();
   } catch {
-    return jsonResponse({ error: 'Invalid JSON body' }, 400);
+    return jsonResponse(request, { error: 'Invalid JSON body' }, 400);
   }
 
   const slots = body?.slots;
   if (!Array.isArray(slots) || slots.length === 0) {
-    return jsonResponse({ error: 'slots must be a non-empty array' }, 400);
+    return jsonResponse(request, { error: 'slots must be a non-empty array' }, 400);
   }
 
   if (!slots.every(isWellFormedSlot)) {
-    return jsonResponse({ error: 'Invalid slot structure detected' }, 400);
+    return jsonResponse(request, { error: 'Invalid slot structure detected' }, 400);
   }
 
   const redundantWords = findRedundantWords(slots);
   if (redundantWords.length > 0) {
-    return jsonResponse({
+    return jsonResponse(request, {
       error: 'Redundant words in board slots',
       message: `Board ${cleanId} update contains redundant words: ${redundantWords.join(', ')}.`,
       code: 'REDUNDANT_WORDS',
@@ -129,7 +131,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     if (fetchError) {
       if (fetchError.code === 'PGRST116') {
-        return jsonResponse({ error: 'Board not found' }, 404);
+        return jsonResponse(request, { error: 'Board not found' }, 404);
       }
       throw fetchError;
     }
@@ -137,7 +139,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
     const isStoredBoardSound =
       !hasRedundantWords(existingBoard?.slots) && !hasInvalidWords(existingBoard?.slots, cleanId);
     if (isStoredBoardSound) {
-      return jsonResponse({
+      return jsonResponse(request, {
         error: 'Board update not allowed',
         message: `Board ${cleanId} is already sound; refusing to overwrite it.`,
         code: 'BOARD_UPDATE_NOT_ALLOWED',
@@ -170,9 +172,9 @@ export const PUT: APIRoute = async ({ params, request }) => {
 
     if (error) throw error;
 
-    return jsonResponse(data ?? []);
+    return jsonResponse(request, data ?? []);
   } catch (error: any) {
     console.error('Error updating board:', error);
-    return jsonResponse({ error: error.message }, 500);
+    return jsonResponse(request, { error: error.message }, 500);
   }
 };

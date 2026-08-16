@@ -66,8 +66,13 @@ export function getCorsOrigin(request: Request, allowedOrigins: string[]): strin
  * Creates CORS headers for a given request
  * @param request - The incoming request
  * @param env - Environment object containing CORS_ALLOWED_ORIGINS
+ * @param allowedMethods - HTTP methods the route accepts
  */
-export function getCorsHeaders(request: Request, env?: CorsEnv): Record<string, string> {
+export function getCorsHeaders(
+  request: Request,
+  env?: CorsEnv,
+  allowedMethods: readonly string[] = ['GET', 'OPTIONS'],
+): Record<string, string> {
   const corsOrigins = typeof env?.CORS_ALLOWED_ORIGINS === 'string' ? env.CORS_ALLOWED_ORIGINS : undefined;
   const allowedOrigins = parseAllowedOrigins(corsOrigins);
   const allowOrigin = getCorsOrigin(request, allowedOrigins);
@@ -75,7 +80,7 @@ export function getCorsHeaders(request: Request, env?: CorsEnv): Record<string, 
     // Spread rather than assigned, so that with no configured origins the key
     // is absent instead of carrying the string "undefined". See getCorsOrigin.
     ...(allowOrigin === undefined ? {} : { 'Access-Control-Allow-Origin': allowOrigin }),
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': allowedMethods.join(', '),
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400', // 24 hours
   };
@@ -85,10 +90,15 @@ export function getCorsHeaders(request: Request, env?: CorsEnv): Record<string, 
  * Creates a CORS preflight response (for OPTIONS requests)
  * @param request - The incoming request
  * @param env - Environment object containing CORS_ALLOWED_ORIGINS
+ * @param allowedMethods - HTTP methods the route accepts
  */
-export function createCorsPreflightResponse(request: Request, env?: CorsEnv): Response {
+export function createCorsPreflightResponse(
+  request: Request,
+  env?: CorsEnv,
+  allowedMethods?: readonly string[],
+): Response {
   return new Response(null, {
     status: 204,
-    headers: getCorsHeaders(request, env),
+    headers: getCorsHeaders(request, env, allowedMethods),
   });
 }

@@ -2,18 +2,17 @@ import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 import { env } from 'cloudflare:workers';
 import { findRedundantWords, isWellFormedSlot, normalizeLanguageCode, normalizeTwitchChannel, validateBoardName } from '../../../lib/board-utils';
+import { createCorsPreflightResponse, getCorsHeaders } from '../../../lib/cors';
 
 export const prerender = false;
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-}
+const ALLOWED_METHODS = ['GET', 'POST', 'OPTIONS'] as const;
 
 // Handle CORS preflight requests (issue #172).
-export const OPTIONS: APIRoute = () => new Response(null, { status: 204, headers: corsHeaders });
+export const OPTIONS: APIRoute = ({ request }) =>
+  createCorsPreflightResponse(request, env, ALLOWED_METHODS);
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+  const corsHeaders = getCorsHeaders(request, env, ALLOWED_METHODS);
   try {
     const supabase = createClient(
       env.SUPABASE_URL,
@@ -37,6 +36,7 @@ export const GET: APIRoute = async () => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+  const corsHeaders = getCorsHeaders(request, env, ALLOWED_METHODS);
   // An unreadable body must be answered, not thrown: an uncaught parse error
   // escapes the handler and becomes an Astro error page with no CORS headers,
   // which a browser caller can only see as an opaque network failure. The
