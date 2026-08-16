@@ -212,6 +212,7 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
 
       expect(headers).toEqual({
         'Access-Control-Allow-Origin': SECONDARY,
+        'Vary': 'Origin',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '86400',
@@ -227,6 +228,7 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
 
       expect(rejected).toMatchObject({
         'Access-Control-Allow-Origin': PRIMARY,
+        'Vary': 'Origin',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '86400',
@@ -269,6 +271,7 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
         // The rest of the set still goes out, so the route keeps working and
         // only the origin grant is withheld.
         expect(headers).toEqual({
+          'Vary': 'Origin',
           'Access-Control-Allow-Methods': 'GET, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
           'Access-Control-Max-Age': '86400',
@@ -318,6 +321,7 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
       expect(response.body).toBeNull();
       expect(responseHeaders(response)).toMatchObject({
         'access-control-allow-origin': SECONDARY,
+        'vary': 'Origin',
         'access-control-allow-methods': 'GET, OPTIONS',
         'access-control-allow-headers': 'Content-Type',
         'access-control-max-age': '86400',
@@ -339,6 +343,7 @@ describe('src/lib/cors.ts — building the header set a route sends', () => {
 
       expect(response.status).toBe(204);
       expect(response.headers.get('access-control-allow-origin')).toBeNull();
+      expect(response.headers.get('vary')).toBe('Origin');
     });
   });
 });
