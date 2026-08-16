@@ -46,7 +46,7 @@ export default defineConfig({
       thresholds: {
         statements: 90,
         branches: 85,
-        functions: 86,
+        functions: 87,
         lines: 90,
 
         // Per-file floors for the crown jewels, measured at PR #155
