@@ -29,7 +29,7 @@ The shape you need to know before touching code:
 | Web Workers | `src/scripts/wos-worker.ts`, `src/scripts/twitch-chat-worker.ts` | `postMessage` only; no DOM, no shared state |
 | Dictionary / word matching | `src/scripts/wos-words.ts` | The crown jewels. Highest-risk module, lowest coverage. |
 | API routes | `src/pages/api/**` | Must `export const prerender = false`; env via `locals.runtime.env`; CORS via `src/lib/cors.ts` |
-| Shared helpers | `src/lib/**` | API responses in `api-utils.ts`; Supabase clients in `supabase.ts`; CORS in `cors.ts` |
+| Shared helpers | `src/lib/**` | Board validation in `board-utils.ts`; API responses in `api-utils.ts`; Supabase clients in `supabase.ts`; CORS in `cors.ts` |
 | Tests | `tests/unit/`, `tests/acceptance/`, `tests/property/` | Vitest 4 + happy-dom; setup in `tests/setup.ts`. Two streams — see §7 |
 | E2E smoke | `tests/e2e/` | Playwright, against a real `wrangler dev` runtime. Separate from Vitest — see §9 |
 | Behavioural contract | `specs/` | Human-owned. Acceptance tests cite it; open questions indexed in [specs/README.md](specs/README.md) |
@@ -151,8 +151,8 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **91.49% statements / 87.86% branches / 89.11% functions /
- 92.16% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **91.39% statements / 87.55% branches / 89.17% functions /
+ 92.05% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.
