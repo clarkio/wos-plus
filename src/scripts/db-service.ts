@@ -1,4 +1,4 @@
-import { findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel } from '../lib/board-utils';
+import { findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel, validateBoardName } from '../lib/board-utils';
 
 export interface ChannelStats {
   allTimePersonalBest: number;
@@ -145,26 +145,26 @@ function storedBoardCorruptionReason(board: Board | null, boardId: string): 'red
   return null;
 }
 
+function clientBoardIdWarning(error: string): string {
+  if (error === 'Board ID is required') {
+    return 'boardId must be a non-empty string.';
+  }
+  if (error === 'Invalid board ID format. Only letters are allowed.') {
+    return 'boardId contains invalid characters. Only letters are allowed.';
+  }
+  if (error === 'Invalid board ID length. Must be between 4 and 12 characters.') {
+    return 'boardId length must be between 4 and 12 characters.';
+  }
+  return error;
+}
+
 export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: string, languageCode?: string) {
-  // Validate boardId is a string and not too long
-  if (typeof boardId !== 'string' || boardId.length === 0) {
-    console.warn('Cannot save board: boardId must be a non-empty string.');
+  const boardName = validateBoardName(boardId);
+  if ('error' in boardName) {
+    console.warn(`Cannot save board: ${clientBoardIdWarning(boardName.error)}`);
     return;
   }
-
-  // Clean up big word (remove spaces if stored as "W O R D")
-  const cleanBoardId = boardId.replace(/\s+/g, "").toUpperCase();
-
-  // Security validation: only allow alphabetic characters
-  if (!/^[A-Z]+$/.test(cleanBoardId)) {
-    console.warn('Cannot save board: boardId contains invalid characters. Only letters are allowed.');
-    return;
-  }
-
-  if (cleanBoardId.length < 4 || cleanBoardId.length > 12) {
-    console.warn('Cannot save board: boardId length must be between 4 and 12 characters.');
-    return;
-  }
+  const { cleanId: cleanBoardId } = boardName;
 
   // Validate slots array
   if (!Array.isArray(slots) || slots.length === 0) {
@@ -310,25 +310,12 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
 }
 
 export async function fetchBoard(boardId: string): Promise<Board | null> {
-  if (typeof boardId !== 'string' || boardId.length === 0) {
-    console.warn('Cannot fetch board: boardId must be a non-empty string.');
+  const boardName = validateBoardName(boardId);
+  if ('error' in boardName) {
+    console.warn(`Cannot fetch board: ${clientBoardIdWarning(boardName.error)}`);
     return null;
   }
-
-  // Clean up big word (remove spaces if stored as "W O R D")
-  const cleanBoardId = boardId.replace(/\s+/g, "").toUpperCase();
-
-  // Security validation: only allow alphabetic characters
-  if (!/^[A-Z]+$/.test(cleanBoardId)) {
-    console.warn('Cannot fetch board: boardId contains invalid characters. Only letters are allowed.');
-    return null;
-  }
-
-  // Validate length to prevent abuse
-  if (cleanBoardId.length < 4 || cleanBoardId.length > 12) {
-    console.warn('Cannot fetch board: boardId length must be between 4 and 12 characters.');
-    return null;
-  }
+  const { cleanId: cleanBoardId } = boardName;
 
   try {
     const url = `/api/boards/${encodeURIComponent(cleanBoardId)}`;
