@@ -21,8 +21,7 @@ const TWITCH_LOGIN_CHARACTERS = /^[a-z0-9_]+$/;
 /** True when a bare login matches WoS+'s canonical channel-name shape. */
 export function isValidTwitchLoginFormat(login: string): boolean {
   const trimmed = login.trim();
-  const normalized = normalizeTwitchLogin(trimmed);
-  return normalized !== null && normalized === trimmed.toLowerCase();
+  return normalizeTwitchLogin(trimmed) === trimmed.toLowerCase();
 }
 
 export type TwitchLoginValidation =
