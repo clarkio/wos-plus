@@ -20,6 +20,14 @@ import { blockExternalNetwork } from './e2e-harness';
 const MIRROR_URL = 'https://wos.gg/r/4fdfc856-0328-4384-a882-8377dcb5a4f6';
 const TWITCH_CHANNEL = 'somestreamer';
 
+function configuredPath(path: string, twitchChannel: string): string {
+  const params = new URLSearchParams({
+    mirrorUrl: MIRROR_URL,
+    twitchChannel,
+  });
+  return `${path}?${params.toString()}`;
+}
+
 test('player settings dialog round-trips values into URL params', async ({ page }) => {
   await blockExternalNetwork(page);
   await page.goto('/player', { waitUntil: 'domcontentloaded' });
@@ -51,3 +59,37 @@ test('player settings dialog round-trips values into URL params', async ({ page 
   expect(params.get('board')).toBe('true');
   expect(params.get('clearSound')).toBe('true');
 });
+
+for (const [path, iframeId, dialogId] of [
+  ['/player', '#player-twitch-chat-widget', '#player-settings'],
+  ['/streamer', '#streamer-twitch-chat-widget', '#streamer-settings'],
+] as const) {
+  for (const [label, channel] of [
+    ['canonical', 'clarkio'],
+    ['URL-encoded streamer formatting', '#ClarkIO'],
+  ] as const) {
+    test(`${path} initializes from a ${label} channel query`, async ({ page }) => {
+      await blockExternalNetwork(page);
+      await page.route('https://www.twitch.tv/embed/**', (route) => route.abort());
+
+      await page.goto(configuredPath(path, channel), { waitUntil: 'domcontentloaded' });
+
+      await expect(page.locator(dialogId)).not.toBeVisible();
+      await expect(page.locator(iframeId)).toHaveAttribute(
+        'src',
+        /https:\/\/www\.twitch\.tv\/embed\/clarkio\/chat\?/,
+      );
+    });
+  }
+
+  test(`${path} rejects an invalid channel query`, async ({ page }) => {
+    await blockExternalNetwork(page);
+
+    await page.goto(configuredPath(path, 'bad channel!'), {
+      waitUntil: 'domcontentloaded',
+    });
+
+    await expect(page.locator(dialogId)).toBeVisible();
+    await expect(page.locator(iframeId)).toHaveAttribute('src', '');
+  });
+}
