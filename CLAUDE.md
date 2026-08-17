@@ -152,8 +152,8 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **91.9% statements / 88% branches / 89.23% functions /
- 92.59% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **91.89% statements / 87.97% branches / 89.23% functions /
+ 92.58% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.
