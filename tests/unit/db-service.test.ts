@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { saveBoard, fetchBoard, type Slot } from '@scripts/db-service';
+import { fetchBoard, fetchChannelStats, saveBoard, type Slot } from '@scripts/db-service';
 import { mockFetchResponse } from '../test-utils';
 
 /**
@@ -23,6 +23,41 @@ describe('db-service module', () => {
     consoleWarnSpy.mockRestore();
     consoleLogSpy.mockRestore();
     consoleErrorSpy.mockRestore();
+  });
+
+  describe('fetchChannelStats', () => {
+    it('normalizes a streamer-formatted channel before requesting its stats', async () => {
+      global.fetch = vi.fn(() => mockFetchResponse({
+        allTimePersonalBest: 42,
+        dailyBest: 30,
+        dailyClears: 3,
+        chatbotEnabled: true,
+      }));
+
+      const result = await fetchChannelStats('  #ClarkIO  ');
+
+      expect(global.fetch).toHaveBeenCalledWith('/api/channel-stats/clarkio');
+      expect(result).toEqual({
+        allTimePersonalBest: 42,
+        dailyBest: 30,
+        dailyClears: 3,
+        chatbotEnabled: true,
+      });
+    });
+
+    it('rejects an invalid channel without making a request', async () => {
+      global.fetch = vi.fn();
+
+      const result = await fetchChannelStats('bad channel!');
+
+      expect(global.fetch).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        allTimePersonalBest: 0,
+        dailyBest: 0,
+        dailyClears: 0,
+        chatbotEnabled: false,
+      });
+    });
   });
 
   describe('saveBoard', () => {

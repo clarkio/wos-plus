@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   isValidTwitchLoginFormat,
+  normalizeTwitchLogin,
   twitchChannelExists,
 } from '@scripts/twitch-channel';
 
@@ -17,12 +18,13 @@ describe('isValidTwitchLoginFormat', () => {
     expect(isValidTwitchLoginFormat('  clarkio  ')).toBe(true);
   });
 
-  it('rejects logins shorter than 4 characters', () => {
-    expect(isValidTwitchLoginFormat('abc')).toBe(false);
+  it('accepts the shortest non-empty login in the approved 1-50 rule', () => {
+    expect(isValidTwitchLoginFormat('a')).toBe(true);
   });
 
-  it('rejects logins longer than 25 characters', () => {
-    expect(isValidTwitchLoginFormat('a'.repeat(26))).toBe(false);
+  it('accepts a 50-character login and rejects a longer one', () => {
+    expect(isValidTwitchLoginFormat('a'.repeat(50))).toBe(true);
+    expect(isValidTwitchLoginFormat('a'.repeat(51))).toBe(false);
   });
 
   it('rejects empty input', () => {
@@ -34,6 +36,31 @@ describe('isValidTwitchLoginFormat', () => {
     expect(isValidTwitchLoginFormat('clark io')).toBe(false);
     expect(isValidTwitchLoginFormat('clark@io')).toBe(false);
     expect(isValidTwitchLoginFormat('twitch.tv/clarkio')).toBe(false);
+  });
+});
+
+describe('normalizeTwitchLogin', () => {
+  it('trims, strips a leading hash, and lowercases a login', () => {
+    expect(normalizeTwitchLogin('  #ClarkIO  ')).toBe('clarkio');
+  });
+
+  it('extracts a login from a pasted Twitch channel URL', () => {
+    expect(normalizeTwitchLogin('https://www.twitch.tv/ClarkIO')).toBe('clarkio');
+    expect(normalizeTwitchLogin('twitch.tv/ClarkIO/videos')).toBe('clarkio');
+  });
+
+  it('accepts letters, digits, and underscores from 1 through 50 characters', () => {
+    expect(normalizeTwitchLogin('a')).toBe('a');
+    expect(normalizeTwitchLogin('some_user_123')).toBe('some_user_123');
+    expect(normalizeTwitchLogin('a'.repeat(50))).toBe('a'.repeat(50));
+  });
+
+  it('rejects empty, overlong, malformed, and non-text values', () => {
+    expect(normalizeTwitchLogin('')).toBeNull();
+    expect(normalizeTwitchLogin('a'.repeat(51))).toBeNull();
+    expect(normalizeTwitchLogin('bad channel')).toBeNull();
+    expect(normalizeTwitchLogin('twitch.tv/clark.io')).toBeNull();
+    expect(normalizeTwitchLogin(null)).toBeNull();
   });
 });
 
