@@ -570,12 +570,14 @@ import ThemeControl from "../components/ThemeControl.astro";
     });
   };
 
-  const checkRequiredParams = () => {
-    const urlParams = new URLSearchParams(window.location.search);
+  const checkRequiredParams = (
+    urlParams: URLSearchParams,
+    normalizedChannel: string | null,
+  ) => {
     // Treat a missing OR invalid mirror URL the same: prompt via the dialog so
     // a hand-crafted/legacy query string can never drive the board iframe.
     const hasMirrorUrl = !!normalizeMirrorUrl(urlParams.get("mirrorUrl") || "");
-    const hasTwitchChannel = urlParams.has("twitchChannel");
+    const hasTwitchChannel = normalizedChannel !== null;
 
     // If either parameter is missing, show the settings dialog
     if (!hasMirrorUrl || !hasTwitchChannel) {
@@ -654,8 +656,16 @@ import ThemeControl from "../components/ThemeControl.astro";
     const urlParams = new URLSearchParams(window.location.search);
     populateSettingsFormFromUrl(urlParams);
 
-    // Check if required parameters are present (this will trigger dialog if needed)
-    const hasRequiredParams = checkRequiredParams();
+    const normalizedChannelFromParams = normalizeTwitchLogin(
+      extractTwitchChannel(urlParams.get("twitchChannel") || ""),
+    );
+
+    // Check if required parameters are present and valid (this will trigger
+    // the dialog if needed).
+    const hasRequiredParams = checkRequiredParams(
+      urlParams,
+      normalizedChannelFromParams,
+    );
 
     const normalizedFromParams = normalizeMirrorUrl(
       urlParams.get("mirrorUrl") || "",
@@ -682,8 +692,8 @@ import ThemeControl from "../components/ThemeControl.astro";
       }
     }
 
-    if (urlParams.has("twitchChannel")) {
-      twitchChannel = urlParams.get("twitchChannel") || "clarkio";
+    if (normalizedChannelFromParams) {
+      twitchChannel = normalizedChannelFromParams;
       const twitchChatWidget = document.getElementById(
         "player-twitch-chat-widget",
       ) as HTMLIFrameElement;
