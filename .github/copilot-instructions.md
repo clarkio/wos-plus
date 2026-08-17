@@ -243,6 +243,7 @@ Required in **Cloudflare Pages dashboard** (not .env):
 - **localStorage keys**: Prefixed pattern `pb_${channel}`, `pb_${channel}_${date}`, `clears_${channel}_${date}`
 - Missing required params triggers settings dialog automatically
 - **Board IDs**: Normalize and validate with `validateBoardName` from `src/lib/board-utils.ts`; do not duplicate the 4–12 letter rule in callers
+- **Twitch logins**: Normalize with `normalizeTwitchLogin` from `src/scripts/twitch-channel.ts`; the approved contract is 1–50 letters, digits, or underscores
 
 ### UI Rendering
 

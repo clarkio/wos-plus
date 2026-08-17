@@ -1,4 +1,5 @@
-import { findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, normalizeTwitchChannel, validateBoardName } from '../lib/board-utils';
+import { findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, validateBoardName } from '../lib/board-utils';
+import { normalizeTwitchLogin } from './twitch-channel';
 
 export interface ChannelStats {
   allTimePersonalBest: number;
@@ -13,20 +14,9 @@ export interface ChannelStats {
 const defaultStats: ChannelStats = { allTimePersonalBest: 0, dailyBest: 0, dailyClears: 0, chatbotEnabled: false };
 
 export async function fetchChannelStats(channel: string): Promise<ChannelStats> {
-  if (typeof channel !== 'string' || channel.length === 0) {
-    console.warn('Cannot fetch channel stats: channel must be a non-empty string.');
-    return defaultStats;
-  }
-
-  const cleanChannel = channel.toLowerCase().trim();
-
-  if (!/^[a-z0-9_]+$/.test(cleanChannel)) {
-    console.warn('Cannot fetch channel stats: channel contains invalid characters.');
-    return defaultStats;
-  }
-
-  if (cleanChannel.length > 50) {
-    console.warn('Cannot fetch channel stats: channel name too long.');
+  const cleanChannel = normalizeTwitchLogin(channel);
+  if (!cleanChannel) {
+    console.warn('Cannot fetch channel stats: channel name is invalid.');
     return defaultStats;
   }
 
@@ -211,7 +201,7 @@ export async function saveBoard(boardId: string, slots: Slot[], twitchChannel?: 
 
   // The channel is informational metadata: an invalid or missing value is
   // dropped rather than blocking the save.
-  const cleanTwitchChannel = normalizeTwitchChannel(twitchChannel);
+  const cleanTwitchChannel = normalizeTwitchLogin(twitchChannel);
   if (twitchChannel !== undefined && cleanTwitchChannel === null) {
     console.warn('Saving board without twitch channel: channel name is invalid.');
   }

@@ -28,6 +28,7 @@ The shape you need to know before touching code:
 | Game state orchestration | `src/scripts/wos-plus-main.ts` | `GameSpectator` class; slot-based level state |
 | Web Workers | `src/scripts/wos-worker.ts`, `src/scripts/twitch-chat-worker.ts` | `postMessage` only; no DOM, no shared state |
 | Dictionary / word matching | `src/scripts/wos-words.ts` | The crown jewels. Highest-risk module, lowest coverage. |
+| Twitch channel names | `src/scripts/twitch-channel.ts` | Canonical normalization and 1–50 character validation |
 | API routes | `src/pages/api/**` | Must `export const prerender = false`; env via `locals.runtime.env`; CORS via `src/lib/cors.ts` |
 | Shared helpers | `src/lib/**` | Board validation in `board-utils.ts`; API responses in `api-utils.ts`; Supabase clients in `supabase.ts`; CORS in `cors.ts` |
 | Tests | `tests/unit/`, `tests/acceptance/`, `tests/property/` | Vitest 4 + happy-dom; setup in `tests/setup.ts`. Two streams — see §7 |

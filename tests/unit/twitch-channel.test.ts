@@ -44,11 +44,6 @@ describe('normalizeTwitchLogin', () => {
     expect(normalizeTwitchLogin('  #ClarkIO  ')).toBe('clarkio');
   });
 
-  it('extracts a login from a pasted Twitch channel URL', () => {
-    expect(normalizeTwitchLogin('https://www.twitch.tv/ClarkIO')).toBe('clarkio');
-    expect(normalizeTwitchLogin('twitch.tv/ClarkIO/videos')).toBe('clarkio');
-  });
-
   it('accepts letters, digits, and underscores from 1 through 50 characters', () => {
     expect(normalizeTwitchLogin('a')).toBe('a');
     expect(normalizeTwitchLogin('some_user_123')).toBe('some_user_123');

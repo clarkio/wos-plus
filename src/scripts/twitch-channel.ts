@@ -1,7 +1,10 @@
 /**
  * Validation for user-entered Twitch channel/login names.
  *
- * Twitch usernames are 4-25 characters of letters, numbers, and underscores.
+ * WoS+ accepts the established channel-name contract used by its API and
+ * archive: 1-50 characters of letters, numbers, and underscores. This is
+ * intentionally broader than Twitch's current account-creation rule so legacy
+ * channels and already-stored names remain usable.
  * `isValidTwitchLoginFormat` rejects obvious typos/garbage synchronously,
  * before any network round trip.
  *
@@ -13,11 +16,53 @@
  * official API) for anonymous, credential-free lookups.
  */
 
-const TWITCH_LOGIN_PATTERN = /^[a-zA-Z0-9_]{4,25}$/;
+const TWITCH_LOGIN_CHARACTERS = /^[a-z0-9_]+$/;
 
-/** True when `login` matches Twitch's username shape (4-25 alphanumeric/underscore chars). */
+/** True when a bare login matches WoS+'s canonical channel-name shape. */
 export function isValidTwitchLoginFormat(login: string): boolean {
-  return TWITCH_LOGIN_PATTERN.test(login.trim());
+  const trimmed = login.trim();
+  const normalized = normalizeTwitchLogin(trimmed);
+  return normalized !== null && normalized === trimmed.toLowerCase();
+}
+
+export type TwitchLoginValidation =
+  | { login: string }
+  | { error: 'required' | 'format' | 'length' };
+
+/**
+ * Validates and normalizes a user-supplied Twitch login while retaining the
+ * rejection reason for callers that need to explain it.
+ */
+export function validateTwitchLogin(input: unknown): TwitchLoginValidation {
+  if (typeof input !== 'string') {
+    return { error: 'required' };
+  }
+
+  const trimmed = input.trim();
+  const login = trimmed.replace(/^#/, '').toLowerCase();
+
+  if (!login) {
+    return { error: 'required' };
+  }
+  if (!TWITCH_LOGIN_CHARACTERS.test(login)) {
+    return { error: 'format' };
+  }
+  if (login.length > 50) {
+    return { error: 'length' };
+  }
+  return { login };
+}
+
+/**
+ * Normalizes a user-supplied Twitch login.
+ *
+ * Trims whitespace, strips a leading hash, lowercases it, and rejects values
+ * outside the canonical 1-50 character contract. Twitch URL extraction remains
+ * view-controller work tracked by #128.
+ */
+export function normalizeTwitchLogin(input: unknown): string | null {
+  const result = validateTwitchLogin(input);
+  return 'login' in result ? result.login : null;
 }
 
 const TWITCH_GQL_ENDPOINT = 'https://gql.twitch.tv/gql';

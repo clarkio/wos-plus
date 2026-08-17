@@ -260,7 +260,7 @@ import ThemeControl from "../components/ThemeControl.astro";
   import { GameSpectator } from "../scripts/wos-plus-main";
   import { normalizeMirrorUrl } from "../scripts/mirror-url";
   import {
-    isValidTwitchLoginFormat,
+    normalizeTwitchLogin,
     twitchChannelExists,
   } from "../scripts/twitch-channel";
 
@@ -313,11 +313,13 @@ import ThemeControl from "../components/ThemeControl.astro";
     twitchChannelInputEl()?.classList.remove("input-invalid");
   };
 
+  // Shared view-controller extraction is tracked by #128. Validation and
+  // canonical casing live in normalizeTwitchLogin (#133).
   const extractTwitchChannel = (input: string): string => {
     const trimmed = input.trim();
     if (!trimmed) return "";
     const match = trimmed.match(/(?:[a-z0-9-]+\.)?twitch\.tv\/([^/?#]+)/i);
-    return (match ? match[1] : trimmed).toLowerCase();
+    return match ? match[1] : trimmed;
   };
 
   const isBoardVisible = () =>
@@ -413,8 +415,10 @@ import ThemeControl from "../components/ThemeControl.astro";
       // indication of why (issue #103), so reject it here instead.
       let newChannel = twitchChannel;
       if (data.twitchChannel) {
-        const channel = extractTwitchChannel(data.twitchChannel);
-        if (!channel || !isValidTwitchLoginFormat(channel)) {
+        const channel = normalizeTwitchLogin(
+          extractTwitchChannel(data.twitchChannel),
+        );
+        if (!channel) {
           showTwitchChannelError("Enter a valid Twitch channel name.");
           return false;
         }
