@@ -4,6 +4,7 @@
 // (issue #119) and must never be inserted as-is.
 
 import { canFormWord } from '../scripts/wos-words';
+import { normalizeTwitchLogin } from '../scripts/twitch-channel';
 
 /**
  * The `slots` column comes back from the database as a JSON string rather
@@ -181,31 +182,11 @@ export function normalizeLanguageCode(code: unknown): string | null {
 }
 
 /**
- * Strips the formatting streamers plausibly type a Twitch channel name with —
- * a leading '#', surrounding whitespace, mixed case — without judging whether
- * the result is a valid Twitch username. Shared by `normalizeTwitchChannel`
- * (below) and the channel-stats read path so both sides of a name written
- * either way resolve to the same channel (#164).
- */
-export function cleanTwitchChannel(channel: string): string {
-  return channel.trim().replace(/^#/, '').toLowerCase();
-}
-
-/**
  * Normalizes a Twitch channel name for storage on a board (lowercase, no
  * leading '#'). Returns null when the value isn't a valid Twitch username
  * (letters, digits, underscores, max 50 chars) so callers can simply omit it —
  * the channel is informational and must never block a board from saving.
  */
 export function normalizeTwitchChannel(channel: unknown): string | null {
-  if (typeof channel !== 'string') {
-    return null;
-  }
-
-  const cleanChannel = cleanTwitchChannel(channel);
-  if (!/^[a-z0-9_]{1,50}$/.test(cleanChannel)) {
-    return null;
-  }
-
-  return cleanChannel;
+  return normalizeTwitchLogin(channel);
 }

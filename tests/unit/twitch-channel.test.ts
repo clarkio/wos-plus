@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   isValidTwitchLoginFormat,
+  normalizeTwitchLogin,
   twitchChannelExists,
+  validateTwitchLogin,
 } from '@scripts/twitch-channel';
 
 describe('isValidTwitchLoginFormat', () => {
@@ -17,12 +19,13 @@ describe('isValidTwitchLoginFormat', () => {
     expect(isValidTwitchLoginFormat('  clarkio  ')).toBe(true);
   });
 
-  it('rejects logins shorter than 4 characters', () => {
-    expect(isValidTwitchLoginFormat('abc')).toBe(false);
+  it('accepts the shortest non-empty login in the approved 1-50 rule', () => {
+    expect(isValidTwitchLoginFormat('a')).toBe(true);
   });
 
-  it('rejects logins longer than 25 characters', () => {
-    expect(isValidTwitchLoginFormat('a'.repeat(26))).toBe(false);
+  it('accepts a 50-character login and rejects a longer one', () => {
+    expect(isValidTwitchLoginFormat('a'.repeat(50))).toBe(true);
+    expect(isValidTwitchLoginFormat('a'.repeat(51))).toBe(false);
   });
 
   it('rejects empty input', () => {
@@ -33,7 +36,49 @@ describe('isValidTwitchLoginFormat', () => {
     expect(isValidTwitchLoginFormat('clark.io')).toBe(false);
     expect(isValidTwitchLoginFormat('clark io')).toBe(false);
     expect(isValidTwitchLoginFormat('clark@io')).toBe(false);
+    expect(isValidTwitchLoginFormat('#clarkio')).toBe(false);
     expect(isValidTwitchLoginFormat('twitch.tv/clarkio')).toBe(false);
+  });
+});
+
+describe('validateTwitchLogin', () => {
+  it('reports required for non-text and empty inputs', () => {
+    expect(validateTwitchLogin(null)).toEqual({ error: 'required' });
+    expect(validateTwitchLogin('')).toEqual({ error: 'required' });
+    expect(validateTwitchLogin('#')).toEqual({ error: 'required' });
+  });
+
+  it('reports format for invalid characters without stripping an inner hash', () => {
+    expect(validateTwitchLogin('bad channel')).toEqual({ error: 'format' });
+    expect(validateTwitchLogin('clark#io')).toEqual({ error: 'format' });
+  });
+
+  it('reports length for a login over 50 characters', () => {
+    expect(validateTwitchLogin('a'.repeat(51))).toEqual({ error: 'length' });
+  });
+
+  it('returns the normalized login for valid input', () => {
+    expect(validateTwitchLogin('  #ClarkIO  ')).toEqual({ login: 'clarkio' });
+  });
+});
+
+describe('normalizeTwitchLogin', () => {
+  it('trims, strips a leading hash, and lowercases a login', () => {
+    expect(normalizeTwitchLogin('  #ClarkIO  ')).toBe('clarkio');
+  });
+
+  it('accepts letters, digits, and underscores from 1 through 50 characters', () => {
+    expect(normalizeTwitchLogin('a')).toBe('a');
+    expect(normalizeTwitchLogin('some_user_123')).toBe('some_user_123');
+    expect(normalizeTwitchLogin('a'.repeat(50))).toBe('a'.repeat(50));
+  });
+
+  it('rejects empty, overlong, malformed, and non-text values', () => {
+    expect(normalizeTwitchLogin('')).toBeNull();
+    expect(normalizeTwitchLogin('a'.repeat(51))).toBeNull();
+    expect(normalizeTwitchLogin('bad channel')).toBeNull();
+    expect(normalizeTwitchLogin('twitch.tv/clark.io')).toBeNull();
+    expect(normalizeTwitchLogin(null)).toBeNull();
   });
 });
 

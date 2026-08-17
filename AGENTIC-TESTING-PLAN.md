@@ -42,8 +42,8 @@ ever disagree, believe `CLAUDE.md`.
 
 ### What to do next, and why
 
-**#155 is done.** `vitest.config.ts` now enforces a global floor (statements 90,
-branches 85, functions 87, lines 90) plus per-file floors for `wos-words.ts` and
+**#155 is done.** `vitest.config.ts` now enforces a global floor (statements 91,
+branches 86, functions 88, lines 91) plus per-file floors for `wos-words.ts` and
 `src/lib/**`, with a ratchet-only policy documented in `CLAUDE.md` § 4 and
 `TESTING.md` § Coverage. `pnpm run test:coverage` fails below those numbers —
 verified by temporarily raising a threshold above measured reality and watching

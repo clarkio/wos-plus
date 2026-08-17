@@ -44,10 +44,10 @@ export default defineConfig({
       // fine any time; lowering one is a deliberate, reviewed act — never
       // do it just to get CI green.
       thresholds: {
-        statements: 90,
-        branches: 85,
-        functions: 87,
-        lines: 90,
+        statements: 91,
+        branches: 86,
+        functions: 88,
+        lines: 91,
 
         // Per-file floors for the crown jewels, measured at PR #155
         // (statements/branches/functions/lines: 96.77/91.67/95.24/98.78).

@@ -1,9 +1,9 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
 import { jsonResponse } from '../../../lib/api-utils';
-import { cleanTwitchChannel } from '../../../lib/board-utils';
 import { createCorsPreflightResponse } from '../../../lib/cors';
 import { getSupabaseClient } from '../../../lib/supabase';
+import { validateTwitchLogin } from '../../../scripts/twitch-channel';
 
 export const prerender = false;
 
@@ -20,13 +20,8 @@ export const GET: APIRoute = async ({ params, request }) => {
     return jsonResponse({ error: 'Channel name is required' }, request, ALLOWED_METHODS, 400);
   }
 
-  // Streamers write channel names both with and without a leading '#'; strip
-  // it here with the same helper normalizeTwitchChannel uses for the board
-  // path, so '#clarkio' and 'clarkio' resolve to the same channel everywhere
-  // (#164).
-  const cleanChannel = cleanTwitchChannel(channel);
-
-  if (!/^[a-z0-9_]+$/.test(cleanChannel)) {
+  const validation = validateTwitchLogin(channel);
+  if ('error' in validation && validation.error !== 'length') {
     return jsonResponse(
       { error: 'Invalid channel name format. Only lowercase letters, numbers, and underscores are allowed.' },
       request,
@@ -35,7 +30,7 @@ export const GET: APIRoute = async ({ params, request }) => {
     );
   }
 
-  if (cleanChannel.length < 1 || cleanChannel.length > 50) {
+  if ('error' in validation) {
     return jsonResponse(
       { error: 'Invalid channel name length. Must be between 1 and 50 characters.' },
       request,
@@ -43,6 +38,7 @@ export const GET: APIRoute = async ({ params, request }) => {
       400,
     );
   }
+  const { login: cleanChannel } = validation;
 
   try {
     const supabase = getSupabaseClient();
