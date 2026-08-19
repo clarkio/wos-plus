@@ -18,10 +18,10 @@ import ThemeControl from "../components/ThemeControl.astro";
   <SettingsDialog id="player-settings" title="Player Settings">
     <form id="player-settings-form" class="settings-form">
       <div class="form-group">
-        <label for="mirror-url-input">Mirror URL</label>
+        <label for="player-mirror-url-input">Mirror URL</label>
         <input
           type="url"
-          id="mirror-url-input"
+          id="player-mirror-url-input"
           name="mirrorUrl"
           placeholder="https://wos.gg/r/your-game-id"
           pattern="https://wos\.gg/r/[0-9a-fA-F-]+"
@@ -30,16 +30,16 @@ import ThemeControl from "../components/ThemeControl.astro";
         <small class="form-help"
           >The Words on Stream mirror link, e.g. https://wos.gg/r/&lt;game-id&gt;</small
         >
-        <small class="form-error" id="mirror-url-error" hidden
+        <small class="form-error" id="player-mirror-url-error" hidden
           >Enter a valid Words on Stream mirror link that starts with
           https://wos.gg/r/</small
         >
       </div>
       <div class="form-group">
-        <label for="twitch-channel-input">Twitch Channel</label>
+        <label for="player-twitch-channel-input">Twitch Channel</label>
         <input
           type="text"
-          id="twitch-channel-input"
+          id="player-twitch-channel-input"
           name="twitchChannel"
           placeholder="clarkio or https://twitch.tv/clarkio"
           required
@@ -48,7 +48,7 @@ import ThemeControl from "../components/ThemeControl.astro";
           >The Twitch channel to connect to. You can paste the full channel URL
           or just the username.</small
         >
-        <small class="form-error" id="twitch-channel-error" hidden
+        <small class="form-error" id="player-twitch-channel-error" hidden
           >Enter a valid, existing Twitch channel name.</small
         >
       </div>
@@ -56,7 +56,7 @@ import ThemeControl from "../components/ThemeControl.astro";
         <label class="toggle-label">
           <input
             type="checkbox"
-            id="chat-enabled-input"
+            id="player-chat-enabled-input"
             name="chatEnabled"
             class="toggle-input"
           />
@@ -69,7 +69,7 @@ import ThemeControl from "../components/ThemeControl.astro";
         <label class="toggle-label">
           <input
             type="checkbox"
-            id="wos-enabled-input"
+            id="player-wos-enabled-input"
             name="wosEnabled"
             class="toggle-input"
             checked
@@ -85,13 +85,13 @@ import ThemeControl from "../components/ThemeControl.astro";
         <label class="toggle-label">
           <input
             type="checkbox"
-            id="clear-sound-input"
+            id="player-clear-sound-input"
             name="clearSound"
             class="toggle-input"
             checked
           />
           <span class="toggle-slider"></span>
-          <span class="toggle-text">Play  Sounds</span>
+          <span class="toggle-text">Play Sounds</span>
         </label>
         <small class="form-help"
           >Play custom clarkio sounds for in game events such as "CLEAR!" when all words on the board are found</small
@@ -303,9 +303,9 @@ import ThemeControl from "../components/ThemeControl.astro";
   let twitchChannel = "clarkio";
 
   const mirrorUrlErrorEl = () =>
-    document.getElementById("mirror-url-error") as HTMLElement | null;
+    document.getElementById("player-mirror-url-error") as HTMLElement | null;
   const mirrorUrlInputEl = () =>
-    document.getElementById("mirror-url-input") as HTMLInputElement | null;
+    document.getElementById("player-mirror-url-input") as HTMLInputElement | null;
 
   const showMirrorUrlError = () => {
     mirrorUrlErrorEl()?.removeAttribute("hidden");
@@ -318,9 +318,9 @@ import ThemeControl from "../components/ThemeControl.astro";
   };
 
   const twitchChannelErrorEl = () =>
-    document.getElementById("twitch-channel-error") as HTMLElement | null;
+    document.getElementById("player-twitch-channel-error") as HTMLElement | null;
   const twitchChannelInputEl = () =>
-    document.getElementById("twitch-channel-input") as HTMLInputElement | null;
+    document.getElementById("player-twitch-channel-input") as HTMLInputElement | null;
 
   const showTwitchChannelError = (message?: string) => {
     const errorEl = twitchChannelErrorEl();
@@ -377,19 +377,19 @@ import ThemeControl from "../components/ThemeControl.astro";
 
   const populateSettingsFormFromUrl = (urlParams: URLSearchParams) => {
     const mirrorUrlInput = document.getElementById(
-      "mirror-url-input",
+      "player-mirror-url-input",
     ) as HTMLInputElement | null;
     const twitchChannelInput = document.getElementById(
-      "twitch-channel-input",
+      "player-twitch-channel-input",
     ) as HTMLInputElement | null;
     const chatEnabledInput = document.getElementById(
-      "chat-enabled-input",
+      "player-chat-enabled-input",
     ) as HTMLInputElement | null;
     const wosEnabledInput = document.getElementById(
-      "wos-enabled-input",
+      "player-wos-enabled-input",
     ) as HTMLInputElement | null;
     const clearSoundInput = document.getElementById(
-      "clear-sound-input",
+      "player-clear-sound-input",
     ) as HTMLInputElement | null;
 
     if (mirrorUrlInput && urlParams.has("mirrorUrl")) {
