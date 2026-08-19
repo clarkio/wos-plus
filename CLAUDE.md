@@ -376,6 +376,27 @@ runtime.
   connections are explicitly **out of scope** — that protocol handling is
   already covered deterministically by the fixture-driven worker tests
   (`tests/unit/wos-worker.test.ts`, `tests/unit/twitch-chat-worker.test.ts`).
+- **One deliberate exception to "thin"**:
+  `tests/e2e/view-controller.spec.ts` is *characterization* coverage, not
+  smoke — required-parameter gating, `board`/`chat` visibility handling, board
+  iframe load/clear, and settings-form pre-population, on both `/player` and
+  `/streamer`. It exists because those two pages carry ~630 duplicated lines
+  with no other test coverage at all, and
+  [#128](https://github.com/clarkio/wos-plus/issues/128) will deduplicate
+  them; it is the safety net that refactor needs. It has to live at this layer
+  rather than in Vitest because both pages' client code is an inline
+  `<script>` block inside the `.astro` file, so there is no module to import —
+  extracting one is itself part of #128. **Fold it back into the unit stream
+  once that extraction lands**; it is not a licence to grow the E2E layer
+  generally.
+- **Two of its tests pin drift between the two views on purpose** — `/player`
+  echoes invalid query parameters back into the settings dialog while
+  `/streamer` discards them, and the chat/board toggles exist only in
+  player's form. Both are open questions on #128, pinned as *current
+  behaviour under protest* in the same spirit as the ⚠️ acceptance tests in
+  §7. Deduplicating the views will force one behaviour on both, so the
+  matching test must be **updated in the same PR as the fix**, never deleted
+  to get green (§2.2).
 - **Hermetic by the same convention as the acceptance stream** (§7): zero
   reliance on real third-party network reachability. `tests/e2e/e2e-harness.ts`
   aborts Google Fonts and Twitch's GQL lookup over HTTP (`blockExternalNetwork`),
