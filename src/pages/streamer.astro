@@ -56,6 +56,35 @@ import ThemeControl from "../components/ThemeControl.astro";
         <label class="toggle-label">
           <input
             type="checkbox"
+            id="streamer-chat-enabled-input"
+            name="chatEnabled"
+            class="toggle-input"
+          />
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Show Twitch Chat</span>
+        </label>
+        <small class="form-help">Toggle Twitch chat visibility</small>
+      </div>
+      <div class="form-group">
+        <label class="toggle-label">
+          <input
+            type="checkbox"
+            id="streamer-wos-enabled-input"
+            name="wosEnabled"
+            class="toggle-input"
+            checked
+          />
+          <span class="toggle-slider"></span>
+          <span class="toggle-text">Show Words on Stream Board</span>
+        </label>
+        <small class="form-help"
+          >Toggle the Words on Stream board visibility</small
+        >
+      </div>
+      <div class="form-group">
+        <label class="toggle-label">
+          <input
+            type="checkbox"
             id="streamer-clear-sound-input"
             name="clearSound"
             class="toggle-input"
@@ -369,6 +398,12 @@ import ThemeControl from "../components/ThemeControl.astro";
     const twitchChannelInput = document.getElementById(
       "streamer-twitch-channel-input",
     ) as HTMLInputElement | null;
+    const chatEnabledInput = document.getElementById(
+      "streamer-chat-enabled-input",
+    ) as HTMLInputElement | null;
+    const wosEnabledInput = document.getElementById(
+      "streamer-wos-enabled-input",
+    ) as HTMLInputElement | null;
     const clearSoundInput = document.getElementById(
       "streamer-clear-sound-input",
     ) as HTMLInputElement | null;
@@ -381,6 +416,20 @@ import ThemeControl from "../components/ThemeControl.astro";
       twitchChannelInput.value = urlParams.get("twitchChannel") || "";
     }
 
+    if (chatEnabledInput) {
+      const chatParam = urlParams.get("chat");
+      chatEnabledInput.checked = chatParam
+        ? chatParam.toLowerCase() === "true"
+        : true;
+    }
+
+    if (wosEnabledInput) {
+      const boardParam = urlParams.get("board");
+      wosEnabledInput.checked = boardParam
+        ? boardParam.toLowerCase() === "true"
+        : true;
+    }
+
     if (clearSoundInput) {
       const clearSoundParam = urlParams.get("clearSound");
       clearSoundInput.checked = clearSoundParam
@@ -390,6 +439,34 @@ import ThemeControl from "../components/ThemeControl.astro";
   };
 
   // Separate function to set up save callback
+  const applyChatVisibility = (isChatEnabled: boolean) => {
+    const twitchChatWidget = document.getElementById(
+      "streamer-twitch-chat-widget",
+    ) as HTMLIFrameElement | null;
+    const grid = document.querySelector(
+      ".streamer-wos-main-grid",
+    ) as HTMLElement | null;
+    if (!twitchChatWidget || !grid) return;
+    if (isChatEnabled) {
+      twitchChatWidget.style.display = "";
+      grid.classList.remove("chat-hidden");
+    } else {
+      twitchChatWidget.style.display = "none";
+      grid.classList.add("chat-hidden");
+    }
+  };
+
+  const applyBoardVisibility = (boardEnabled: boolean) => {
+    if (!boardContainer) return;
+    if (boardEnabled) {
+      boardContainer.style.display = "";
+      loadBoardIframeIfVisible();
+    } else {
+      boardContainer.style.display = "none";
+      clearBoardIframe();
+    }
+  };
+
   const setupDialogCallbacks = () => {
     if (!settingsDialog) return;
 
@@ -445,6 +522,10 @@ import ThemeControl from "../components/ThemeControl.astro";
         params.set("mirrorUrl", normalizedMirrorUrl);
       }
       params.set("twitchChannel", newChannel);
+      // Handle chat enabled toggle
+      params.set("chat", data.chatEnabled ? "true" : "false");
+      // Handle WoS board visibility toggle
+      params.set("board", data.wosEnabled ? "true" : "false");
       // Handle clear sound toggle
       params.set("clearSound", data.clearSound ? "true" : "false");
 
@@ -458,6 +539,8 @@ import ThemeControl from "../components/ThemeControl.astro";
       const mirrorUrlChanged = normalizedMirrorUrl !== currentMirrorUrl;
       currentMirrorUrl = normalizedMirrorUrl;
 
+      applyChatVisibility(!!data.chatEnabled);
+      applyBoardVisibility(!!data.wosEnabled);
       spectator.isSoundsEnabled = !!data.clearSound;
 
       const channelChanged = newChannel !== twitchChannel;
@@ -504,34 +587,7 @@ import ThemeControl from "../components/ThemeControl.astro";
     // If either parameter is missing, show the settings dialog
     if (!hasMirrorUrl || !hasTwitchChannel) {
       // Pre-populate any existing values
-      if (hasMirrorUrl) {
-        const mirrorUrlInput = document.getElementById(
-          "streamer-mirror-url-input",
-        ) as HTMLInputElement;
-        if (mirrorUrlInput) {
-          mirrorUrlInput.value = urlParams.get("mirrorUrl") || "";
-        }
-      }
-
-      if (hasTwitchChannel) {
-        const twitchChannelInput = document.getElementById(
-          "streamer-twitch-channel-input",
-        ) as HTMLInputElement;
-        if (twitchChannelInput) {
-          twitchChannelInput.value = urlParams.get("twitchChannel") || "";
-        }
-      }
-
-      // Pre-populate clear sound checkbox
-      const clearSoundInput = document.getElementById(
-        "streamer-clear-sound-input",
-      ) as HTMLInputElement;
-      if (clearSoundInput) {
-        const clearSoundParam = urlParams.get("clearSound");
-        clearSoundInput.checked = clearSoundParam
-          ? clearSoundParam.toLowerCase() === "true"
-          : true;
-      }
+      populateSettingsFormFromUrl(urlParams);
 
       // Ensure dialog is ready and set up callbacks before opening
       const attemptOpenDialog = () => {
@@ -605,6 +661,7 @@ import ThemeControl from "../components/ThemeControl.astro";
 
     // check for query parameters in the url
     const urlParams = new URLSearchParams(window.location.search);
+    populateSettingsFormFromUrl(urlParams);
 
     const normalizedChannelFromParams = normalizeTwitchLogin(
       extractTwitchChannel(urlParams.get("twitchChannel") || ""),

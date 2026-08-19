@@ -41,6 +41,8 @@ interface ViewFixture {
   readonly mirrorUrlInput: string;
   readonly twitchChannelInput: string;
   readonly clearSoundInput: string;
+  readonly chatEnabledInput: string;
+  readonly boardEnabledInput: string;
 }
 
 const VIEWS: readonly ViewFixture[] = [
@@ -53,6 +55,8 @@ const VIEWS: readonly ViewFixture[] = [
     mirrorUrlInput: '#mirror-url-input',
     twitchChannelInput: '#twitch-channel-input',
     clearSoundInput: '#clear-sound-input',
+    chatEnabledInput: '#chat-enabled-input',
+    boardEnabledInput: '#wos-enabled-input',
   },
   {
     path: '/streamer',
@@ -63,6 +67,8 @@ const VIEWS: readonly ViewFixture[] = [
     mirrorUrlInput: '#streamer-mirror-url-input',
     twitchChannelInput: '#streamer-twitch-channel-input',
     clearSoundInput: '#streamer-clear-sound-input',
+    chatEnabledInput: '#streamer-chat-enabled-input',
+    boardEnabledInput: '#streamer-wos-enabled-input',
   },
 ];
 
@@ -205,78 +211,74 @@ for (const view of VIEWS) {
 }
 
 /**
- * The two views disagree about what the auto-opened dialog shows back to the
- * user, because they pre-populate it from different code:
+ * Both views echo an unusable query parameter back into the dialog so the user
+ * can see what was wrong and correct it, rather than being shown an empty form
+ * (specs/settings.md, "what WoS+ shows back when a setting cannot be used").
  *
- * - player.astro calls `populateSettingsFormFromUrl`, which guards on
- *   `urlParams.has(...)` — the raw value is echoed back even when invalid.
- * - streamer.astro re-implements the same logic inline inside
- *   `checkRequiredParams`, guarding on the *validated* `hasMirrorUrl` /
- *   `hasTwitchChannel` instead — so invalid input is silently discarded and
- *   the user is shown an empty form.
- *
- * That is #128 drift item 2. These two tests pin each side as it currently
- * behaves, under protest for the streamer case: losing what the user typed
- * looks like a defect, not a design choice. Deduplicating the two views will
- * force one behaviour on both, so the question has to be answered rather than
- * absorbed — whichever way it is settled, one of these tests must be updated
- * in the same PR as the fix, never deleted to get green (CLAUDE.md §2.2).
+ * This was drift item 2 on #128: player called `populateSettingsFormFromUrl`
+ * (guarding on `urlParams.has(...)`) while streamer re-implemented the same
+ * logic inline inside `checkRequiredParams`, guarding on the *validated* value
+ * and so silently discarding what the user typed. The maintainer confirmed the
+ * two views should behave alike; streamer now shares player's behaviour.
  */
-test('/player echoes invalid parameters back into the dialog for correction', async ({ page }) => {
-  await armView(page);
-  await page.goto(
-    pathWith('/player', {
-      mirrorUrl: INVALID_MIRROR_URL,
-      twitchChannel: INVALID_CHANNEL,
-    }),
-    { waitUntil: 'domcontentloaded' },
-  );
+for (const view of VIEWS) {
+  test(`${view.path} echoes invalid parameters back into the dialog for correction`, async ({
+    page,
+  }) => {
+    await armView(page);
+    await page.goto(
+      pathWith(view.path, {
+        mirrorUrl: INVALID_MIRROR_URL,
+        twitchChannel: INVALID_CHANNEL,
+      }),
+      { waitUntil: 'domcontentloaded' },
+    );
 
-  await expect(page.locator('#player-settings')).toBeVisible();
-  await expect(page.locator('#mirror-url-input')).toHaveValue(INVALID_MIRROR_URL);
-  await expect(page.locator('#twitch-channel-input')).toHaveValue(INVALID_CHANNEL);
-});
-
-test('/streamer discards invalid parameters, showing an empty dialog (known drift, #128)', async ({
-  page,
-}) => {
-  await armView(page);
-  await page.goto(
-    pathWith('/streamer', {
-      mirrorUrl: INVALID_MIRROR_URL,
-      twitchChannel: INVALID_CHANNEL,
-    }),
-    { waitUntil: 'domcontentloaded' },
-  );
-
-  await expect(page.locator('#streamer-settings')).toBeVisible();
-  await expect(page.locator('#streamer-mirror-url-input')).toHaveValue('');
-  await expect(page.locator('#streamer-twitch-channel-input')).toHaveValue('');
-});
+    await expect(page.locator(view.dialog)).toBeVisible();
+    await expect(page.locator(view.mirrorUrlInput)).toHaveValue(INVALID_MIRROR_URL);
+    await expect(page.locator(view.twitchChannelInput)).toHaveValue(INVALID_CHANNEL);
+  });
+}
 
 /**
- * The chat/board toggles exist only in player's settings form, but both views
- * honour the `chat` and `board` query parameters in `initializePage` (pinned
- * above). So the streamer view supports the settings without exposing any way
- * to change them from its own dialog. #128 asks whether that asymmetry is
- * intended before the shared controller assumes either answer.
+ * Both views expose the same settings (specs/settings.md, "the same settings
+ * are available on both views"). The chat and board toggles used to exist only
+ * in player's form even though both views honoured the `chat` and `board`
+ * query parameters — #128 drift, resolved in favour of parity.
  */
-test('/player exposes chat and board toggles in its settings form', async ({ page }) => {
-  await armView(page);
-  await page.goto('/player', { waitUntil: 'domcontentloaded' });
+for (const view of VIEWS) {
+  test(`${view.path} exposes chat and board toggles in its settings form`, async ({ page }) => {
+    await armView(page);
+    await page.goto(view.path, { waitUntil: 'domcontentloaded' });
 
-  await expect(page.locator('#player-settings')).toBeVisible();
-  await expect(page.locator('#chat-enabled-input')).toHaveCount(1);
-  await expect(page.locator('#wos-enabled-input')).toHaveCount(1);
-});
+    await expect(page.locator(view.dialog)).toBeVisible();
+    await expect(page.locator(view.chatEnabledInput)).toHaveCount(1);
+    await expect(page.locator(view.boardEnabledInput)).toHaveCount(1);
+  });
 
-test('/streamer has no chat or board toggles, though both query params still apply', async ({
-  page,
-}) => {
-  await armView(page);
-  await page.goto('/streamer', { waitUntil: 'domcontentloaded' });
+  test(`${view.path} settings dialog round-trips the chat toggle into URL params`, async ({
+    page,
+  }) => {
+    await armView(page);
+    await page.goto(view.path, { waitUntil: 'domcontentloaded' });
 
-  await expect(page.locator('#streamer-settings')).toBeVisible();
-  await expect(page.locator('#chat-enabled-input')).toHaveCount(0);
-  await expect(page.locator('#wos-enabled-input')).toHaveCount(0);
-});
+    await expect(page.locator(view.dialog)).toBeVisible();
+    await page.fill(view.mirrorUrlInput, MIRROR_URL);
+    await page.fill(view.twitchChannelInput, TWITCH_CHANNEL);
+    // The toggle switch hides its native checkbox off-screen behind the
+    // visible `.toggle-slider`; click the slider like a user would.
+    await page.locator(`label:has(${view.chatEnabledInput}) .toggle-slider`).click();
+    await expect(page.locator(view.chatEnabledInput)).not.toBeChecked();
+
+    await page.click('.settings-dialog__save');
+    await expect(page.locator(view.dialog)).not.toBeVisible();
+
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('chat'))
+      .toBe('false');
+    const params = new URL(page.url()).searchParams;
+    expect(params.get('board')).toBe('true');
+    expect(params.get('mirrorUrl')).toBe(MIRROR_URL);
+    expect(params.get('twitchChannel')).toBe(TWITCH_CHANNEL);
+  });
+}

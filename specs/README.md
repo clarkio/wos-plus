@@ -114,6 +114,7 @@ follow a **grant**, not a live capability check.
 | [words.md](words.md) | the shared word list, and working out which words were missed |
 | [channel-stats.md](channel-stats.md) | personal bests, daily bests and daily clears for a channel |
 | [game-flow.md](game-flow.md) | connecting, and what a live level looks like from level start to level end |
+| [settings.md](settings.md) | the settings dialog on both views, and opening WoS+ from a link that already carries settings |
 
 ---
 
