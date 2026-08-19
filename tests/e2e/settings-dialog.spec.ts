@@ -35,15 +35,15 @@ test('player settings dialog round-trips values into URL params', async ({ page 
   const dialog = page.locator('#player-settings');
   await expect(dialog).toBeVisible();
 
-  await page.fill('#mirror-url-input', MIRROR_URL);
-  await page.fill('#twitch-channel-input', TWITCH_CHANNEL);
+  await page.fill('#player-mirror-url-input', MIRROR_URL);
+  await page.fill('#player-twitch-channel-input', TWITCH_CHANNEL);
   // The toggle switch hides its native checkbox off-screen behind the
   // visible `.toggle-slider`; click the slider like a user would rather than
   // the input Playwright can't see.
   await page
-    .locator('label:has(#chat-enabled-input) .toggle-slider')
+    .locator('label:has(#player-chat-enabled-input) .toggle-slider')
     .click();
-  await expect(page.locator('#chat-enabled-input')).not.toBeChecked();
+  await expect(page.locator('#player-chat-enabled-input')).not.toBeChecked();
 
   await page.click('.settings-dialog__save');
 

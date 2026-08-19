@@ -27,17 +27,11 @@ const INVALID_CHANNEL = 'bad channel!';
 
 interface ViewFixture {
   readonly path: string;
+  readonly view: string;
   readonly dialog: string;
   readonly boardIframe: string;
   readonly chatWidget: string;
   readonly grid: string;
-  /**
-   * Settings-form control ids. The prefixing is inconsistent between the two
-   * views — streamer prefixes every control, player prefixes none — which is
-   * the main mechanical blocker to sharing the script (#128, drift item 1).
-   * Encoding it here rather than hiding it behind a helper keeps the
-   * inconsistency visible until it is settled.
-   */
   readonly mirrorUrlInput: string;
   readonly twitchChannelInput: string;
   readonly clearSoundInput: string;
@@ -45,31 +39,37 @@ interface ViewFixture {
   readonly boardEnabledInput: string;
 }
 
+/**
+ * Every element either view owns is named `{view}-<thing>`, so the fixture is
+ * derived from the view name rather than listing both by hand. That was not
+ * possible before #128 step 2b: streamer prefixed its settings-form controls
+ * and player did not, so the two had to be spelled out separately. If a future
+ * change reintroduces a per-view exception, it has to be written down here as
+ * an override — which is the point.
+ *
+ * The ids the shared spectator script drives (`#correct-words-log`,
+ * `#level-value`, `#wos-board`) are deliberately *not* prefixed: they are the
+ * same on both views because one script in wos-plus-main.ts looks them up.
+ */
+function viewFixture(path: string, view: string): ViewFixture {
+  return {
+    path,
+    view,
+    dialog: `#${view}-settings`,
+    boardIframe: `#${view}-wos-board-iframe`,
+    chatWidget: `#${view}-twitch-chat-widget`,
+    grid: `.${view}-wos-main-grid`,
+    mirrorUrlInput: `#${view}-mirror-url-input`,
+    twitchChannelInput: `#${view}-twitch-channel-input`,
+    clearSoundInput: `#${view}-clear-sound-input`,
+    chatEnabledInput: `#${view}-chat-enabled-input`,
+    boardEnabledInput: `#${view}-wos-enabled-input`,
+  };
+}
+
 const VIEWS: readonly ViewFixture[] = [
-  {
-    path: '/player',
-    dialog: '#player-settings',
-    boardIframe: '#player-wos-board-iframe',
-    chatWidget: '#player-twitch-chat-widget',
-    grid: '.player-wos-main-grid',
-    mirrorUrlInput: '#mirror-url-input',
-    twitchChannelInput: '#twitch-channel-input',
-    clearSoundInput: '#clear-sound-input',
-    chatEnabledInput: '#chat-enabled-input',
-    boardEnabledInput: '#wos-enabled-input',
-  },
-  {
-    path: '/streamer',
-    dialog: '#streamer-settings',
-    boardIframe: '#streamer-wos-board-iframe',
-    chatWidget: '#streamer-twitch-chat-widget',
-    grid: '.streamer-wos-main-grid',
-    mirrorUrlInput: '#streamer-mirror-url-input',
-    twitchChannelInput: '#streamer-twitch-channel-input',
-    clearSoundInput: '#streamer-clear-sound-input',
-    chatEnabledInput: '#streamer-chat-enabled-input',
-    boardEnabledInput: '#streamer-wos-enabled-input',
-  },
+  viewFixture('/player', 'player'),
+  viewFixture('/streamer', 'streamer'),
 ];
 
 /**
