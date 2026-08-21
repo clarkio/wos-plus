@@ -30,11 +30,20 @@ const BLOCKED_TWITCH_GQL = 'https://gql.twitch.tv/gql';
 // requires `page.routeWebSocket` as well.
 const BLOCKED_WOS_SOCKET_HOST = 'wos2.gartic.es';
 
+/**
+ * True when `url` is a host this suite refuses to talk to. Exported so the
+ * policy itself can be asserted in the unit stream
+ * (tests/unit/e2e-harness.test.ts): whether a given host is reachable from a
+ * particular sandbox or CI runner is not something a test about *policy*
+ * should depend on, and in a fully offline sandbox every host looks blocked
+ * whether the harness blocks it or not.
+ */
+export function isBlockedRequestUrl(url: URL): boolean {
+  return BLOCKED_HOSTS.includes(url.hostname) || url.href === BLOCKED_TWITCH_GQL;
+}
+
 export async function blockExternalNetwork(page: Page): Promise<void> {
-  await page.route(
-    (url) => BLOCKED_HOSTS.includes(url.hostname) || url.href === BLOCKED_TWITCH_GQL,
-    (route) => route.abort(),
-  );
+  await page.route(isBlockedRequestUrl, (route) => route.abort());
 
   // Must be registered before navigation (Playwright only intercepts sockets
   // opened after the route is armed). Not calling `ws.connectToServer()`
@@ -62,7 +71,7 @@ const EXPECTED_PATH_PREFIXES = ['/api/channel-stats/'];
 // host containing a blocked one (e.g. `evil-fonts.googleapis.com.example`) or
 // an unrelated path merely containing a known one as a substring (e.g.
 // `/api/words-backup`, or a query string like `/?next=/api/words`).
-const isKnownExpectedFailureUrl = (rawUrl: string): boolean => {
+export const isKnownExpectedFailureUrl = (rawUrl: string): boolean => {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);

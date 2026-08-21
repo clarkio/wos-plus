@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { blockExternalNetwork, collectUnexpectedFailures } from './e2e-harness';
 
+const MIRROR_URL = 'https://wos.gg/r/4fdfc856-0328-4384-a882-8377dcb5a4f6';
+
 /**
  * Thin E2E smoke layer (AGENTIC-TESTING-PLAN.md Phase 6 / issue #152).
  *
@@ -57,6 +59,52 @@ test('an unrelated request failure still surfaces after a known expected one', a
   expect(unexpectedRequestFailures).toEqual(
     expect.arrayContaining([expect.stringContaining('/definitely-not-a-real-route')]),
   );
+});
+
+test('the board iframe never reaches the real wos.gg host', async ({ page }) => {
+  // Regression for #203. The board iframe's src is set straight to the mirror
+  // URL, so a test supplying a valid `mirrorUrl` makes the browser fetch
+  // https://wos.gg/r/<id> for real. Nothing failed because no test asserted on
+  // it, which left the suite quietly dependent on that host being reachable —
+  // the opposite of the "zero real network" convention in CLAUDE.md §7/§9.
+  //
+  // Asserted via `requestfinished` rather than the console or the failure
+  // recorder: an aborted request fires `requestfailed`, never
+  // `requestfinished`, so this asks precisely "did anything complete against
+  // wos.gg".
+  //
+  // Note what this test can and cannot do. Where wos.gg is reachable — CI, a
+  // developer's machine — it genuinely catches the regression, because
+  // without the harness block the iframe load completes. In a fully offline
+  // sandbox it passes vacuously: nothing completes against any external host
+  // whether the harness blocks it or not. That is why the *policy* is pinned
+  // separately and deterministically in tests/unit/e2e-harness.test.ts; this
+  // test is the end-to-end confirmation that the policy is actually wired
+  // into the page's real network activity.
+  await blockExternalNetwork(page);
+
+  const completedWosGgRequests: string[] = [];
+  page.on('requestfinished', (request) => {
+    if (new URL(request.url()).hostname === 'wos.gg') {
+      completedWosGgRequests.push(request.url());
+    }
+  });
+
+  const params = new URLSearchParams({
+    mirrorUrl: MIRROR_URL,
+    twitchChannel: 'somestreamer',
+  });
+  await page.goto(`/player?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+
+  // The iframe really was pointed at the mirror — without this the test would
+  // pass just as well on a page that never tried to load a board at all.
+  await expect(page.locator('#player-wos-board-iframe')).toHaveAttribute(
+    'src',
+    MIRROR_URL,
+  );
+  await page.waitForTimeout(500);
+
+  expect(completedWosGgRequests).toEqual([]);
 });
 
 for (const path of ['/player', '/streamer']) {
