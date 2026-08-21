@@ -56,6 +56,14 @@ export function isBlockedRequestUrl(url: URL): boolean {
   return BLOCKED_HOSTS.includes(url.hostname) || url.href === BLOCKED_TWITCH_GQL;
 }
 
+/**
+ * Arms `page` so no request leaves for a third-party host: the HTTP hosts in
+ * `BLOCKED_HOSTS` and Twitch's GQL lookup are aborted, and the WoS mirror
+ * socket is intercepted separately (see `BLOCKED_WOS_SOCKET_HOST`).
+ *
+ * Call this **before** navigating — Playwright only intercepts requests and
+ * sockets opened after the routes are registered.
+ */
 export async function blockExternalNetwork(page: Page): Promise<void> {
   await page.route(isBlockedRequestUrl, (route) => route.abort());
 
@@ -80,11 +88,17 @@ export async function blockExternalNetwork(page: Page): Promise<void> {
 const EXPECTED_EXACT_PATHS = ['/api/words'];
 const EXPECTED_PATH_PREFIXES = ['/api/channel-stats/'];
 
-// Matched against the *parsed* URL's hostname/pathname rather than substrings
-// of the raw URL string — `url.includes(...)` would also match an unrelated
-// host containing a blocked one (e.g. `evil-fonts.googleapis.com.example`) or
-// an unrelated path merely containing a known one as a substring (e.g.
-// `/api/words-backup`, or a query string like `/?next=/api/words`).
+/**
+ * True when a failed request against `rawUrl` is one this environment expects
+ * (a blocked host, or a Supabase-backed route with no credentials) rather
+ * than a defect worth failing a test over.
+ *
+ * Matched against the *parsed* URL's hostname/pathname rather than substrings
+ * of the raw URL string — `rawUrl.includes(...)` would also match an unrelated
+ * host containing a blocked one (e.g. `evil-fonts.googleapis.com.example`) or
+ * an unrelated path merely containing a known one as a substring (e.g.
+ * `/api/words-backup`, or a query string like `/?next=/api/words`).
+ */
 export const isKnownExpectedFailureUrl = (rawUrl: string): boolean => {
   let parsed: URL;
   try {
