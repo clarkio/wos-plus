@@ -11,10 +11,10 @@ import { blockExternalNetwork } from './e2e-harness';
  * console output the way smoke.spec.ts does; it only checks where Save lands
  * the URL. `blockExternalNetwork` still blocks the WoS mirror WebSocket Save
  * also opens, so the suite stays hermetic even though this test doesn't rely
- * on that for its own assertions. `wos.gg` below is only the mirror-URL
- * *input* the form validates — not a host this suite talks to; the actual
- * live connection Save makes is the WebSocket to `wos2.gartic.es`, which
- * `blockExternalNetwork` intercepts.
+ * on that for its own assertions. `wos.gg` below is the mirror-URL *input*
+ * the form validates, and is also the host the board iframe is pointed at
+ * once Save applies it — `blockExternalNetwork` aborts that request (#203),
+ * as it does the WebSocket to `wos2.gartic.es` that Save opens.
  */
 
 const MIRROR_URL = 'https://wos.gg/r/4fdfc856-0328-4384-a882-8377dcb5a4f6';

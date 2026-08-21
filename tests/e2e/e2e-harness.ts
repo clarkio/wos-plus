@@ -9,10 +9,24 @@ import type { Page } from '@playwright/test';
  * to be reachable.
  */
 
-// The base page loads Google Fonts as a render-blocking stylesheet. Aborting
-// it keeps navigation fast and deterministic; it has no bearing on whether
-// WoS+ itself works.
-const BLOCKED_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+// Hosts no test in this suite is allowed to reach.
+//
+// - Google Fonts: the base page loads it as a render-blocking stylesheet.
+//   Aborting it keeps navigation fast and deterministic; it has no bearing on
+//   whether WoS+ itself works.
+// - wos.gg: the Words on Stream mirror. Both views set the board iframe's
+//   `src` straight to the mirror URL (loadBoardIframeIfVisible), so every
+//   test that supplies a valid `mirrorUrl` makes the browser fetch a real
+//   game room. Blocking it costs nothing — the tests assert on the iframe's
+//   `src` attribute, never on what loads inside it — and the board's own
+//   content is a third-party page this suite has no business rendering
+//   (issue #203).
+//
+// Listing a host here also marks it as an expected failure
+// (isKnownExpectedFailureUrl), which is required: without that, aborting a
+// request would make it surface as an *unexpected* failure and fail every
+// smoke test.
+const BLOCKED_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'wos.gg'];
 
 // Twitch's own unofficial GQL lookup (src/scripts/twitch-channel.ts),
 // exercised by the settings dialog's Save flow. `twitchChannelExists`
