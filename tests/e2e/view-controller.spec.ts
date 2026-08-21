@@ -73,17 +73,14 @@ const VIEWS: readonly ViewFixture[] = [
 ];
 
 /**
- * `blockExternalNetwork` covers the hosts the *existing* suite reaches. These
- * tests additionally assert on the board iframe, whose `src` is set to the
- * live `wos.gg` mirror URL, and on the chat iframe pointed at `twitch.tv`, so
- * both are aborted here to keep this file hermetic under the same "zero real
- * network" convention (CLAUDE.md §7). Kept local to this spec rather than
- * added to the shared harness: widening the harness would change what the
- * existing specs exercise, which is out of scope for #128 step 1.
+ * `blockExternalNetwork` now covers wos.gg too (#203), so the local route
+ * this file used to carry for it is gone. The Twitch chat embed stays local:
+ * unlike the blocked hosts it is not a suite-wide policy — `smoke.spec.ts`
+ * deliberately lets the embed load when checking the page for console
+ * errors — and these tests only assert on the iframe's `src` attribute.
  */
 async function armView(page: Page): Promise<void> {
   await blockExternalNetwork(page);
-  await page.route('https://wos.gg/**', (route) => route.abort());
   await page.route('https://www.twitch.tv/embed/**', (route) => route.abort());
 }
 

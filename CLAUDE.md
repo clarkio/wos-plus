@@ -399,13 +399,23 @@ runtime.
   to get green (§2.2).
 - **Hermetic by the same convention as the acceptance stream** (§7): zero
   reliance on real third-party network reachability. `tests/e2e/e2e-harness.ts`
-  aborts Google Fonts and Twitch's GQL lookup over HTTP (`blockExternalNetwork`),
-  and separately mocks the WoS mirror socket (`wos2.gartic.es`) via
-  `page.routeWebSocket` — the settings dialog's Save flow opens that
-  connection as a raw WebSocket (socket.io with `transports: ['websocket']`,
-  no HTTP fallback), which `page.route` cannot intercept. Neither depends on
-  whether those hosts happen to be reachable in a given CI or sandbox network
-  policy.
+  aborts Google Fonts, Twitch's GQL lookup and the WoS mirror board
+  (`wos.gg`) over HTTP (`blockExternalNetwork`), and separately mocks the WoS
+  mirror socket (`wos2.gartic.es`) via `page.routeWebSocket` — the settings
+  dialog's Save flow opens that connection as a raw WebSocket (socket.io with
+  `transports: ['websocket']`, no HTTP fallback), which `page.route` cannot
+  intercept. Neither depends on whether those hosts happen to be reachable in
+  a given CI or sandbox network policy.
+- **The policy is pinned in the unit stream, not only end-to-end**
+  (`tests/unit/e2e-harness.test.ts`, added with
+  [#203](https://github.com/clarkio/wos-plus/issues/203)). Whether a host is
+  reachable from a given sandbox is not something a test about *policy* should
+  depend on: in a fully offline sandbox every host looks blocked whether the
+  harness blocks it or not, so a browser-driven assertion passes for the wrong
+  reason — which is exactly how the `wos.gg` gap survived being noticed. When
+  adding a host to `BLOCKED_HOSTS`, note that the same list drives
+  `isKnownExpectedFailureUrl`: a host that is aborted but *not* treated as an
+  expected failure surfaces as an unexpected one and fails every smoke test.
 - **A named, not hidden, gap**: `e2e.yml` provisions no Supabase credentials,
   so `/player`/`/streamer`'s in-page word-dictionary and channel-stats
   fetches fail the same way they would locally without `.dev.vars` — the
