@@ -9,10 +9,24 @@ import type { Page } from '@playwright/test';
  * to be reachable.
  */
 
-// The base page loads Google Fonts as a render-blocking stylesheet. Aborting
-// it keeps navigation fast and deterministic; it has no bearing on whether
-// WoS+ itself works.
-const BLOCKED_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+// Hosts no test in this suite is allowed to reach.
+//
+// - Google Fonts: the base page loads it as a render-blocking stylesheet.
+//   Aborting it keeps navigation fast and deterministic; it has no bearing on
+//   whether WoS+ itself works.
+// - wos.gg: the Words on Stream mirror. Both views set the board iframe's
+//   `src` straight to the mirror URL (loadBoardIframeIfVisible), so every
+//   test that supplies a valid `mirrorUrl` makes the browser fetch a real
+//   game room. Blocking it costs nothing — the tests assert on the iframe's
+//   `src` attribute, never on what loads inside it — and the board's own
+//   content is a third-party page this suite has no business rendering
+//   (issue #203).
+//
+// Listing a host here also marks it as an expected failure
+// (isKnownExpectedFailureUrl), which is required: without that, aborting a
+// request would make it surface as an *unexpected* failure and fail every
+// smoke test.
+const BLOCKED_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'wos.gg'];
 
 // Twitch's own unofficial GQL lookup (src/scripts/twitch-channel.ts),
 // exercised by the settings dialog's Save flow. `twitchChannelExists`
@@ -30,11 +44,28 @@ const BLOCKED_TWITCH_GQL = 'https://gql.twitch.tv/gql';
 // requires `page.routeWebSocket` as well.
 const BLOCKED_WOS_SOCKET_HOST = 'wos2.gartic.es';
 
+/**
+ * True when `url` is a host this suite refuses to talk to. Exported so the
+ * policy itself can be asserted in the unit stream
+ * (tests/unit/e2e-harness.test.ts): whether a given host is reachable from a
+ * particular sandbox or CI runner is not something a test about *policy*
+ * should depend on, and in a fully offline sandbox every host looks blocked
+ * whether the harness blocks it or not.
+ */
+export function isBlockedRequestUrl(url: URL): boolean {
+  return BLOCKED_HOSTS.includes(url.hostname) || url.href === BLOCKED_TWITCH_GQL;
+}
+
+/**
+ * Arms `page` so no request leaves for a third-party host: the HTTP hosts in
+ * `BLOCKED_HOSTS` and Twitch's GQL lookup are aborted, and the WoS mirror
+ * socket is intercepted separately (see `BLOCKED_WOS_SOCKET_HOST`).
+ *
+ * Call this **before** navigating — Playwright only intercepts requests and
+ * sockets opened after the routes are registered.
+ */
 export async function blockExternalNetwork(page: Page): Promise<void> {
-  await page.route(
-    (url) => BLOCKED_HOSTS.includes(url.hostname) || url.href === BLOCKED_TWITCH_GQL,
-    (route) => route.abort(),
-  );
+  await page.route(isBlockedRequestUrl, (route) => route.abort());
 
   // Must be registered before navigation (Playwright only intercepts sockets
   // opened after the route is armed). Not calling `ws.connectToServer()`
@@ -57,12 +88,18 @@ export async function blockExternalNetwork(page: Page): Promise<void> {
 const EXPECTED_EXACT_PATHS = ['/api/words'];
 const EXPECTED_PATH_PREFIXES = ['/api/channel-stats/'];
 
-// Matched against the *parsed* URL's hostname/pathname rather than substrings
-// of the raw URL string — `url.includes(...)` would also match an unrelated
-// host containing a blocked one (e.g. `evil-fonts.googleapis.com.example`) or
-// an unrelated path merely containing a known one as a substring (e.g.
-// `/api/words-backup`, or a query string like `/?next=/api/words`).
-const isKnownExpectedFailureUrl = (rawUrl: string): boolean => {
+/**
+ * True when a failed request against `rawUrl` is one this environment expects
+ * (a blocked host, or a Supabase-backed route with no credentials) rather
+ * than a defect worth failing a test over.
+ *
+ * Matched against the *parsed* URL's hostname/pathname rather than substrings
+ * of the raw URL string — `rawUrl.includes(...)` would also match an unrelated
+ * host containing a blocked one (e.g. `evil-fonts.googleapis.com.example`) or
+ * an unrelated path merely containing a known one as a substring (e.g.
+ * `/api/words-backup`, or a query string like `/?next=/api/words`).
+ */
+export const isKnownExpectedFailureUrl = (rawUrl: string): boolean => {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
