@@ -1,5 +1,8 @@
 import { findRedundantWords, hasInvalidWords, hasRedundantWords, normalizeLanguageCode, validateBoardName } from '../lib/board-utils';
 import { normalizeTwitchLogin } from './twitch-channel';
+import type { Slot } from '../lib/types';
+
+export type { Slot };
 
 export interface ChannelStats {
   allTimePersonalBest: number;
@@ -42,13 +45,6 @@ export async function fetchChannelStats(channel: string): Promise<ChannelStats> 
   }
 }
 
-export interface Slot {
-  letters: string[];
-  user?: string | null;
-  hitMax: boolean;
-  originalIndex?: number;
-  word: string;
-}
 
 export interface Board {
   id: string;

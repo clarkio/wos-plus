@@ -5,6 +5,7 @@ import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosW
 import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
 import { getMirrorGameId } from './mirror-url';
 import { wosLanguageIdToCode } from '../lib/board-utils';
+import type { Slot } from '../lib/types';
 
 
 const twitchWorker = new Worker(
@@ -16,7 +17,6 @@ const wosWorker = new Worker(
   { type: 'module' }
 );
 
-type Slots = { letters: string[], word: string, user?: string, hitMax: boolean; index: number, length: number };
 
 // A single Twitch chat message we may later match to a hidden correct-guess
 // event. `consumed` is flipped once it's been matched so a second event can't
@@ -80,7 +80,7 @@ export class GameSpectator {
   isProcessingTwitch: boolean = false;
   currentLevelHiddenLetters: string[] = [];
   currentLevelFakeLetters: string[] = [];
-  currentLevelSlots: Slots[] = [];
+  currentLevelSlots: Slot[] = [];
   currentLevelEmptySlotsCount: { [key: number]: number; } = {};
   isSoundsEnabled: boolean = true;
   // Identifies the active Twitch join attempt. Each (re)connect bumps this so a
@@ -514,7 +514,7 @@ export class GameSpectator {
   // unless the level has a masked guess: a masked slot's letters are reported
   // as '?' with no way to recover the real word after the fact, so the whole
   // level's gap is left in place rather than partially filled (issue #169).
-  private rebuildFoundWordsAfterReconnect(slots: Slots[]) {
+  private rebuildFoundWordsAfterReconnect(slots: Slot[]) {
     const filledSlots = slots.filter(slot => slot && slot.user);
     const hasMaskedGuess = filledSlots.some(slot => Array.isArray(slot.letters) && slot.letters.includes('?'));
     if (hasMaskedGuess) {
