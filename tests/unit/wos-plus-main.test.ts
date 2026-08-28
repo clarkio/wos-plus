@@ -32,6 +32,9 @@ vi.mock('@scripts/wos-words', async (importActual) => {
     // in tests it works purely from the big word and the slot-word candidates,
     // so save/fetch key derivation is genuinely exercised.
     determineBoardId: actual.determineBoardId,
+    // Same reasoning: picking which big word to display is pure string
+    // comparison with no dictionary dependency, so the real one is used.
+    selectDisplayedBigWord: actual.selectDisplayedBigWord,
   };
 });
 
