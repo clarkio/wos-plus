@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { findMissingWordsFromBoard, canFormWord, determineBoardId } from '@scripts/wos-words';
+import {
+  findMissingWordsFromBoard,
+  canFormWord,
+  determineBoardId,
+  selectDisplayedBigWord,
+} from '@scripts/wos-words';
 import type { Slot } from '@scripts/wos-words';
 
 /**
@@ -366,6 +371,42 @@ describe('wos-words module', () => {
       // RULING was never guessed nor passed as a candidate, but the
       // dictionary knows it is an anagram of LURING and it sorts last.
       expect(wosWords.determineBoardId('L U R I N G')).toBe('RULING');
+    });
+  });
+
+  describe('selectDisplayedBigWord', () => {
+    it('should take the candidate when no big word is displayed yet', () => {
+      expect(selectDisplayedBigWord('', 'B E D R O O M')).toBe('B E D R O O M');
+    });
+
+    it('should keep the displayed big word when the candidate is empty', () => {
+      expect(selectDisplayedBigWord('B E D R O O M', '')).toBe('B E D R O O M');
+      expect(selectDisplayedBigWord('B E D R O O M', '   ')).toBe('B E D R O O M');
+    });
+
+    it('should take a candidate that sorts after the displayed big word', () => {
+      expect(selectDisplayedBigWord('B E D R O O M', 'B R O O M E D')).toBe('B R O O M E D');
+    });
+
+    it('should keep the displayed big word when the candidate sorts before it', () => {
+      expect(selectDisplayedBigWord('B R O O M E D', 'B E D R O O M')).toBe('B R O O M E D');
+      expect(selectDisplayedBigWord('B R O O M E D', 'B O R E D O M')).toBe('B R O O M E D');
+    });
+
+    it('should compare ignoring display spaces and case', () => {
+      // 'BEDROOM' vs 'broomed': without normalisation the spaces and case
+      // would decide the comparison instead of the letters.
+      expect(selectDisplayedBigWord('BEDROOM', 'b r o o m e d')).toBe('b r o o m e d');
+      expect(selectDisplayedBigWord('B R O O M E D', 'bedroom')).toBe('B R O O M E D');
+    });
+
+    it('should keep the displayed big word when the candidate is the same word', () => {
+      const displayed = 'B R O O M E D';
+      expect(selectDisplayedBigWord(displayed, 'b r o o m e d')).toBe(displayed);
+    });
+
+    it('should return an empty string when neither is a word', () => {
+      expect(selectDisplayedBigWord('', '')).toBe('');
     });
   });
 

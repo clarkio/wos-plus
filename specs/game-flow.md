@@ -178,6 +178,23 @@ Related: [boards.md](boards.md) covers what happens to a captured board;
   word rather than as the letters, and WoS+ works out which of the board's
   letters were hidden and which were fake
 
+### Scenario: a board with more than one big word shows the alphabetically last
+
+- **Given** a level whose big word has anagrams — for example `BEDROOM`,
+  `BOREDOM` and `BROOMED` — and one of them has already been guessed
+- **When** another of them is guessed
+- **Then** the big word on display is whichever of the big words guessed **so
+  far** sorts last alphabetically, regardless of the order they were guessed in
+
+  The display used to follow the most recent guess, so it changed under the
+  player every time another anagram was found. Settling on the alphabetically
+  last one guessed keeps it steady: it only ever moves forward through the
+  alphabet, and it matches the rule already used to pick a board's canonical id
+  in [boards.md](boards.md).
+
+  Only big words actually guessed this level are candidates — WoS+ does not
+  reach into the dictionary to display an anagram nobody has found yet.
+
 ---
 
 ## Hidden and fake letters
