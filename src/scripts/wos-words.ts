@@ -1,3 +1,10 @@
+import type { Slot } from '../lib/types';
+
+// Re-exported for consumers that historically imported the slot shape from
+// this module (tests/unit/wos-words.test.ts). The canonical declaration is
+// in ../lib/types (issue #134).
+export type { Slot };
+
 // import localDictionary from './wos_dictionary.json';
 // Starts empty rather than undefined: loadWordsFromDb() is fire-and-forget and
 // deliberately swallows failures, so every consumer here can run before (or
@@ -56,15 +63,6 @@ export function canFormWord(word: string, availableLetters: string[]): boolean {
   return true;
 }
 
-export interface Slot {
-  letters: string[];
-  user?: string | null;
-  hitMax: boolean;
-  originalIndex?: number;
-  word: string;
-  index?: number;
-  length?: number;
-}
 
 /**
  * Determines the canonical database id for a board: the alphabetically last
