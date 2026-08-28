@@ -1,7 +1,7 @@
 import tmi, { type Client as tmiClient } from '@tmi.js/chat';
 import io from 'socket.io-client';
 
-import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosWord, canFormWord, determineBoardId } from './wos-words';
+import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosWord, canFormWord, determineBoardId, selectDisplayedBigWord } from './wos-words';
 import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
 import { getMirrorGameId } from './mirror-url';
 import { wosLanguageIdToCode } from '../lib/board-utils';
@@ -654,13 +654,23 @@ export class GameSpectator {
     this.updateCorrectWordsDisplayed(word);
     this.updateCurrentLevelSlots(username, word.split(''), index, hitMax);
 
-    // If hitMax is true, set the current level big word
+    // If hitMax is true, set the current level big word.
+    //
+    // A board can have several big words (anagrams — AUCTION and CAUTION), and
+    // every one of them arrives here as its own hitMax guess. Displaying the
+    // latest made the big word change under the player mid-level, so the
+    // display settles on the alphabetically last of the big words guessed so
+    // far instead (specs/game-flow.md § A correct guess). The hidden/fake
+    // letter deduction still runs off the word just guessed: the anagrams share
+    // a letter multiset, so it reaches the same answer either way, and
+    // calculateHiddenLetters is idempotent across repeat calls by design.
     if (hitMax) {
-      this.currentLevelBigWord = word.split('').join(' ').toUpperCase();
+      const guessedBigWord = word.split('').join(' ').toUpperCase();
+      this.currentLevelBigWord = selectDisplayedBigWord(this.currentLevelBigWord, guessedBigWord);
       document.getElementById('letters-label')!.innerText = 'Big Word:';
       document.getElementById('letters')!.innerText = this.currentLevelBigWord;
-      this.calculateHiddenLetters(this.currentLevelBigWord);
-      this.calculateFakeLetters(this.currentLevelBigWord);
+      this.calculateHiddenLetters(guessedBigWord);
+      this.calculateFakeLetters(guessedBigWord);
     }
 
 

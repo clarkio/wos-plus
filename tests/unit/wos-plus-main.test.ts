@@ -32,6 +32,9 @@ vi.mock('@scripts/wos-words', async (importActual) => {
     // in tests it works purely from the big word and the slot-word candidates,
     // so save/fetch key derivation is genuinely exercised.
     determineBoardId: actual.determineBoardId,
+    // Same reasoning: picking which big word to display is pure string
+    // comparison with no dictionary dependency, so the real one is used.
+    selectDisplayedBigWord: actual.selectDisplayedBigWord,
   };
 });
 
@@ -1970,6 +1973,43 @@ describe('GameSpectator class', () => {
       (spectator as any).updateGameState('testuser', ['t', 'e', 's', 't', 'i', 'n', 'g'], 0, true);
 
       expect(spectator.currentLevelBigWord).toBe('T E S T I N G');
+      expect(document.getElementById('letters-label')!.innerText).toBe('Big Word:');
+    });
+
+    it('should display the alphabetically last big word guessed, not the most recent', () => {
+      // BEDROOM, BOREDOM and BROOMED are anagram big words of one board. The
+      // display used to follow whichever was guessed last, which moved under
+      // the player; it now settles on the alphabetically last one guessed.
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 7 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 7 },
+        { letters: [], word: '', hitMax: false, index: 2, length: 7 },
+      ];
+
+      (spectator as any).updateGameState('p1', ['b', 'r', 'o', 'o', 'm', 'e', 'd'], 0, true);
+      expect(spectator.currentLevelBigWord).toBe('B R O O M E D');
+
+      (spectator as any).updateGameState('p2', ['b', 'e', 'd', 'r', 'o', 'o', 'm'], 1, true);
+      expect(spectator.currentLevelBigWord).toBe('B R O O M E D');
+      expect(document.getElementById('letters')!.innerText).toBe('B R O O M E D');
+
+      (spectator as any).updateGameState('p3', ['b', 'o', 'r', 'e', 'd', 'o', 'm'], 2, true);
+      expect(spectator.currentLevelBigWord).toBe('B R O O M E D');
+      expect(document.getElementById('letters')!.innerText).toBe('B R O O M E D');
+    });
+
+    it('should advance the displayed big word when a later guess sorts after it', () => {
+      spectator.currentLevelSlots = [
+        { letters: [], word: '', hitMax: false, index: 0, length: 7 },
+        { letters: [], word: '', hitMax: false, index: 1, length: 7 },
+      ];
+
+      (spectator as any).updateGameState('p1', ['b', 'e', 'd', 'r', 'o', 'o', 'm'], 0, true);
+      expect(spectator.currentLevelBigWord).toBe('B E D R O O M');
+
+      (spectator as any).updateGameState('p2', ['b', 'r', 'o', 'o', 'm', 'e', 'd'], 1, true);
+      expect(spectator.currentLevelBigWord).toBe('B R O O M E D');
+      expect(document.getElementById('letters')!.innerText).toBe('B R O O M E D');
       expect(document.getElementById('letters-label')!.innerText).toBe('Big Word:');
     });
 

@@ -294,6 +294,10 @@ See [LIST.todo](../LIST.todo) for active bugs. Critical scenarios:
 - Multiple `?` hidden letters revealed at different times
 - Chat message timing mismatches for masked guess resolution
 - Big word detection when fake letters still present
+- Boards with several big words (anagrams): each one arrives as its own
+  `hitMax` guess. The display keeps the alphabetically last of the ones
+  guessed so far (`selectDisplayedBigWord` in `wos-words.ts`) rather than
+  following the most recent guess
 - Slot-based missed word detection **is implemented** —
   `findMissingWordsFromBoard` in `wos-words.ts`, used by `logMissingWords` when
   the level's board is in the archive. (This file previously said it was not,

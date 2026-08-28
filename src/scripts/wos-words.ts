@@ -107,6 +107,30 @@ export function determineBoardId(bigWord: string, extraCandidates: string[] = []
   return [...candidates].sort((a, b) => a.localeCompare(b)).pop()!.toUpperCase();
 }
 
+/**
+ * Chooses which of a level's big words to show. A level can have several valid
+ * big words — anagrams of the same letters, e.g. AUCTION and CAUTION — and the
+ * game reports each one as it is guessed. Showing the most recent guess made
+ * the display jump around under the player mid-level, so WoS+ keeps whichever
+ * of the big words guessed **so far** sorts last alphabetically. That only ever
+ * moves forward through the alphabet, and it is the same tie-break
+ * `determineBoardId` uses to pick a board's canonical id.
+ *
+ * Unlike `determineBoardId`, this looks only at what has actually been guessed:
+ * the dictionary is not consulted, so an anagram nobody has found is never put
+ * on screen. Both arguments are display strings (letters separated by spaces);
+ * the comparison ignores those spaces and case, and the winner is returned
+ * exactly as it was passed in.
+ */
+export function selectDisplayedBigWord(displayed: string, candidate: string): string {
+  const normalize = (word: string) => word.replace(/\s+/g, '').toLowerCase();
+
+  // The empty cases need no guard of their own: an empty string sorts before
+  // every word, so an empty candidate loses to whatever is displayed and an
+  // empty display loses to any candidate — which is exactly what is wanted.
+  return normalize(candidate).localeCompare(normalize(displayed)) > 0 ? candidate : displayed;
+}
+
 export async function loadWordsFromDb() {
   try {
     const url = '/api/words';

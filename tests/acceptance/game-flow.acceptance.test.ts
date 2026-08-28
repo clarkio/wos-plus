@@ -683,6 +683,27 @@ describe('specs/game-flow.md § A correct guess', () => {
     expect(spectator.currentLevelSlots[3].hitMax).toBe(true);
   });
 
+  it('shows the alphabetically last big word guessed when a board has several', async () => {
+    // AUCTION and CAUTION are anagrams, so both are big words of this board.
+    // CAUTION is guessed second here and first in the next test; either way the
+    // display settles on CAUTION rather than on whichever was guessed last.
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'auction', index: 3, hitMax: true }));
+    expect(text('letters')).toBe('A U C T I O N');
+
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'caution', index: 3, hitMax: true }));
+
+    expect(text('letters-label')).toBe('Big Word:');
+    expect(text('letters')).toBe('C A U T I O N');
+  });
+
+  it('keeps the alphabetically last big word when an earlier one is guessed after it', async () => {
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'caution', index: 3, hitMax: true }));
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'auction', index: 3, hitMax: true }));
+
+    expect(text('letters-label')).toBe('Big Word:');
+    expect(text('letters')).toBe('C A U T I O N');
+  });
+
   it('trusts the word the game gave it and never looks at chat', async () => {
     // Chat is full of a different word of the same length. An unmasked event
     // carries the word itself, so chat must not get a vote.
