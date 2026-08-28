@@ -124,17 +124,11 @@ export function determineBoardId(bigWord: string, extraCandidates: string[] = []
  */
 export function selectDisplayedBigWord(displayed: string, candidate: string): string {
   const normalize = (word: string) => word.replace(/\s+/g, '').toLowerCase();
-  const cleanCandidate = normalize(candidate);
-  if (cleanCandidate.length === 0) {
-    return displayed;
-  }
 
-  const cleanDisplayed = normalize(displayed);
-  if (cleanDisplayed.length === 0) {
-    return candidate;
-  }
-
-  return cleanCandidate.localeCompare(cleanDisplayed) > 0 ? candidate : displayed;
+  // The empty cases need no guard of their own: an empty string sorts before
+  // every word, so an empty candidate loses to whatever is displayed and an
+  // empty display loses to any candidate — which is exactly what is wanted.
+  return normalize(candidate).localeCompare(normalize(displayed)) > 0 ? candidate : displayed;
 }
 
 export async function loadWordsFromDb() {
