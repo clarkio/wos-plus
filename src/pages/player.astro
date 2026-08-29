@@ -103,7 +103,13 @@ import ThemeControl from "../components/ThemeControl.astro";
 
   <div class="player-wos-main-grid">
     <div class="player-wos-board-container" id="wos-board">
-      <iframe id="player-wos-board-iframe" src="" loading="lazy"></iframe>
+      <!--
+        `allow="autoplay"` delegates the autoplay permission to the wos.gg
+        board. The permission defaults to `self`, so without it the
+        cross-origin frame is blocked by the browser autoplay policy and the
+        game's audio stays silent on this page.
+      -->
+      <iframe id="player-wos-board-iframe" src="" loading="lazy" allow="autoplay"></iframe>
     </div>
     <div class="player-channel-data-container">
       <button
