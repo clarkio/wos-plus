@@ -143,6 +143,22 @@ for (const view of VIEWS) {
       await expect(page.locator(view.boardIframe)).toHaveAttribute('src', MIRROR_URL);
     });
 
+    test('delegates autoplay to the board iframe so WoS audio can play', async ({ page }) => {
+      await armView(page);
+      await page.goto(pathWith(view.path, validParams()), {
+        waitUntil: 'domcontentloaded',
+      });
+
+      // wos.gg is a cross-origin child, and the autoplay permission defaults
+      // to `self` — without the delegation the mirror's game audio is muted
+      // by the browser's autoplay policy no matter what the user does on the
+      // parent page.
+      await expect(page.locator(view.boardIframe)).toHaveAttribute(
+        'allow',
+        /\bautoplay\b/,
+      );
+    });
+
     test('board=false hides the board container and clears the iframe', async ({ page }) => {
       await armView(page);
       await page.goto(pathWith(view.path, validParams({ board: 'false' })), {
