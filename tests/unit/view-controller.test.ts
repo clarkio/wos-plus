@@ -411,29 +411,23 @@ describe('view controller lifecycle', () => {
 });
 
 describe('view controller resilience and connection churn', () => {
-  // ⚠️ Pins current behaviour under protest — known gap (#204).
-  //
-  // Most of this module guards its lookups (`applyChatVisibility` casts to
-  // `HTMLIFrameElement | null` and returns early when either element is
-  // missing), but `initializePage` re-implements the same work inline and
-  // casts to a non-null type it never checks — so a page missing
-  // `#{view}-twitch-chat-widget` throws on load instead of degrading.
-  //
-  // That is exactly the duplication #204 tracks, and extracting this module
-  // is what made it reproducible in a unit test for the first time: the
-  // defect was unreachable while the code lived in an inline `<script>` with
-  // no importable surface. Fixing it is #204's job, not this PR's.
-  //
-  // **When #204 lands, invert this assertion in the same PR** — do not delete
-  // it to get green (CLAUDE.md §2.2, §7).
-  it('throws when the page is missing the elements it drives (known gap #204)', () => {
+  it('does not throw when the page is missing the elements it drives', () => {
+    // Was pinned under protest as a known gap (#204) when this module was
+    // extracted: `initializePage` re-implemented the chat/board visibility
+    // work inline, casting to non-null types it never checked, so a page
+    // missing `#{view}-twitch-chat-widget` threw on load — while
+    // `applyChatVisibility` guarded the identical lookup. Those inline copies
+    // are gone; the assertion is inverted here rather than deleted (§2.2, §7).
+    //
+    // An OBS browser source rendering a trimmed page, or markup drifting ahead
+    // of this module, should degrade rather than throw.
     document.body.innerHTML = '<div></div>';
     setSearch({ mirrorUrl: MIRROR_URL, twitchChannel: TWITCH_CHANNEL });
 
     expect(() => {
       createViewController('player').initialize();
       vi.advanceTimersByTime(500);
-    }).toThrow(TypeError);
+    }).not.toThrow();
   });
 
   it('re-points the chat embed only when the channel actually changes', async () => {

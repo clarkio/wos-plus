@@ -248,6 +248,15 @@ export function createViewController(view: ViewName): ViewController {
       }
     };
 
+    /** Points the chat embed at whatever `twitchChannel` currently holds. */
+    const pointChatEmbedAtChannel = () => {
+      const twitchChatWidget = document.getElementById(
+        `${view}-twitch-chat-widget`,
+      ) as HTMLIFrameElement | null;
+      if (!twitchChatWidget) return;
+      twitchChatWidget.src = `https://www.twitch.tv/embed/${twitchChannel}/chat?darkpopout&parent=${location.hostname}`;
+    };
+
     const applyBoardVisibility = (boardEnabled: boolean) => {
       const boardContainer = boardContainerEl();
       if (!boardContainer) return;
@@ -344,12 +353,7 @@ export function createViewController(view: ViewName): ViewController {
         // Only swap the chat embed when the channel actually changed to avoid an
         // unnecessary reload of the iframe.
         if (channelChanged) {
-          const twitchChatWidget = document.getElementById(
-            `${view}-twitch-chat-widget`,
-          ) as HTMLIFrameElement | null;
-          if (twitchChatWidget) {
-            twitchChatWidget.src = `https://www.twitch.tv/embed/${twitchChannel}/chat?darkpopout&parent=${location.hostname}`;
-          }
+          pointChatEmbedAtChannel();
         }
 
         // Only re-point the board iframe when the mirror URL actually changed.
@@ -472,28 +476,12 @@ export function createViewController(view: ViewName): ViewController {
       }
 
       if (urlParams.has("chat")) {
-        const isChatEnabled = urlParams.get("chat")?.toLowerCase() === "true";
-        const twitchChatWidget = document.getElementById(
-          `${view}-twitch-chat-widget`,
-        ) as HTMLIFrameElement;
-        const grid = document.querySelector(
-          `.${view}-wos-main-grid`,
-        ) as HTMLElement;
-        if (isChatEnabled) {
-          twitchChatWidget.style.display = "";
-          grid.classList.remove("chat-hidden");
-        } else {
-          twitchChatWidget.style.display = "none";
-          grid.classList.add("chat-hidden");
-        }
+        applyChatVisibility(urlParams.get("chat")?.toLowerCase() === "true");
       }
 
       if (normalizedChannelFromParams) {
         twitchChannel = normalizedChannelFromParams;
-        const twitchChatWidget = document.getElementById(
-          `${view}-twitch-chat-widget`,
-        ) as HTMLIFrameElement;
-        twitchChatWidget.src = `https://www.twitch.tv/embed/${twitchChannel}/chat?darkpopout&parent=${location.hostname}`;
+        pointChatEmbedAtChannel();
       }
 
       // Only connect if we have required parameters
@@ -509,18 +497,9 @@ export function createViewController(view: ViewName): ViewController {
       }
 
       if (urlParams.has("board")) {
-        const boardEnabled = urlParams.get("board")?.toLowerCase() === "true";
-        const boardContainer = boardContainerEl();
-        if (boardContainer) {
-          if (boardEnabled) {
-            boardContainer.style.display = "";
-            loadBoardIframeIfVisible();
-          } else {
-            boardContainer.style.display = "none";
-            clearBoardIframe();
-          }
-        }
+        applyBoardVisibility(urlParams.get("board")?.toLowerCase() === "true");
       } else {
+        // No preference expressed: the board stays as the markup rendered it.
         loadBoardIframeIfVisible();
       }
     };
