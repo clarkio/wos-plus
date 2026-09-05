@@ -139,7 +139,7 @@ Prefer a failing build over a paragraph of good advice.
 
 ## 4. Known state (keep current)
 
-- Test suite: **736 passing** Vitest tests across 22 files, plus **3
+- Test suite: **774 passing** Vitest tests across 23 files, plus **3
   `it.todo`**. Every remaining todo is a **known gap with a tracking issue or a
   stated coverage limitation** — none is simply an unwritten test, and none may
   be deleted to tidy the count. The decisions behind them are tabulated in
@@ -152,13 +152,20 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **91.92% statements / 88.00% branches / 89.34% functions /
- 92.60% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **91.91% statements / 87.04% branches / 89.38% functions /
+ 92.68% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.
   - `src/scripts/wos-widget.ts` is still at **0%** — the one module no test
     imports.
+  - **Branches dropped from 88.00% to 87.04% and the headroom above the 86
+    floor is now thinner.** #128 step 3 moved ~470 lines of previously
+    *uncounted* inline `<script>` into `src/scripts/view-controller.ts`, so
+    the denominator grew by code that had never been measured. Nothing got
+    worse — the ratchet is simply seeing it for the first time. A PR touching
+    that module should expect to add branch coverage rather than assume
+    slack.
   - **Thresholds are enforced** (`vitest.config.ts` `coverage.thresholds`,
     landed with [#155](https://github.com/clarkio/wos-plus/issues/155)):
     global floor statements 91 / branches 86 / functions 88 / lines 91, plus
@@ -376,27 +383,27 @@ runtime.
   connections are explicitly **out of scope** — that protocol handling is
   already covered deterministically by the fixture-driven worker tests
   (`tests/unit/wos-worker.test.ts`, `tests/unit/twitch-chat-worker.test.ts`).
-- **One deliberate exception to "thin"**:
-  `tests/e2e/view-controller.spec.ts` is *characterization* coverage, not
-  smoke — required-parameter gating, `board`/`chat` visibility handling, board
-  iframe load/clear, and settings-form pre-population, on both `/player` and
-  `/streamer`. It exists because those two pages carry ~630 duplicated lines
-  with no other test coverage at all, and
-  [#128](https://github.com/clarkio/wos-plus/issues/128) will deduplicate
-  them; it is the safety net that refactor needs. It has to live at this layer
-  rather than in Vitest because both pages' client code is an inline
-  `<script>` block inside the `.astro` file, so there is no module to import —
-  extracting one is itself part of #128. **Fold it back into the unit stream
-  once that extraction lands**; it is not a licence to grow the E2E layer
-  generally.
-- **Two of its tests pin drift between the two views on purpose** — `/player`
-  echoes invalid query parameters back into the settings dialog while
-  `/streamer` discards them, and the chat/board toggles exist only in
-  player's form. Both are open questions on #128, pinned as *current
-  behaviour under protest* in the same spirit as the ⚠️ acceptance tests in
-  §7. Deduplicating the views will force one behaviour on both, so the
-  matching test must be **updated in the same PR as the fix**, never deleted
-  to get green (§2.2).
+- **The view-controller characterization tests have been folded back into
+  the unit stream**, as this section previously said they should be. Both
+  pages' client code is now one importable module
+  (`src/scripts/view-controller.ts`, [#128](https://github.com/clarkio/wos-plus/issues/128)
+  step 3), so `tests/unit/view-controller.test.ts` covers required-parameter
+  gating, `board`/`chat` handling, board iframe load/clear, settings-form
+  population, the save flow and the controller lifecycle — faster than driving
+  a browser, and **counted by coverage**, which an inline `<script>` never was.
+  `tests/e2e/view-controller.spec.ts` keeps only what a unit test structurally
+  cannot assert: that each `.astro` page really renders the elements the shared
+  controller looks up. A unit test builds its own fixture DOM, so a page that
+  stopped emitting a control would still satisfy it.
+- **One test in `tests/unit/view-controller.test.ts` pins a defect under
+  protest** — `initializePage` casts
+  `#{view}-twitch-chat-widget` to a non-null type it never checks, so a page
+  missing that element throws on load, while `applyChatVisibility` guards the
+  same lookup. That is the duplication
+  [#204](https://github.com/clarkio/wos-plus/issues/204) tracks; extracting the
+  module is what made it reachable from a test at all. **Invert that assertion
+  in the same PR that fixes #204**, never delete it (§2.2, and the ⚠️
+  convention in §7).
 - **Hermetic by the same convention as the acceptance stream** (§7): zero
   reliance on real third-party network reachability. `tests/e2e/e2e-harness.ts`
   aborts Google Fonts, Twitch's GQL lookup and the WoS mirror board
