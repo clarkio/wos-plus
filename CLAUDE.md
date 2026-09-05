@@ -139,7 +139,7 @@ Prefer a failing build over a paragraph of good advice.
 
 ## 4. Known state (keep current)
 
-- Test suite: **773 passing** Vitest tests across 23 files, plus **3
+- Test suite: **774 passing** Vitest tests across 23 files, plus **3
   `it.todo`**. Every remaining todo is a **known gap with a tracking issue or a
   stated coverage limitation** — none is simply an unwritten test, and none may
   be deleted to tidy the count. The decisions behind them are tabulated in
@@ -152,8 +152,8 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **91.87% statements / 87.04% branches / 89.28% functions /
- 92.64% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **91.91% statements / 87.04% branches / 89.38% functions /
+ 92.68% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.
@@ -395,7 +395,8 @@ runtime.
   cannot assert: that each `.astro` page really renders the elements the shared
   controller looks up. A unit test builds its own fixture DOM, so a page that
   stopped emitting a control would still satisfy it.
-- **One test there pins a defect under protest** — `initializePage` casts
+- **One test in `tests/unit/view-controller.test.ts` pins a defect under
+  protest** — `initializePage` casts
   `#{view}-twitch-chat-widget` to a non-null type it never checks, so a page
   missing that element throws on load, while `applyChatVisibility` guards the
   same lookup. That is the duplication

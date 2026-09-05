@@ -82,12 +82,20 @@ export interface ViewController {
  */
 export function createViewController(view: ViewName): ViewController {
 
-    const boardContainer = document.getElementById(
-      "wos-board",
-    ) as HTMLDivElement | null;
-    const boardIframe = document.getElementById(
-      `${view}-wos-board-iframe`,
-    ) as HTMLIFrameElement | null;
+    // Resolved per call, not captured once. `initialize()` runs on every
+    // `astro:page-load`, where Astro replaces the document body — a reference
+    // captured here would point at a detached node from the second navigation
+    // onward, and the board would silently stop responding to the `board`
+    // parameter. Nothing enables `ClientRouter` today, so that path is latent
+    // rather than live, but every other lookup in this module is already lazy
+    // and this pair was the sole exception (carried over from the inline page
+    // scripts).
+    const boardContainerEl = () =>
+      document.getElementById("wos-board") as HTMLDivElement | null;
+    const boardIframeEl = () =>
+      document.getElementById(
+        `${view}-wos-board-iframe`,
+      ) as HTMLIFrameElement | null;
     let currentMirrorUrl = "";
     let twitchChannel = "clarkio";
 
@@ -134,12 +142,17 @@ export function createViewController(view: ViewName): ViewController {
       return match ? match[1] : trimmed;
     };
 
-    const isBoardVisible = () =>
-      boardContainer
+    const isBoardVisible = () => {
+      const boardContainer = boardContainerEl();
+      // No container at all counts as visible: the caller's next guard is on
+      // the iframe, which is the thing that actually matters.
+      return boardContainer
         ? window.getComputedStyle(boardContainer).display !== "none"
         : true;
+    };
 
     const loadBoardIframeIfVisible = () => {
+      const boardIframe = boardIframeEl();
       if (!boardIframe || !currentMirrorUrl || !isBoardVisible()) {
         return;
       }
@@ -150,6 +163,7 @@ export function createViewController(view: ViewName): ViewController {
     };
 
     const clearBoardIframe = () => {
+      const boardIframe = boardIframeEl();
       if (!boardIframe) {
         return;
       }
@@ -235,6 +249,7 @@ export function createViewController(view: ViewName): ViewController {
     };
 
     const applyBoardVisibility = (boardEnabled: boolean) => {
+      const boardContainer = boardContainerEl();
       if (!boardContainer) return;
       if (boardEnabled) {
         boardContainer.style.display = "";
@@ -495,6 +510,7 @@ export function createViewController(view: ViewName): ViewController {
 
       if (urlParams.has("board")) {
         const boardEnabled = urlParams.get("board")?.toLowerCase() === "true";
+        const boardContainer = boardContainerEl();
         if (boardContainer) {
           if (boardEnabled) {
             boardContainer.style.display = "";

@@ -370,6 +370,32 @@ describe('view controller lifecycle', () => {
     expect(spectatorInstances).toHaveLength(1);
   });
 
+  it('drives the board in a replaced document, not the one it was built against', () => {
+    // Regression for the review finding on #213: `boardContainer` and
+    // `boardIframe` used to be resolved once when the controller was built,
+    // while `initialize()` runs again on every `astro:page-load` — where Astro
+    // swaps the document body. The controller would then mutate detached
+    // nodes and the visible board would stop responding to `board`.
+    //
+    // Latent rather than live today (nothing enables `ClientRouter`), which is
+    // exactly why it needs a test: no existing one re-renders between calls,
+    // so nothing would notice if the lookups were captured again.
+    setSearch({ mirrorUrl: MIRROR_URL, twitchChannel: TWITCH_CHANNEL, board: 'false' });
+    attachDialogApi('player');
+    const controller = createViewController('player');
+    controller.initialize();
+    vi.advanceTimersByTime(500);
+
+    // Stand in for a client-side navigation: same markup, all-new nodes.
+    renderView('player');
+    attachDialogApi('player');
+    controller.initialize();
+    vi.advanceTimersByTime(500);
+
+    expect((document.getElementById('wos-board') as HTMLElement).style.display).toBe('none');
+    expect(document.getElementById('player-wos-board-iframe')?.hasAttribute('src')).toBe(false);
+  });
+
   it('picks up the dialog API from the dialog-ready event when it is not there yet', () => {
     setSearch({ mirrorUrl: MIRROR_URL, twitchChannel: TWITCH_CHANNEL });
     const controller = createViewController('player');
