@@ -46,6 +46,12 @@ for (const view of ['player', 'streamer'] as const) {
 
     await expect(page.locator(`.${view}-wos-main-grid`)).toHaveCount(1);
 
+    // Both views style the correct-words log through the same class (#207).
+    // Pinned here because the two used to diverge — player carried
+    // `player-correct-words-log` and bypassed the shared base entirely — and
+    // nothing else would notice a per-view class creeping back in.
+    await expect(page.locator('#correct-words-log')).toHaveClass('correct-words-log');
+
     // The three the shared spectator drives stay unprefixed on both views, so
     // one script in wos-plus-main.ts can find them.
     await expect(page.locator('#wos-board')).toHaveCount(1);
