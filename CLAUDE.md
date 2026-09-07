@@ -152,20 +152,20 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **91.91% statements / 87.04% branches / 89.38% functions /
- 92.68% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **91.98% statements / 87.30% branches / 89.42% functions /
+ 92.75% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.
   - `src/scripts/wos-widget.ts` is still at **0%** — the one module no test
     imports.
-  - **Branches dropped from 88.00% to 87.04% and the headroom above the 86
-    floor is now thinner.** #128 step 3 moved ~470 lines of previously
-    *uncounted* inline `<script>` into `src/scripts/view-controller.ts`, so
-    the denominator grew by code that had never been measured. Nothing got
-    worse — the ratchet is simply seeing it for the first time. A PR touching
-    that module should expect to add branch coverage rather than assume
-    slack.
+  - **Branches sit at 87.30%, closer to the 86 floor than before #128.**
+    Step 3 moved ~470 lines of previously *uncounted* inline `<script>` into
+    `src/scripts/view-controller.ts`, so the denominator grew by code that had
+    never been measured; nothing got worse, the ratchet is simply seeing it for
+    the first time. (#204 then removed the duplicated branches inside it, which
+    is why the number recovered from 87.04%.) A PR touching that module should
+    still expect to add branch coverage rather than assume slack.
   - **Thresholds are enforced** (`vitest.config.ts` `coverage.thresholds`,
     landed with [#155](https://github.com/clarkio/wos-plus/issues/155)):
     global floor statements 91 / branches 86 / functions 88 / lines 91, plus
@@ -395,15 +395,17 @@ runtime.
   cannot assert: that each `.astro` page really renders the elements the shared
   controller looks up. A unit test builds its own fixture DOM, so a page that
   stopped emitting a control would still satisfy it.
-- **One test in `tests/unit/view-controller.test.ts` pins a defect under
-  protest** — `initializePage` casts
-  `#{view}-twitch-chat-widget` to a non-null type it never checks, so a page
-  missing that element throws on load, while `applyChatVisibility` guards the
-  same lookup. That is the duplication
-  [#204](https://github.com/clarkio/wos-plus/issues/204) tracks; extracting the
-  module is what made it reachable from a test at all. **Invert that assertion
-  in the same PR that fixes #204**, never delete it (§2.2, and the ⚠️
-  convention in §7).
+- **A defect this layer once pinned under protest is now fixed**
+  ([#204](https://github.com/clarkio/wos-plus/issues/204)). `initializePage`
+  re-implemented the chat/board visibility work inline instead of calling
+  `applyChatVisibility` / `applyBoardVisibility`, and the inline copies cast to
+  non-null types they never checked — so a page missing
+  `#{view}-twitch-chat-widget` threw on load while the helpers guarded the
+  identical lookup. There is now one guarded path for each, plus
+  `pointChatEmbedAtChannel` for the embed URL that was built in two places. The
+  test that pinned the throw was **inverted, not deleted**, and now asserts the
+  controller degrades instead — which is the ⚠️ flow in §7 running to
+  completion.
 - **Hermetic by the same convention as the acceptance stream** (§7): zero
   reliance on real third-party network reachability. `tests/e2e/e2e-harness.ts`
   aborts Google Fonts, Twitch's GQL lookup and the WoS mirror board
