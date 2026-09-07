@@ -26,6 +26,7 @@ The shape you need to know before touching code:
 | Area | Where | Notes |
 | --- | --- | --- |
 | Game state orchestration | `src/scripts/wos-plus-main.ts` | `GameSpectator` class; slot-based level state |
+| The two game views | `src/components/WosGameView.astro` + `src/scripts/view-controller.ts` | One markup component and one controller, both parameterised by `"player" \| "streamer"`. The pages are thin wrappers ([#128](https://github.com/clarkio/wos-plus/issues/128)) |
 | Web Workers | `src/scripts/wos-worker.ts`, `src/scripts/twitch-chat-worker.ts` | `postMessage` only; no DOM, no shared state |
 | Dictionary / word matching | `src/scripts/wos-words.ts` | The crown jewels. Highest-risk module, lowest coverage. |
 | Twitch channel names | `src/scripts/twitch-channel.ts` | Canonical normalization and 1–50 character validation |
@@ -394,7 +395,10 @@ runtime.
   `tests/e2e/view-controller.spec.ts` keeps only what a unit test structurally
   cannot assert: that each `.astro` page really renders the elements the shared
   controller looks up. A unit test builds its own fixture DOM, so a page that
-  stopped emitting a control would still satisfy it.
+  stopped emitting a control would still satisfy it. **That test carries more
+  weight since #128 step 4**: the markup now lives in
+  `src/components/WosGameView.astro` rather than in the pages, so it enumerates
+  every id the controller and the spectator drive rather than sampling a few.
 - **A defect this layer once pinned under protest is now fixed**
   ([#204](https://github.com/clarkio/wos-plus/issues/204)). `initializePage`
   re-implemented the chat/board visibility work inline instead of calling

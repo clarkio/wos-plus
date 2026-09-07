@@ -52,10 +52,29 @@ for (const view of ['player', 'streamer'] as const) {
     // nothing else would notice a per-view class creeping back in.
     await expect(page.locator('#correct-words-log')).toHaveClass('correct-words-log');
 
-    // The three the shared spectator drives stay unprefixed on both views, so
-    // one script in wos-plus-main.ts can find them.
-    await expect(page.locator('#wos-board')).toHaveCount(1);
-    await expect(page.locator('#correct-words-log')).toHaveCount(1);
-    await expect(page.locator('#open-settings-btn')).toHaveCount(1);
+    // The ids the shared spectator drives stay unprefixed on both views, so
+    // one script in wos-plus-main.ts can find them. Enumerated rather than
+    // sampled, because #128 step 4 moved this markup into a component: the
+    // pages no longer spell it out, so nothing else would notice a control
+    // going missing from one view.
+    for (const id of [
+      'wos-board',
+      'open-settings-btn',
+      'correct-words-log',
+      'level-title',
+      'level-value',
+      'pb-record',
+      'pb-value',
+      'daily-pb-record',
+      'daily-pb-value',
+      'daily-clear-record',
+      'daily-clear-value',
+      'letters-label',
+      'letters',
+      'hidden-letter',
+      'fake-letter',
+    ]) {
+      await expect(page.locator(`#${id}`)).toHaveCount(1);
+    }
   });
 }
