@@ -57,6 +57,7 @@ body {
   overflow-x: hidden;
   height: 100%;
   width: 100%;
+  min-height: 0;
   font-family: var(--font-mono);
   box-sizing: border-box;
   color: var(--text-muted);
@@ -66,12 +67,6 @@ body {
   background: var(--bg-overlay);
   container-type: size;
   container-name: word-log;
-
-  /* Dynamic scaling based on available space */
-  --word-log-height: 100%;
-  --padding-vertical: clamp(0.25rem, 2cqh, 0.75rem);
-  --padding-horizontal: clamp(0.25rem, 3cqi, 0.75rem);
-
   gap: clamp(0.1rem, 1cqh, 0.25rem);
 
   /* Smooth scroll behavior for content overflow */
@@ -123,8 +118,7 @@ body {
     animation: none;
   }
 
-  .correct-words-log.auto-scroll,
-  .player-correct-words-log.auto-scroll {
+  .correct-words-log.auto-scroll {
     overflow-y: auto;
   }
 }

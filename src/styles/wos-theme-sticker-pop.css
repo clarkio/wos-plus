@@ -181,7 +181,6 @@
 }
 
 /* --- Word log: dark block with yellow offset shadow ---------------------- */
-[data-theme="sticker-pop"] .player-correct-words-log,
 [data-theme="sticker-pop"] .correct-words-log {
   background: var(--sp-bg-deep);
   border: none;
