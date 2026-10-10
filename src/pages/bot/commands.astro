@@ -1,17 +1,17 @@
 ---
 import WosBaseLayout from "../../layouts/WosBaseLayout.astro";
 import Twitch from "../../components/Icons/Twitch.astro";
+import { BOT_COMMAND_GROUPS } from "../../data/bot-commands";
 
-// The page the bot service redirects to after a successful Twitch
-// authorization (issue #178). It is also linked from /bot so a streamer who
-// authorized earlier — or who lost the redirect — can find the same steps
-// again; nothing on it depends on having arrived from the OAuth callback.
+// The full WoS+ Bot command reference. The bot's !help reply links here
+// (https://wosplus.com/bot/commands) because the whole list is too long to
+// read in a Twitch chat window. The data lives in src/data/bot-commands.ts.
 ---
 
 <WosBaseLayout
-  title="Set up WoS+ Bot | Twitch Chatbot for Words on Stream"
-  description="Finish setting up WoS+ Bot in your Twitch stream: verify the bot, mod it, and connect your Words on Stream mirror link."
-  keywords="words on stream, wos, chatbot, twitch bot, wos plus bot, setup, mirror link, mod the bot"
+  title="WoS+ Bot Commands | Twitch Chatbot for Words on Stream"
+  description="Every WoS+ Bot chat command for Words on Stream: start and continue games, define words, see clear streaks, and the settings broadcasters and moderators can change."
+  keywords="words on stream, wos, chatbot, twitch bot, wos plus bot, commands, help, define, continue, restart, moderator"
 >
   <div class="sp-bot">
     <!-- ===================== Nav ===================== -->
@@ -20,7 +20,7 @@ import Twitch from "../../components/Icons/Twitch.astro";
       <nav class="sp-nav-links">
         <a href="/">Home</a>
         <a href="/bot">Bot</a>
-        <a href="/bot/commands" class="sp-nav-launch">Commands</a>
+        <a href="/bot/setup" class="sp-nav-launch">Setup</a>
       </nav>
     </header>
 
@@ -29,113 +29,65 @@ import Twitch from "../../components/Icons/Twitch.astro";
       <div class="sp-hero-content">
         <span class="sp-hero-badge">
           <Twitch width={16} height={16} />
-          After you authorize the bot
+          Type these in Twitch chat
         </span>
         <h1 class="sp-hero-title">
-          FINISH <span class="sp-hero-accent">SETUP</span>
+          BOT <span class="sp-hero-accent">COMMANDS</span>
         </h1>
         <p class="sp-hero-sub">
-          Four short steps in your own Twitch chat and WoS+ Bot will start
-          tracking your Words on Stream games.
+          Everything WoS+ Bot answers to. Words in <code>&lt;angle brackets&gt;</code>
+          are required, words in <code>[square brackets]</code> are optional.
+          Want one command explained in chat? Send <code>!help</code> and its name,
+          like <code>!help define</code>.
         </p>
+        <nav class="sp-jump" aria-label="Command groups">
+          {BOT_COMMAND_GROUPS.map((group) => (
+            <a href={`#${group.id}`}>{group.title}</a>
+          ))}
+        </nav>
       </div>
     </section>
 
-    <!-- ===================== Steps ===================== -->
-    <section class="sp-section" data-setup-steps>
-      <ol class="sp-setup">
-        <li class="sp-setup-item sp-setup-1">
-          <div class="sp-setup-num">1</div>
-          <div class="sp-setup-body">
-            <h2>Check the bot is in your chat</h2>
-            <p>
-              Go to your own Twitch chat and send <code>!ping</code>. WoS+ Bot
-              should reply with <code>Pong!</code> within a second or two.
-            </p>
-            <p class="sp-setup-note">
-              No reply? Give it a minute and try again &mdash; the bot joins
-              shortly after you authorize. If it still says nothing, re-run
-              <a href="/bot">Add Bot to Your Channel</a>.
-            </p>
-          </div>
-        </li>
-
-        <li class="sp-setup-item sp-setup-2">
-          <div class="sp-setup-num">2</div>
-          <div class="sp-setup-body">
-            <h2>Give the bot moderator permissions</h2>
-            <p>
-              In your chat, send <code>/mod WoSPlusBot</code>. This matters for
-              two reasons:
-            </p>
-            <ul class="sp-setup-list">
-              <li>
-                <strong>Rate limits.</strong> Twitch throttles ordinary
-                accounts that send a lot of chat messages. Without mod, the bot
-                gets rate-limited during busy games and its replies stop
-                arriving.
-              </li>
-              <li>
-                <strong>Links.</strong> The bot posts links (game boards, word
-                lists). If your AutoMod or a moderation bot blocks links from
-                non-mods, WoS+ Bot will get timed out or banned in your own
-                channel. Modding it &mdash; or explicitly permitting it to post
-                links in your moderation setup &mdash; prevents that.
-              </li>
-            </ul>
-          </div>
-        </li>
-
-        <li class="sp-setup-item sp-setup-3">
-          <div class="sp-setup-num">3</div>
-          <div class="sp-setup-body">
-            <h2>Copy your Words on Stream mirror link</h2>
-            <p>
-              In Words on Stream, open the <strong>settings menu</strong> (the
-              gear icon) and find the <strong>mirror link</strong> &mdash; the
-              spectator link for your game. Copy it to your clipboard.
-            </p>
-            <p class="sp-setup-note">
-              It looks like
-              <code>https://wos.gg/r/4fdfc856-0328-4384-a882-8377dcb5a4f6</code>
-              &mdash; the WoS host followed by your game's room id. This is the
-              link that lets WoS+ follow along with your game.
-            </p>
-          </div>
-        </li>
-
-        <li class="sp-setup-item sp-setup-4">
-          <div class="sp-setup-num">4</div>
-          <div class="sp-setup-body">
-            <h2>Send the mirror link to the bot</h2>
-            <p>
-              Back in your Twitch chat, send the mirror command with the link
-              you just copied:
-            </p>
-            <pre class="sp-setup-code"><code>!mirror set &lt;your mirror link&gt;</code></pre>
-            <p>
-              Replace <code>&lt;your mirror link&gt;</code> entirely &mdash;
-              angle brackets included &mdash; with the link from step 3.
-            </p>
-            <p class="sp-setup-note">
-              WoS+ Bot replies in chat confirming the mirror link was set. If
-              you see that confirmation, you are done: play as usual and the
-              bot tracks the session.
-            </p>
-          </div>
-        </li>
-      </ol>
-    </section>
+    <!-- ===================== Command groups ===================== -->
+    {BOT_COMMAND_GROUPS.map((group) => (
+      <section id={group.id} class="sp-section">
+        <h2 class="sp-group-title">{group.title}</h2>
+        <p class="sp-group-blurb">{group.blurb}</p>
+        <div class="sp-commands">
+          {group.commands.map((cmd) => (
+            <article class="sp-command" data-bot-command={cmd.name}>
+              <div class="sp-command-head">
+                <code class="sp-command-usage">{cmd.usage}</code>
+                {cmd.modsOnly && <span class="sp-badge">Broadcaster &amp; mods</span>}
+              </div>
+              {cmd.aliases.length > 0 && (
+                <span class="sp-command-alias">
+                  {cmd.aliases.length === 1 ? "alias" : "aliases"}:{" "}
+                  {cmd.aliases.map((alias, i) => (
+                    <>{i > 0 && ", "}<code>!{alias}</code></>
+                  ))}
+                </span>
+              )}
+              <p class="sp-command-desc">{cmd.description}</p>
+              {cmd.notes && (
+                <ul class="sp-command-notes">
+                  {cmd.notes.map((note) => <li>{note}</li>)}
+                </ul>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+    ))}
 
     <!-- ===================== CTA ===================== -->
     <section class="sp-cta">
       <div class="sp-cta-content">
-        <h2 class="sp-cta-title">Something not working?</h2>
+        <h2 class="sp-cta-title">Not in your channel yet?</h2>
         <p class="sp-cta-sub">
-          Check the command list, or re-authorize the bot for your channel.
+          Add WoS+ Bot to your Twitch channel, then follow the setup steps.
         </p>
         <div class="sp-cta-row">
-          <a href="/bot/commands" class="sp-btn sp-btn-yellow">See Commands →</a>
           <a
             href="https://wos-plus-bot.onrender.com/auth"
             class="sp-btn sp-btn-cyan"
@@ -143,8 +95,9 @@ import Twitch from "../../components/Icons/Twitch.astro";
             rel="noopener"
           >
             <Twitch width={18} height={18} />
-            Re-authorize
+            Add Bot to Your Channel
           </a>
+          <a href="/bot/setup" class="sp-btn sp-btn-yellow">Setup Steps →</a>
         </div>
       </div>
     </section>
@@ -226,7 +179,7 @@ import Twitch from "../../components/Icons/Twitch.astro";
 
   /* ===================== Hero ===================== */
   .sp-hero {
-    padding: 54px 32px 20px;
+    padding: 54px 32px 10px;
     max-width: 1240px;
     margin: 0 auto;
     text-align: center;
@@ -286,119 +239,146 @@ import Twitch from "../../components/Icons/Twitch.astro";
     font-weight: 500;
   }
 
-  /* ===================== Steps ===================== */
-  .sp-section {
-    max-width: 940px;
-    margin: 0 auto;
-    padding: 40px 32px 20px;
+  .sp-hero-sub code {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--sp-yellow);
+    padding: 0.1rem 0.35rem;
+    border-radius: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
   }
 
-  .sp-setup {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+  /* ===================== Jump links ===================== */
+  .sp-jump {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 26px;
+  }
+
+  .sp-jump a {
+    padding: 8px 16px;
+    border-radius: 999px;
+    background: var(--sp-bg-deep);
+    color: #fff;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    box-shadow: 3px 3px 0 var(--sp-purple);
+  }
+
+  .sp-jump a:hover {
+    transform: translate(-1px, -1px);
+  }
+
+  /* ===================== Command groups ===================== */
+  .sp-section {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 40px 32px 10px;
+    scroll-margin-top: 16px;
+  }
+
+  .sp-group-title {
+    margin: 0 0 6px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 30px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .sp-group-blurb {
+    margin: 0 0 22px;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--sp-ink-muted);
+    max-width: 760px;
+  }
+
+  .sp-commands {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     gap: 22px;
   }
 
-  .sp-setup-item {
-    display: flex;
-    gap: 20px;
-    padding: 26px 28px;
+  .sp-command {
+    padding: 22px 24px;
     border-radius: 18px;
     background: #fff;
     color: var(--sp-bg-deep);
     text-align: left;
-  }
-
-  .sp-setup-1 { box-shadow: 5px 5px 0 var(--sp-purple); }
-  .sp-setup-2 { box-shadow: 5px 5px 0 var(--sp-pink); }
-  .sp-setup-3 { box-shadow: 5px 5px 0 var(--sp-cyan); }
-  .sp-setup-4 { box-shadow: 5px 5px 0 var(--sp-yellow); }
-
-  .sp-setup-num {
-    flex: 0 0 auto;
-    width: 46px;
-    height: 46px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--sp-purple);
-    color: #fff;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 22px;
-  }
-
-  .sp-setup-2 .sp-setup-num { background: var(--sp-pink); }
-  .sp-setup-3 .sp-setup-num { background: var(--sp-cyan); color: var(--sp-cyan-ink); }
-  .sp-setup-4 .sp-setup-num { background: var(--sp-yellow-shadow); color: var(--sp-bg-deep); }
-
-  .sp-setup-body {
+    box-shadow: 5px 5px 0 var(--sp-purple);
     min-width: 0;
   }
 
-  .sp-setup-body h2 {
-    margin: 6px 0 10px;
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 22px;
-  }
+  .sp-command:nth-child(4n + 2) { box-shadow: 5px 5px 0 var(--sp-pink); }
+  .sp-command:nth-child(4n + 3) { box-shadow: 5px 5px 0 var(--sp-cyan); }
+  .sp-command:nth-child(4n + 4) { box-shadow: 5px 5px 0 var(--sp-yellow); }
 
-  .sp-setup-body p {
-    margin: 0 0 10px;
-    font-size: 1rem;
-    line-height: 1.55;
-    color: rgba(22, 2, 39, 0.78);
-  }
-
-  .sp-setup-list {
-    margin: 0 0 10px;
-    padding-left: 20px;
-    font-size: 1rem;
-    line-height: 1.55;
-    color: rgba(22, 2, 39, 0.78);
-  }
-
-  .sp-setup-list li {
+  .sp-command-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-bottom: 8px;
   }
 
-  .sp-setup-note {
-    font-size: 0.92rem !important;
-    color: rgba(22, 2, 39, 0.6) !important;
-  }
-
-  .sp-setup-body code {
-    background: rgba(120, 60, 220, 0.12);
-    color: var(--sp-purple-deep);
-    padding: 0.125rem 0.4rem;
-    border-radius: 0.3rem;
+  .sp-command-usage {
+    display: inline-block;
     font-family: var(--font-mono);
-    font-size: 0.92em;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--sp-purple);
+    padding: 0.35rem 0.7rem;
+    border-radius: 0.5rem;
     overflow-wrap: anywhere;
   }
 
-  .sp-setup-code {
-    margin: 0 0 10px;
-    padding: 14px 16px;
-    border-radius: 10px;
-    background: var(--sp-bg-deep);
-    overflow-x: auto;
-  }
-
-  .sp-setup-code code {
-    background: none;
-    color: var(--sp-yellow);
-    font-size: 1rem;
-    padding: 0;
-  }
-
-  .sp-setup-body a {
-    color: var(--sp-purple);
+  .sp-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--sp-pink);
+    color: #fff;
+    font-family: var(--font-display);
     font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .sp-command-alias {
+    display: block;
+    font-size: 0.85rem;
+    color: rgba(22, 2, 39, 0.6);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .sp-command-alias code,
+  .sp-command-notes code {
+    font-family: var(--font-mono);
+  }
+
+  .sp-command-desc {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0;
+    color: rgba(22, 2, 39, 0.78);
+  }
+
+  .sp-command-notes {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: rgba(22, 2, 39, 0.62);
   }
 
   /* ===================== Buttons ===================== */
@@ -552,10 +532,16 @@ import Twitch from "../../components/Icons/Twitch.astro";
       font-size: 14px;
     }
 
-    .sp-setup-item {
-      flex-direction: column;
-      gap: 12px;
-      padding: 22px 20px;
+    .sp-section {
+      padding: 32px 20px 6px;
+    }
+
+    .sp-group-title {
+      font-size: 24px;
+    }
+
+    .sp-commands {
+      grid-template-columns: 1fr;
     }
 
     .sp-cta-title {

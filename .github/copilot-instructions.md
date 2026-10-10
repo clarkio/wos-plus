@@ -7,6 +7,8 @@
 - **Player View** ([player.astro](../src/pages/player.astro)): Track words, letters, and personal records
 - **Streamer View** ([streamer.astro](../src/pages/streamer.astro)): OBS-ready layout with embedded game board and Twitch chat
 
+It also hosts the WoS+ Bot pages: [bot.astro](../src/pages/bot.astro), [bot/setup.astro](../src/pages/bot/setup.astro), and [bot/commands.astro](../src/pages/bot/commands.astro) — the full chat command reference the bot's `!help` reply links to. Its data is hand-copied from the `clarkio/wos-plus-bot` command handlers into [src/data/bot-commands.ts](../src/data/bot-commands.ts); update it whenever a bot command changes.
+
 Built with **Astro 7 + TypeScript**, deployed to **Cloudflare Pages** with Workers for serverless API routes.
 
 The authoritative versions are always in `package.json`, which **exact-pins**

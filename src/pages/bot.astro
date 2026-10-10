@@ -16,6 +16,7 @@ import Twitch from "../components/Icons/Twitch.astro";
         <a href="/">Home</a>
         <a href="#features">Features</a>
         <a href="/bot/setup">Setup</a>
+        <a href="/bot/commands">Commands</a>
         <a href="#commands" class="sp-nav-launch">Add Bot</a>
       </nav>
     </header>
@@ -118,7 +119,8 @@ import Twitch from "../components/Icons/Twitch.astro";
           <code class="sp-command-name">!help</code>
           <span class="sp-command-alias">aliases: !commands, !h</span>
           <p class="sp-command-desc">
-            List all available bot commands and their descriptions.
+            Get a link to the full command list, or describe one command
+            with <code>!help &lt;command&gt;</code>.
           </p>
         </div>
 
@@ -132,8 +134,7 @@ import Twitch from "../components/Icons/Twitch.astro";
       </div>
 
       <p class="sp-commands-footer">
-        More commands coming soon &mdash; including channel achievements and
-        player stats.
+        <a href="/bot/commands">See all bot commands →</a>
       </p>
     </section>
 
@@ -562,10 +563,20 @@ import Twitch from "../components/Icons/Twitch.astro";
 
   .sp-commands-footer {
     text-align: center;
-    color: var(--sp-ink-dim);
-    font-style: italic;
     margin-top: 32px;
-    font-size: 0.95rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.05rem;
+  }
+
+  .sp-commands-footer a {
+    color: var(--sp-cyan);
+    text-decoration: none;
+  }
+
+  .sp-command-desc code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
   }
 
   /* ===================== Steps ===================== */
