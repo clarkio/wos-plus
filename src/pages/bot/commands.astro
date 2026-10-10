@@ -58,7 +58,7 @@ import { BOT_COMMAND_GROUPS } from "../../data/bot-commands";
             <article class="sp-command" data-bot-command={cmd.name}>
               <div class="sp-command-head">
                 <code class="sp-command-usage">{cmd.usage}</code>
-                {cmd.modsOnly && <span class="sp-badge">Mods &amp; broadcaster</span>}
+                {cmd.modsOnly && <span class="sp-badge">Broadcaster &amp; mods</span>}
               </div>
               {cmd.aliases.length > 0 && (
                 <span class="sp-command-alias">

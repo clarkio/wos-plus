@@ -55,7 +55,7 @@ export const BOT_COMMAND_GROUPS: BotCommandGroup[] = [
         name: 'restart',
         aliases: ['r'],
         usage: '!restart',
-        description: 'Restart the current level.',
+        description: 'Restart the game.',
       },
     ],
   },
@@ -124,7 +124,7 @@ export const BOT_COMMAND_GROUPS: BotCommandGroup[] = [
         name: 'wosconnect',
         aliases: ['wsc'],
         usage: '!wosconnect',
-        description: 'Connect the bot to the Words on Stream game feed by hand.',
+        description: 'Connect the bot to the Words on Stream game.',
         notes: ['Needs a mirror link first: !mirror set <url>.'],
         modsOnly: true,
       },
@@ -178,7 +178,7 @@ export const BOT_COMMAND_GROUPS: BotCommandGroup[] = [
         usage: '!autocr [seconds|off]',
         description:
           'Have the bot send !continue a few seconds after each level ends and !restart after the game ends, so nobody has to.',
-        notes: ['Seconds can be 10 to 60; the default is 12. Use !autocr off to stop.'],
+        notes: ['Seconds can be 12 to 60; the default is 12. Use !autocr off to stop.'],
         modsOnly: true,
       },
       {
@@ -187,7 +187,7 @@ export const BOT_COMMAND_GROUPS: BotCommandGroup[] = [
         usage: '!setcooldown [seconds]',
         description:
           'Set how long viewers wait after a level ends before !start, !continue and !restart work again. Leave the number off to see the current wait.',
-        notes: ['Seconds can be 10 to 60.'],
+        notes: ['Seconds can be 12 to 60.'],
         modsOnly: true,
       },
     ],
