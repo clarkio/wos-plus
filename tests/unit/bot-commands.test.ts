@@ -13,7 +13,7 @@ describe('bot command reference data', () => {
     const names = allBotCommands().map((c) => c.name).sort();
     expect(names).toEqual(
       [
-        'autocr', 'clearstreak', 'continue', 'define', 'disable', 'disablecr',
+        'autocr', 'bigword', 'clearstreak', 'continue', 'define', 'disable', 'disablecr',
         'enable', 'enablecr', 'help', 'mirror', 'missedwords', 'ping',
         'restart', 'setbigwordinterval', 'setcooldown', 'start', 'unlockmsg',
         'wmirror', 'wosconnect', 'wosdisconnect',
@@ -44,7 +44,7 @@ describe('bot command reference data', () => {
     const modsOnly = allBotCommands().filter((c) => c.modsOnly).map((c) => c.name).sort();
     expect(modsOnly).toEqual(
       [
-        'autocr', 'disable', 'disablecr', 'enable', 'enablecr', 'missedwords',
+        'autocr', 'bigword', 'disable', 'disablecr', 'enable', 'enablecr', 'missedwords',
         'setbigwordinterval', 'setcooldown', 'unlockmsg', 'wosconnect',
         'wosdisconnect',
       ].sort(),
