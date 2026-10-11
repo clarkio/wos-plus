@@ -214,6 +214,18 @@ export const BOT_COMMAND_GROUPS: BotCommandGroup[] = [
         modsOnly: true,
       },
       {
+        name: 'bigword',
+        aliases: [],
+        usage: '!bigword [on|off]',
+        description:
+          "Turn the big word messages on or off. They're posted from the broadcaster's own account. Leave it blank to see the current setting.",
+        notes: [
+          'On by default. Turning it off also stops a big word that is already repeating.',
+          'How often it repeats is set with !setbigwordinterval.',
+        ],
+        modsOnly: true,
+      },
+      {
         name: 'setbigwordinterval',
         aliases: ['bwi'],
         usage: '!setbigwordinterval [seconds]',
