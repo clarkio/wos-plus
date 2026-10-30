@@ -537,6 +537,40 @@ describe('GameSpectator class', () => {
       ]);
     });
 
+    it('sets the underscores in their own span so the chip can draw them smaller than a word', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).renderCorrectWords();
+
+      const chip = document.querySelector('#correct-words-log .unguessed-word')!;
+      expect(chip.querySelector('.unguessed-word__blanks')?.textContent).toBe('___');
+    });
+
+    it('fits the log again when a web font finishes loading', () => {
+      const fonts = new EventTarget();
+      const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts');
+      const originalObserver = (globalThis as any).ResizeObserver;
+      Object.defineProperty(document, 'fonts', { value: fonts, configurable: true });
+      (globalThis as any).ResizeObserver = class { observe() { } disconnect() { } };
+      try {
+        (spectator as any).updateCorrectWordsDisplayed('test');
+        const fitSpy = vi.spyOn(spectator as any, 'fitWordLog');
+
+        fonts.dispatchEvent(new Event('loadingdone'));
+
+        expect(fitSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        (globalThis as any).ResizeObserver = originalObserver;
+        if (originalFonts) {
+          Object.defineProperty(document, 'fonts', originalFonts);
+        } else {
+          delete (document as any).fonts;
+        }
+      }
+    });
+
     it('drops every placeholder of a length once its missed words cover the empty slots', () => {
       spectator.currentLevelSlots = [
         { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },

@@ -961,7 +961,17 @@ export class GameSpectator {
             missed: 'correct-word missing-word',
             unguessed: 'correct-word unguessed-word',
           }[entry.kind];
-          wordEl.textContent = entry.text;
+          if (entry.kind === 'unguessed') {
+            // The underscores sit in their own, smaller span so a placeholder
+            // chip keeps a word chip's height but takes no more room across
+            // than the word it stands for would.
+            const blanksEl = document.createElement('span');
+            blanksEl.className = 'unguessed-word__blanks';
+            blanksEl.textContent = entry.text;
+            wordEl.appendChild(blanksEl);
+          } else {
+            wordEl.textContent = entry.text;
+          }
           wordsContainer.appendChild(wordEl);
         });
 
@@ -1057,6 +1067,12 @@ export class GameSpectator {
       this.wordLogResizeRaf = requestAnimationFrame(() => { this.fitWordLog(); });
     });
     this.wordLogResizeObserver.observe(logEl);
+
+    // The fit is measured in whatever font is on screen at the time. Words
+    // drawn before the web fonts arrive are fitted in the fallback font, and
+    // nothing resizes the box when the real one swaps in, so fit again
+    // whenever a font finishes loading.
+    document.fonts?.addEventListener('loadingdone', () => { this.fitWordLog(); });
   }
 
   calculateHiddenLetters(bigWord: string) {

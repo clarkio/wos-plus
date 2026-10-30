@@ -199,11 +199,20 @@ body {
 }
 
 /* An empty board slot, one underscore per letter (issue #211). Dimmer than a
-   found word, with wider tracking so each letter's underscore stays distinct. */
+   found word. The chip keeps the word chips' font size, so it is as tall as
+   they are, while the underscores inside it are set smaller: an underscore is
+   wider than most capitals, and at full size a board of empty slots took far
+   more room than the same board filled in. */
 .correct-word.unguessed-word {
   color: var(--text-light);
-  letter-spacing: 0.2em;
   opacity: 0.7;
+}
+
+.unguessed-word__blanks {
+  font-size: 0.6em;
+  letter-spacing: 0.2em;
+  /* Line the underscores up with the bottom of the neighbouring words. */
+  align-self: flex-end;
 }
 
 /* Scale correct-word sizing based on the word-log container size so
