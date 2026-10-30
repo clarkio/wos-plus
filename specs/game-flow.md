@@ -195,9 +195,11 @@ Related: [boards.md](boards.md) covers what happens to a captured board;
 - **When** the missed words are shown
 - **Then** each length's missed words, with their stars, replace that length's
   underscores, and the list is ordered as before — by length and then
-  alphabetically. If WoS+ can name fewer missed words of a length than that
-  length had empty slots, the slots it cannot name stay as underscores at the
-  end of their group
+  alphabetically. If WoS+ can name some, but fewer, missed words of a length
+  than that length had empty slots, the slots it cannot name stay as
+  underscores at the end of their group. If it can name none for a length, that
+  group is left exactly as it was during the level — underscores still in their
+  places on the board, since nothing has disturbed that order
 
 ### Scenario: a missed word is marked and sorted after the same word found
 
