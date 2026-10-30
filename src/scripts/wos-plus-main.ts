@@ -878,7 +878,7 @@ export class GameSpectator {
   private buildWordLogGroups(): Map<number, WordLogEntry[]> {
     const wordsByLength = new Map<number, string[]>();
     for (const word of this.currentLevelCorrectWords) {
-      const key = word.replace('*', '').length;
+      const key = word.replace(/\*/g, '').length;
       wordsByLength.set(key, [...(wordsByLength.get(key) ?? []), word]);
     }
 
@@ -898,7 +898,7 @@ export class GameSpectator {
 
   private layoutWordGroup(length: number, words: string[], slots: Slot[]): WordLogEntry[] {
     const toEntry = (word: string): WordLogEntry => word.endsWith('*')
-      ? { text: `${word.replace('*', '').toUpperCase()}*`, kind: 'missed' }
+      ? { text: `${word.slice(0, -1).toUpperCase()}*`, kind: 'missed' }
       : { text: word.toUpperCase(), kind: 'found' };
     const placeholder: WordLogEntry = { text: '_'.repeat(length), kind: 'unguessed' };
     const emptySlots = slots.filter(slot => !slot.user).length;
