@@ -163,6 +163,42 @@ Related: [boards.md](boards.md) covers what happens to a captured board;
 - **Then** shorter words come before longer ones, and words of the same length
   are in alphabetical order, grouped by length
 
+### Scenario: a word nobody has found yet holds its place on the board
+
+- **Given** a level is under way, and its board has three four-letter slots, the
+  first holding `MAKE` and the last holding `MARE`
+- **When** the found-words list is shown
+- **Then** the empty slot appears between them as one underscore per letter —
+  `MAKE ____ MARE` — and every other empty slot on the board is shown the same
+  way, in its own length group
+
+  The board lists its words by length and then alphabetically, so where a gap
+  sits narrows down what the missing word can be: the one above begins `MA`
+  and its third letter falls between `K` and `R`
+  ([#211](https://github.com/clarkio/wos-plus/issues/211)). The underscores
+  follow the board's own order, so they appear from the moment the level starts
+  (or WoS+ joins it), before anything has been guessed.
+
+  A slot the game reports as filled but whose word WoS+ could not recover (see
+  § Masked guesses) is filled, not empty, so it shows neither underscores nor a
+  word — the same gap as before.
+
+### Scenario: a found word replaces its underscores
+
+- **Given** the found-words list shows `MAKE ____ MARE`
+- **When** a player finds `MALE`
+- **Then** the list reads `MAKE MALE MARE`, with no underscores left
+
+### Scenario: the missed words take the underscores' place when a level ends
+
+- **Given** a level ended with slots nobody filled
+- **When** the missed words are shown
+- **Then** each length's missed words, with their stars, replace that length's
+  underscores, and the list is ordered as before — by length and then
+  alphabetically. If WoS+ can name fewer missed words of a length than that
+  length had empty slots, the slots it cannot name stay as underscores at the
+  end of their group
+
 ### Scenario: a missed word is marked and sorted after the same word found
 
 - **Given** the found-words list is shown after a level ended

@@ -209,11 +209,33 @@ function text(id: string): string {
   return document.getElementById(id)!.innerText;
 }
 
-/** The words currently rendered in the found-words log, in rendered order. */
+/**
+ * The words currently rendered in the found-words log, in rendered order.
+ *
+ * Underscore placeholders for slots nobody has filled (#211) share the word
+ * chip's styling, but they are not words anyone found, so they are excluded
+ * here and read with `unguessedSlots()` instead.
+ */
 function foundWords(): string[] {
   return Array.from(
-    document.getElementById('correct-words-log')!.querySelectorAll('.correct-word'),
+    document.getElementById('correct-words-log')!.querySelectorAll('.correct-word:not(.unguessed-word)'),
   ).map((element) => element.textContent ?? '');
+}
+
+/** The underscore placeholders the found-words log renders, in rendered order. */
+function unguessedSlots(): string[] {
+  return Array.from(
+    document.getElementById('correct-words-log')!.querySelectorAll('.unguessed-word'),
+  ).map((element) => element.textContent ?? '');
+}
+
+/** Everything one length group renders — words and placeholders — in order. */
+function wordGroup(length: number): string[] {
+  const group = Array.from(
+    document.getElementById('correct-words-log')!.querySelectorAll('.word-group'),
+  ).find((element) => element.querySelector('.word-group__title')?.textContent === `${length}:`);
+  return Array.from(group?.querySelectorAll('.correct-word') ?? [])
+    .map((element) => element.textContent ?? '');
 }
 
 /** The length headings the found-words log renders, in rendered order. */
@@ -733,6 +755,74 @@ describe('specs/game-flow.md § A correct guess', () => {
 });
 
 // ===========================================================================
+// specs/game-flow.md § A correct guess — words nobody has found yet (#211)
+// ===========================================================================
+
+describe('specs/game-flow.md § A correct guess (words nobody has found yet)', () => {
+  it('shows every empty slot as one underscore per letter as soon as the level starts', async () => {
+    await playWosEvent(levelStarted({
+      level: 3,
+      letters: CAUTION_LETTERS,
+      slotLengths: CAUTION_SLOT_LENGTHS,
+    }));
+
+    expect(wordGroupTitles()).toEqual(['4:', '5:', '6:', '7:']);
+    expect(unguessedSlots()).toEqual(['____', '_____', '______', '_______']);
+    expect(foundWords()).toEqual([]);
+  });
+
+  it('keeps an empty slot in its place on the board, between the words around it', async () => {
+    // The issue's own example: MAKE, [missing], MARE.
+    await playWosEvent(levelStarted({ level: 2, letters: ['m', 'a', 'k', 'r', 'e', 'l'], slotLengths: [4, 4, 4] }));
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'mare', index: 2 }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'make', index: 0 }));
+
+    expect(wordGroup(4)).toEqual(['MAKE', '____', 'MARE']);
+  });
+
+  it('replaces the underscores with the word once it is found', async () => {
+    await playWosEvent(levelStarted({ level: 2, letters: ['m', 'a', 'k', 'r', 'e', 'l'], slotLengths: [4, 4, 4] }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'make', index: 0 }));
+    await playWosEvent(correctGuess({ user: 'biocow', word: 'mare', index: 2 }));
+
+    await playWosEvent(correctGuess({ user: 'smc_may_i', word: 'male', index: 1 }));
+
+    expect(wordGroup(4)).toEqual(['MAKE', 'MALE', 'MARE']);
+    expect(unguessedSlots()).toEqual([]);
+  });
+
+  it('shows the empty slots of a level it joins already under way', async () => {
+    // `12-game-connected.json`: TALE is filled; a 5- and a 7-letter slot are not.
+    await playWosEvent(gameConnectedFixture);
+
+    expect(unguessedSlots()).toEqual(['_____', '_______']);
+  });
+
+  it('starts the next level with only that level\'s empty slots', async () => {
+    await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: CAUTION_SLOT_LENGTHS }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+
+    await playWosEvent(levelStarted({ level: 4, letters: TRILBY_LETTERS, slotLengths: [4, 6] }));
+
+    expect(foundWords()).toEqual([]);
+    expect(unguessedSlots()).toEqual(['____', '______']);
+  });
+
+  it('shows neither underscores nor a word for a filled slot whose word could not be recovered', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => { });
+    await useDictionary(TRILBY_DICTIONARY);
+    await playWosEvent(levelStarted({ level: 19, letters: TRILBY_LETTERS, slotLengths: [5, 6] }));
+
+    // Nothing in chat can be the six-letter word.
+    await playWosEvent(maskedGuess({ user: 'clarkio', length: 6, index: 1 }));
+
+    expect(unguessedSlots()).toEqual(['_____']);
+    expect(foundWords()).toEqual([]);
+    warn.mockRestore();
+  });
+});
+
+// ===========================================================================
 // specs/game-flow.md § Hidden and fake letters
 // ===========================================================================
 
@@ -1178,6 +1268,27 @@ describe('specs/game-flow.md § Ending a level (missed words)', () => {
 
     expect(gameLog()).toContain('Game Ended on Level 3');
     expect(missedWords()).toEqual(['TONIC*', 'ACTION*', 'AUCTION*', 'CAUTION*']);
+  });
+
+  it('names the missed words in place of the underscores when the level ends', async () => {
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'coat', index: 0 }));
+    expect(unguessedSlots()).toEqual(['_____', '______', '_______']);
+
+    await playWosEvent(levelResults(2));
+
+    expect(unguessedSlots()).toEqual([]);
+    expect(wordGroup(5)).toEqual(['TONIC*']);
+  });
+
+  it('keeps the underscores for an empty slot whose missed word it cannot name', async () => {
+    // Two four-letter slots, but COAT is the only four-letter word the
+    // dictionary can spell from CAUTION — so one of them stays unnamed.
+    await playWosEvent(levelStarted({ level: 3, letters: CAUTION_LETTERS, slotLengths: [4, 4, 7] }));
+    await playWosEvent(correctGuess({ user: 'clarkio', word: 'caution', index: 2 }));
+
+    await playWosEvent(levelResults(2));
+
+    expect(wordGroup(4)).toEqual(['COAT*', '____']);
   });
 
   it.todo(
