@@ -189,6 +189,14 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
   line-height: 1;
+  /* Room for the slot's letters whatever word fills it, so a placeholder and
+     the word that later replaces it take the same space and a correct guess
+     doesn't shift the chips around it (issue #211). Content-box, so each
+     theme's own padding still adds on top. 0.7em is a little over one letter of the
+     monospaced default font; the proportional sticker-pop font averages a
+     little under it, and a wider word still grows its chip. */
+  box-sizing: content-box;
+  min-width: calc(var(--letters, 0) * 0.7em);
 }
 
 .correct-word.missing-word {
@@ -206,6 +214,14 @@ body {
 .correct-word.unguessed-word {
   color: var(--text-light);
   opacity: 0.7;
+}
+
+/* A zero-width strut a word's line tall, so a placeholder chip is exactly as
+   tall as the word chip that will replace it even though its underscores are
+   set smaller. */
+.correct-word.unguessed-word::before {
+  content: "";
+  height: 1em;
 }
 
 .unguessed-word__blanks {

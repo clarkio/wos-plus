@@ -956,6 +956,10 @@ export class GameSpectator {
 
         entries.forEach(entry => {
           const wordEl = document.createElement('span');
+          // Every chip in a group is sized for the slot's letter count rather
+          // than for the word in it, so a found word drops into its
+          // placeholder's room without moving the chips around it.
+          wordEl.style.setProperty('--letters', `${length}`);
           wordEl.className = {
             found: 'correct-word',
             missed: 'correct-word missing-word',
@@ -1010,32 +1014,47 @@ export class GameSpectator {
 
     const MIN_SCALE = 0.4;
     const MAX_SCALE = 1.4;
-    let scale = 1;
-    track.style.setProperty('zoom', '1');
 
     // Available content area = the log's inner height minus its vertical padding.
     const logStyle = getComputedStyle(logEl);
     const padV =
       (parseFloat(logStyle.paddingTop) || 0) + (parseFloat(logStyle.paddingBottom) || 0);
 
-    // Converge on the scale where the words fill the available height — shrinking
-    // when they overflow and growing into spare space. We measure the track's
-    // rendered height via getBoundingClientRect (which, unlike scrollHeight,
-    // reflects the applied `zoom`) and re-measure each step to handle chips
-    // re-wrapping as the scale changes.
-    for (let i = 0; i < 8; i++) {
-      const content = track.getBoundingClientRect().height;
-      const avail = logEl.clientHeight - padV;
-      if (content <= 0 || avail <= 0) break;
-      let next = scale * (avail / content);
-      next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
-      if (Math.abs(next - scale) < 0.01) {
-        scale = next;
-        break;
+    // Whether the words fit the available height at a given scale. The track's
+    // rendered height is read via getBoundingClientRect, which (unlike
+    // scrollHeight) reflects the applied `zoom`, and it is re-read at every
+    // scale because chips re-wrap as they grow and shrink.
+    const fitsAt = (candidate: number): boolean => {
+      track.style.setProperty('zoom', `${candidate}`);
+      return track.getBoundingClientRect().height <= logEl.clientHeight - padV;
+    };
+
+    // Find the largest scale that still fits. Rendered height only ever grows
+    // with the scale, so a bisection always lands on a scale that fits. The
+    // earlier proportional step could not promise that: re-wrapping makes the
+    // height jump in steps, so it could stop on a scale just past one of them
+    // and start the auto-scroll with room to spare (issue #211).
+    let scale = 1;
+    if (logEl.clientHeight - padV > 0 && track.getBoundingClientRect().height > 0) {
+      if (fitsAt(MAX_SCALE)) {
+        scale = MAX_SCALE;
+      } else if (!fitsAt(MIN_SCALE)) {
+        scale = MIN_SCALE;
+      } else {
+        let low = MIN_SCALE;
+        let high = MAX_SCALE;
+        for (let i = 0; i < 10; i++) {
+          const mid = (low + high) / 2;
+          if (fitsAt(mid)) {
+            low = mid;
+          } else {
+            high = mid;
+          }
+        }
+        scale = low;
       }
-      scale = next;
-      track.style.setProperty('zoom', `${scale}`);
     }
+    track.style.setProperty('zoom', `${scale}`);
 
     const overflowDistance = logEl.scrollHeight - logEl.clientHeight;
     if (overflowDistance > 1) {
