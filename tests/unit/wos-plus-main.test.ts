@@ -477,6 +477,81 @@ describe('GameSpectator class', () => {
     });
   });
 
+  describe('found-words placeholders for empty slots (issue #211)', () => {
+    const renderedGroup = (length: number) => {
+      const group = Array.from(document.querySelectorAll('#correct-words-log .word-group'))
+        .find(el => el.querySelector('.word-group__title')?.textContent === `${length}:`);
+      return Array.from(group?.querySelectorAll('.correct-word') ?? []).map(el => ({
+        text: el.textContent,
+        unguessed: el.classList.contains('unguessed-word'),
+      }));
+    };
+
+    beforeEach(() => {
+      spectator = new GameSpectator();
+    });
+
+    it('renders nothing but found words when the board has no slots', () => {
+      (spectator as any).updateCorrectWordsDisplayed('test');
+
+      expect(renderedGroup(4)).toEqual([{ text: 'TEST', unguessed: false }]);
+    });
+
+    it('places a found word in its slot from the slot letters when the slot carries no word', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'a', 'l', 'e'], word: '', user: 'biocow', hitMax: false },
+        { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).updateCorrectWordsDisplayed('TALE');
+
+      expect(renderedGroup(4)).toEqual([
+        { text: 'TALE', unguessed: false },
+        { text: '____', unguessed: true },
+      ]);
+    });
+
+    it('ignores slot entries that carry no letters', () => {
+      spectator.currentLevelSlots = [
+        null as any,
+        { word: '', user: null, hitMax: false } as any,
+        { letters: ['.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).renderCorrectWords();
+
+      expect(document.querySelectorAll('#correct-words-log .word-group')).toHaveLength(1);
+      expect(renderedGroup(2)).toEqual([{ text: '__', unguessed: true }]);
+    });
+
+    it('appends a found word that matches no slot after the slots of its length', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).updateCorrectWordsDisplayed('coat');
+
+      expect(renderedGroup(4)).toEqual([
+        { text: '____', unguessed: true },
+        { text: 'COAT', unguessed: false },
+      ]);
+    });
+
+    it('drops every placeholder of a length once its missed words cover the empty slots', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).updateCorrectWordsDisplayed('coat*');
+      (spectator as any).updateCorrectWordsDisplayed('cota*');
+
+      expect(renderedGroup(4)).toEqual([
+        { text: 'COAT*', unguessed: false },
+        { text: 'COTA*', unguessed: false },
+      ]);
+    });
+  });
+
   describe('calculateHiddenLetters', () => {
     beforeEach(() => {
       spectator = new GameSpectator();

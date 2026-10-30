@@ -23,6 +23,11 @@ const wosWorker = new Worker(
 // claim the same message.
 type ChatMessage = { message: string; timestamp: number; consumed: boolean };
 
+// One chip in the found-words log: a word someone found, a word nobody found
+// (shown after the level ends, starred), or an empty board slot shown as one
+// underscore per letter while it waits to be found (issue #211).
+type WordLogEntry = { text: string; kind: 'found' | 'missed' | 'unguessed' };
+
 type EventTypes = 'level_end' | 'level_clear' | 'one_star' | 'three_stars' | 'new_all_time_pb' | 'new_daily_pb' | 'new_daily_clear';
 
 export class GameSpectator {
@@ -506,6 +511,9 @@ export class GameSpectator {
     if (isReconnect) {
       this.rebuildFoundWordsAfterReconnect(slots);
     }
+    // Show the newly adopted board's empty slots as placeholders straight
+    // away, before anything has been guessed (issue #211).
+    this.renderCorrectWords();
   }
 
   // On reconnect, the re-reported slots are the only record of what was
@@ -644,15 +652,19 @@ export class GameSpectator {
         // left empty. A masked slot's `letters`/`word` still contain '?', so
         // `saveBoard`'s isMissingWords guard keeps it out of the boards table.
         this.updateCurrentLevelSlots(username, new Array(letters.length).fill('?'), index, hitMax);
+        // The slot is filled now, so its placeholder goes even though no word
+        // takes its place.
+        this.renderCorrectWords();
         return;
       }
     }
 
     this.log(`[WOS Event] ${lowerUsername} correctly guessed: ${word}`, this.wosGameLogId);
 
-    // Add to correct words list
-    this.updateCorrectWordsDisplayed(word);
+    // Fill the slot before adding to the correct words list, so the list is
+    // rendered with the word in its slot rather than beside a placeholder.
     this.updateCurrentLevelSlots(username, word.split(''), index, hitMax);
+    this.updateCorrectWordsDisplayed(word);
 
     // If hitMax is true, set the current level big word.
     //
@@ -847,15 +859,73 @@ export class GameSpectator {
 
     this.currentLevelCorrectWords = sortedWords;
 
-    const groupedWords = sortedWords.reduce((map, currentWord) => {
-      const key = currentWord.replace('*', '').length;
-      if (!map.has(key)) {
-        map.set(key, [] as string[]);
-      }
-      map.get(key)!.push(currentWord);
-      return map;
-    }, new Map<number, string[]>());
+    this.renderCorrectWords();
+  }
 
+  /**
+   * Lays the found-words list out by length group. Within a group, words are
+   * placed in the board's own slot order — which is alphabetical — with each
+   * empty slot shown as one underscore per letter, so a gap's position hints
+   * at the missing word (issue #211). A word with no matching slot (e.g. a
+   * guess for a slot the board lacks) is appended after the slots.
+   *
+   * Once a group has missed (starred) words the level is over: the group keeps
+   * its sorted order and only the empty slots no missed word could name stay
+   * as underscores, at the end. Missed words from the dictionary sweep are not
+   * tied to a slot, so placing them in a gap would claim a position they may
+   * not have.
+   */
+  private buildWordLogGroups(): Map<number, WordLogEntry[]> {
+    const wordsByLength = new Map<number, string[]>();
+    for (const word of this.currentLevelCorrectWords) {
+      const key = word.replace('*', '').length;
+      wordsByLength.set(key, [...(wordsByLength.get(key) ?? []), word]);
+    }
+
+    const slotsByLength = new Map<number, Slot[]>();
+    for (const slot of this.currentLevelSlots) {
+      if (!slot || !Array.isArray(slot.letters)) continue;
+      const key = slot.letters.length;
+      slotsByLength.set(key, [...(slotsByLength.get(key) ?? []), slot]);
+    }
+
+    const lengths = [...new Set([...wordsByLength.keys(), ...slotsByLength.keys()])].sort((a, b) => a - b);
+    return new Map(lengths.map(length => [
+      length,
+      this.layoutWordGroup(length, wordsByLength.get(length) ?? [], slotsByLength.get(length) ?? []),
+    ]));
+  }
+
+  private layoutWordGroup(length: number, words: string[], slots: Slot[]): WordLogEntry[] {
+    const toEntry = (word: string): WordLogEntry => word.endsWith('*')
+      ? { text: `${word.replace('*', '').toUpperCase()}*`, kind: 'missed' }
+      : { text: word.toUpperCase(), kind: 'found' };
+    const placeholder: WordLogEntry = { text: '_'.repeat(length), kind: 'unguessed' };
+    const emptySlots = slots.filter(slot => !slot.user).length;
+    const missedCount = words.filter(word => word.endsWith('*')).length;
+
+    if (missedCount > 0) {
+      const unnamed = Math.max(0, emptySlots - missedCount);
+      return [...words.map(toEntry), ...Array.from({ length: unnamed }, () => placeholder)];
+    }
+
+    const unplaced = [...words];
+    const entries: WordLogEntry[] = [];
+    for (const slot of slots) {
+      if (!slot.user) {
+        entries.push(placeholder);
+        continue;
+      }
+      const slotWord = (slot.word || slot.letters.join('')).toLowerCase();
+      const at = unplaced.findIndex(word => word.toLowerCase() === slotWord);
+      if (at !== -1) {
+        entries.push(toEntry(unplaced.splice(at, 1)[0]));
+      }
+    }
+    return [...entries, ...unplaced.map(toEntry)];
+  }
+
+  private renderCorrectWords() {
     const logEl = document.getElementById('correct-words-log');
     if (!logEl) {
       return;
@@ -871,9 +941,8 @@ export class GameSpectator {
 
     const fragment = document.createDocumentFragment();
 
-    Array.from(groupedWords.entries())
-      .sort((a, b) => a[0] - b[0])
-      .forEach(([length, words]) => {
+    Array.from(this.buildWordLogGroups().entries())
+      .forEach(([length, entries]) => {
         const groupEl = document.createElement('div');
         groupEl.className = 'word-group';
 
@@ -885,11 +954,14 @@ export class GameSpectator {
         const wordsContainer = document.createElement('div');
         wordsContainer.className = 'word-group__words';
 
-        words.forEach(current => {
-          const displayWord = current.replace('*', '').toUpperCase();
+        entries.forEach(entry => {
           const wordEl = document.createElement('span');
-          wordEl.className = `correct-word${current.endsWith('*') ? ' missing-word' : ''}`;
-          wordEl.textContent = `${displayWord}${current.endsWith('*') ? '*' : ''}`;
+          wordEl.className = {
+            found: 'correct-word',
+            missed: 'correct-word missing-word',
+            unguessed: 'correct-word unguessed-word',
+          }[entry.kind];
+          wordEl.textContent = entry.text;
           wordsContainer.appendChild(wordEl);
         });
 

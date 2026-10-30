@@ -694,7 +694,11 @@ describe('specs/game-flow.md § A correct guess', () => {
     await playWosEvent(correctGuess({ user: 'biocow', word: 'auction', index: 3 }));
 
     expect(foundWords()).toEqual(['AUCTION', 'CAUTION']);
-    expect(wordGroupTitles()).toEqual(['7:']);
+    // Both anagrams land in the one seven-letter group. The board's other,
+    // still-empty slots now show as underscore groups of their own (#211),
+    // which is why the 4-, 5- and 6-letter titles appear too.
+    expect(wordGroup(7)).toEqual(['AUCTION', 'CAUTION']);
+    expect(wordGroupTitles()).toEqual(['4:', '5:', '6:', '7:']);
   });
 
   it('turns the letters display into the big word when the big word is guessed', async () => {

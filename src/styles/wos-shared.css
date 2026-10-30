@@ -198,6 +198,14 @@ body {
   color: var(--missing-text);
 }
 
+/* An empty board slot, one underscore per letter (issue #211). Dimmer than a
+   found word, with wider tracking so each letter's underscore stays distinct. */
+.correct-word.unguessed-word {
+  color: var(--text-light);
+  letter-spacing: 0.2em;
+  opacity: 0.7;
+}
+
 /* Scale correct-word sizing based on the word-log container size so
    words fill the available space dynamically */
 @container word-log (min-width: 300px) {
