@@ -140,7 +140,7 @@
   content: "\1F383\00A0"; /* 🎃 + non-breaking space */
 }
 
-[data-theme="halloween"] .correct-words-header .made-by {
+[data-theme="halloween"] .correct-words-header .made-by-component {
   font-family: var(--font-ui);
   letter-spacing: 0;
   color: var(--hw-slime);

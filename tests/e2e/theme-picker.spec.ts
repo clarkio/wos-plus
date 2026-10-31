@@ -27,7 +27,24 @@ for (const [path, defaultTheme] of [
     await select.selectOption('halloween');
     await expect(html).toHaveAttribute('data-theme', 'halloween');
 
+    // Record the theme the head script set, before ThemeControl's own
+    // DOMContentLoaded handler can re-apply it, so a regression in the
+    // first-paint script can't hide behind the picker.
+    await page.addInitScript(() => {
+      document.addEventListener(
+        'DOMContentLoaded',
+        () => {
+          document.documentElement.setAttribute(
+            'data-first-paint-theme',
+            document.documentElement.dataset.theme ?? '',
+          );
+        },
+        { capture: true, once: true },
+      );
+    });
+
     await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(html).toHaveAttribute('data-first-paint-theme', 'halloween');
     await expect(html).toHaveAttribute('data-theme', 'halloween');
     await expect(select).toHaveValue('halloween');
   });
