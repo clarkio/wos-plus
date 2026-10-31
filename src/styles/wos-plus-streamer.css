@@ -1,6 +1,7 @@
 /* WOS Streamer Page Styles */
 @import "./wos-shared.css";
 @import "./wos-theme-sticker-pop.css";
+@import "./wos-theme-halloween.css";
 
 /* Streamer Page Specific Styles */
 .streamer-wos-main-grid {

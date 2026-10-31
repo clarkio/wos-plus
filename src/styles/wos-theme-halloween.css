@@ -1,0 +1,229 @@
+/* ==========================================================================
+   "Halloween" theme
+   --------------------------------------------------------------------------
+   Spooky seasonal skin: midnight panels, pumpkin-orange and slime-green glows,
+   Creepster headings and a jack-o'-lantern on the word log.
+
+   Applied when the document root carries `data-theme="halloween"`. Shared by
+   both the player and streamer views. Like the Sticker Pop theme, only visual
+   properties are touched here: the grid layout, sizing logic and every
+   id/class the spectator script drives (#level-value, #correct-words-log,
+   .word-group, .correct-word, …) are left as they are. Glows are kept small
+   so they fit inside the existing gutters and nothing has to move.
+
+   Creepster is used for headings and labels only. Words, letters and numbers
+   stay in Fredoka so they remain easy to read on stream.
+   ========================================================================== */
+
+/* --- Grid backdrop: night sky with a harvest-moon glow ------------------- */
+[data-theme="halloween"] .player-wos-main-grid,
+[data-theme="halloween"] .streamer-wos-main-grid {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(255, 179, 71, 0.18) 0, rgba(255, 179, 71, 0) 22%),
+    radial-gradient(ellipse at 50% 120%, rgba(140, 255, 63, 0.08) 0, rgba(140, 255, 63, 0) 55%),
+    var(--hw-night);
+  font-family: var(--font-ui);
+}
+
+/* --- Board: pumpkin-rimmed panel ----------------------------------------- */
+[data-theme="halloween"] .player-wos-board-container,
+[data-theme="halloween"] .streamer-wos-board-container {
+  background: var(--hw-panel);
+  border: 2px solid var(--hw-pumpkin);
+  border-radius: 16px;
+  box-shadow: 0 0 10px rgba(255, 117, 24, 0.45);
+}
+
+/* --- Chat: slime-rimmed panel -------------------------------------------- */
+[data-theme="halloween"] .player-twitch-chat-frame,
+[data-theme="halloween"] .streamer-twitch-chat-frame {
+  background: var(--hw-night-deep);
+  border: 2px solid var(--hw-slime);
+  border-radius: 16px;
+  box-shadow: 0 0 10px rgba(140, 255, 63, 0.35);
+}
+
+/* --- Settings button: glowing pumpkin ------------------------------------ */
+[data-theme="halloween"] .settings-button {
+  background: var(--hw-pumpkin);
+  border: none;
+  border-radius: 12px;
+  color: var(--hw-ink-dark);
+  box-shadow: 0 0 8px rgba(255, 117, 24, 0.6);
+}
+
+[data-theme="halloween"] .settings-button:hover {
+  background: var(--hw-candle);
+  border: none;
+  color: var(--hw-ink-dark);
+}
+
+/* --- HUD: LEVEL block + record badges ------------------------------------ */
+[data-theme="halloween"] .player-channel-data-container .level-current,
+[data-theme="halloween"] .streamer-channel-data-container .level-current {
+  background: var(--hw-panel);
+  border: 2px solid var(--hw-pumpkin);
+  border-radius: 14px;
+  box-shadow: 0 0 8px rgba(255, 117, 24, 0.4);
+}
+
+[data-theme="halloween"] .player-channel-data-container .level-title,
+[data-theme="halloween"] .streamer-channel-data-container .level-title {
+  font-family: var(--font-spooky);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--hw-pumpkin);
+}
+
+[data-theme="halloween"] .player-channel-data-container .level-value,
+[data-theme="halloween"] .streamer-channel-data-container .level-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--hw-ghost);
+  text-shadow: 0 0 6px rgba(255, 179, 71, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme="halloween"] .player-channel-data-container .level-record,
+[data-theme="halloween"] .streamer-channel-data-container .level-record {
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+/* Trophy / personal best — pumpkin */
+[data-theme="halloween"] .player-channel-data-container .level-record:nth-child(1),
+[data-theme="halloween"] .streamer-channel-data-container .level-record:nth-child(1) {
+  background: var(--hw-pumpkin);
+  color: var(--hw-ink-dark);
+}
+
+/* Daily best — candlelight */
+[data-theme="halloween"] .player-channel-data-container .level-record:nth-child(2),
+[data-theme="halloween"] .streamer-channel-data-container .level-record:nth-child(2) {
+  background: var(--hw-candle);
+  color: var(--hw-ink-dark);
+}
+
+/* Daily clears — slime */
+[data-theme="halloween"] .player-channel-data-container .level-record:nth-child(3),
+[data-theme="halloween"] .streamer-channel-data-container .level-record:nth-child(3) {
+  background: var(--hw-slime);
+  color: var(--hw-slime-ink);
+}
+
+[data-theme="halloween"] .player-channel-data-container .level-record .icon,
+[data-theme="halloween"] .player-channel-data-container .level-record-value,
+[data-theme="halloween"] .streamer-channel-data-container .level-record .icon,
+[data-theme="halloween"] .streamer-channel-data-container .level-record-value {
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Word log: haunted panel with a jack-o'-lantern header --------------- */
+[data-theme="halloween"] .correct-words-log {
+  background: var(--hw-panel);
+  border: 2px solid var(--hw-candle);
+  border-radius: 16px;
+  box-shadow: 0 0 10px rgba(255, 179, 71, 0.35);
+}
+
+[data-theme="halloween"] .correct-words-header {
+  font-family: var(--font-spooky);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--hw-pumpkin);
+}
+
+[data-theme="halloween"] .correct-words-header::before {
+  content: "\1F383\00A0"; /* 🎃 + non-breaking space */
+}
+
+[data-theme="halloween"] .correct-words-header .made-by {
+  font-family: var(--font-ui);
+  letter-spacing: 0;
+  color: var(--hw-slime);
+}
+
+/* Length badge — small pumpkin square */
+[data-theme="halloween"] .player-bottom-container .word-group,
+[data-theme="halloween"] .streamer-bottom-container .word-group {
+  border-bottom-color: rgba(255, 117, 24, 0.25);
+}
+
+[data-theme="halloween"] .player-bottom-container .word-group__title,
+[data-theme="halloween"] .streamer-bottom-container .word-group__title {
+  background: var(--hw-pumpkin);
+  color: var(--hw-ink-dark);
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 0.15em 0.35em;
+}
+
+/* Found word — ghostly chip */
+[data-theme="halloween"] .player-bottom-container .correct-word,
+[data-theme="halloween"] .streamer-bottom-container .correct-word {
+  background: var(--hw-panel-raised);
+  color: var(--hw-ghost);
+  border-color: transparent;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* Missed word — slime chip. Dark ink to keep contrast on the bright green. */
+[data-theme="halloween"] .player-bottom-container .correct-word.missing-word,
+[data-theme="halloween"] .streamer-bottom-container .correct-word.missing-word {
+  background: var(--hw-slime);
+  border-color: transparent;
+  color: var(--hw-slime-ink);
+}
+
+/* Empty slot — a faint dashed outline, a word still lurking (issue #211). */
+[data-theme="halloween"] .player-bottom-container .correct-word.unguessed-word,
+[data-theme="halloween"] .streamer-bottom-container .correct-word.unguessed-word {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px rgba(244, 236, 255, 0.3);
+  opacity: 0.8;
+}
+
+/* --- Letters panel ------------------------------------------------------- */
+[data-theme="halloween"] .level-data-container {
+  background: var(--hw-panel);
+  border: 2px solid var(--hw-slime);
+  border-radius: 16px;
+  box-shadow: 0 0 10px rgba(140, 255, 63, 0.3);
+}
+
+[data-theme="halloween"] .level-data-container .letters-label,
+[data-theme="halloween"] .level-data-container .hidden-letter-label,
+[data-theme="halloween"] .level-data-container .fake-letter-label {
+  font-family: var(--font-spooky);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--hw-ghost-dim);
+}
+
+[data-theme="halloween"] .level-data-container .letters {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--hw-ghost);
+  letter-spacing: 2px;
+}
+
+[data-theme="halloween"] .level-data-container .hidden-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--hw-candle);
+  letter-spacing: 2px;
+}
+
+[data-theme="halloween"] .level-data-container .fake-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--hw-blood);
+  letter-spacing: 2px;
+}

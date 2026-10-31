@@ -1,9 +1,10 @@
 ---
 /**
  * ThemeControl
- * A theme picker that lets the user switch the UI between the "default" look
- * (the original dark-purple styling) and the bold "Sticker Pop" look. Drop it
- * inside a settings form. The choice is applied by toggling `data-theme` on the
+ * A theme picker that lets the user switch the UI between the themes listed in
+ * src/data/themes.ts: the "default" look (the original dark-purple styling),
+ * the bold "Sticker Pop" look and the "Halloween" look. Drop it inside a
+ * settings form. The choice is applied by toggling `data-theme` on the
  * document root and persisted to localStorage so it carries across both the
  * player and streamer views.
  *
@@ -17,30 +18,32 @@
  * its own default — a choice on one view never changes the other's default. It
  * must match the key WosBaseLayout reads before first paint.
  */
+import { THEMES, THEME_IDS, type ThemeId } from '../data/themes';
+
 export interface Props {
-  defaultTheme?: 'default' | 'sticker-pop';
+  defaultTheme?: ThemeId;
   storageKey?: string;
 }
 
 const { defaultTheme = 'default', storageKey = 'wosPlusTheme' } = Astro.props;
+const validThemes = [...THEME_IDS];
 ---
 
 <div class="form-group">
   <label for="theme-select">Theme</label>
   <select id="theme-select" name="theme" class="theme-select">
-    <option value="default">Default</option>
-    <option value="sticker-pop">Sticker Pop</option>
+    {THEMES.map((theme) => <option value={theme.id}>{theme.label}</option>)}
   </select>
   <small class="form-help"
-    >Switch between the default look and the bold "Sticker Pop" look for this
-    view.</small
+    >Pick how this view looks: the default look, the bold "Sticker Pop" look,
+    or the spooky "Halloween" look.</small
   >
 </div>
 
-<script is:inline define:vars={{ defaultTheme, storageKey }}>
+<script is:inline define:vars={{ defaultTheme, storageKey, validThemes }}>
   (function () {
     const STORAGE_KEY = storageKey;
-    const VALID = ["default", "sticker-pop"];
+    const VALID = validThemes;
 
     const fallbackTheme = VALID.includes(defaultTheme) ? defaultTheme : "default";
 

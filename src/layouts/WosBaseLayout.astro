@@ -1,5 +1,6 @@
 ---
 import '../styles/wos-plus-main.css'
+import { THEME_IDS } from '../data/themes'
 
 const { canonicalURL = Astro.url } = Astro.props
 const title = Astro.props?.title ?? Astro.props?.content?.title ?? ''
@@ -14,6 +15,8 @@ const defaultTheme = Astro.props?.defaultTheme ?? 'default'
 // player and streamer pass distinct keys) so a choice on one view never
 // overrides the other view's default.
 const themeStorageKey = Astro.props?.themeStorageKey ?? 'wosPlusTheme'
+// Every theme id the settings picker offers (src/data/themes.ts).
+const validThemes = [...THEME_IDS]
 ---
 
 <html lang="en" class="dark">
@@ -22,11 +25,12 @@ const themeStorageKey = Astro.props?.themeStorageKey ?? 'wosPlusTheme'
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
 
-    <!-- Fonts: Fredoka (display), Space Grotesk (UI), Share Tech Mono (data) -->
+    <!-- Fonts: Fredoka (display), Space Grotesk (UI), Share Tech Mono (data),
+         Creepster (Halloween theme headings) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Creepster&family=Fredoka:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&display=swap"
       rel="stylesheet"
     />
 
@@ -67,9 +71,9 @@ const themeStorageKey = Astro.props?.themeStorageKey ?? 'wosPlusTheme'
 
     <!-- Set the UI theme before first paint so there is no flash of the wrong
          theme. A stored preference wins; otherwise the page's default is used. -->
-    <script is:inline define:vars={{ defaultTheme, themeStorageKey }}>
+    <script is:inline define:vars={{ defaultTheme, themeStorageKey, validThemes }}>
       (function () {
-        var valid = ['default', 'sticker-pop'];
+        var valid = validThemes;
         var theme = valid.indexOf(defaultTheme) !== -1 ? defaultTheme : 'default';
         try {
           var stored = localStorage.getItem(themeStorageKey);
