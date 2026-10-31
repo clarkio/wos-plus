@@ -235,6 +235,15 @@
   color: var(--sp-bg-deep);
 }
 
+/* Empty slot — an outlined, see-through chip so it reads as a gap still to be
+   filled rather than a word (issue #211). */
+[data-theme="sticker-pop"] .player-bottom-container .correct-word.unguessed-word,
+[data-theme="sticker-pop"] .streamer-bottom-container .correct-word.unguessed-word {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px rgba(233, 220, 255, 0.35);
+  opacity: 0.8;
+}
+
 /* --- Letters panel: dark block with cyan offset shadow ------------------- */
 [data-theme="sticker-pop"] .level-data-container {
   background: var(--sp-bg-deep);

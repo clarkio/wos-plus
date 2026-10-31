@@ -23,6 +23,11 @@ const wosWorker = new Worker(
 // claim the same message.
 type ChatMessage = { message: string; timestamp: number; consumed: boolean };
 
+// One chip in the found-words log: a word someone found, a word nobody found
+// (shown after the level ends, starred), or an empty board slot shown as one
+// underscore per letter while it waits to be found (issue #211).
+type WordLogEntry = { text: string; kind: 'found' | 'missed' | 'unguessed' };
+
 type EventTypes = 'level_end' | 'level_clear' | 'one_star' | 'three_stars' | 'new_all_time_pb' | 'new_daily_pb' | 'new_daily_clear';
 
 export class GameSpectator {
@@ -506,6 +511,9 @@ export class GameSpectator {
     if (isReconnect) {
       this.rebuildFoundWordsAfterReconnect(slots);
     }
+    // Show the newly adopted board's empty slots as placeholders straight
+    // away, before anything has been guessed (issue #211).
+    this.renderCorrectWords();
   }
 
   // On reconnect, the re-reported slots are the only record of what was
@@ -644,15 +652,19 @@ export class GameSpectator {
         // left empty. A masked slot's `letters`/`word` still contain '?', so
         // `saveBoard`'s isMissingWords guard keeps it out of the boards table.
         this.updateCurrentLevelSlots(username, new Array(letters.length).fill('?'), index, hitMax);
+        // The slot is filled now, so its placeholder goes even though no word
+        // takes its place.
+        this.renderCorrectWords();
         return;
       }
     }
 
     this.log(`[WOS Event] ${lowerUsername} correctly guessed: ${word}`, this.wosGameLogId);
 
-    // Add to correct words list
-    this.updateCorrectWordsDisplayed(word);
+    // Fill the slot before adding to the correct words list, so the list is
+    // rendered with the word in its slot rather than beside a placeholder.
     this.updateCurrentLevelSlots(username, word.split(''), index, hitMax);
+    this.updateCorrectWordsDisplayed(word);
 
     // If hitMax is true, set the current level big word.
     //
@@ -847,15 +859,73 @@ export class GameSpectator {
 
     this.currentLevelCorrectWords = sortedWords;
 
-    const groupedWords = sortedWords.reduce((map, currentWord) => {
-      const key = currentWord.replace('*', '').length;
-      if (!map.has(key)) {
-        map.set(key, [] as string[]);
-      }
-      map.get(key)!.push(currentWord);
-      return map;
-    }, new Map<number, string[]>());
+    this.renderCorrectWords();
+  }
 
+  /**
+   * Lays the found-words list out by length group. Within a group, words are
+   * placed in the board's own slot order — which is alphabetical — with each
+   * empty slot shown as one underscore per letter, so a gap's position hints
+   * at the missing word (issue #211). A word with no matching slot (e.g. a
+   * guess for a slot the board lacks) is appended after the slots.
+   *
+   * Once a group has missed (starred) words the level is over: the group keeps
+   * its sorted order and only the empty slots no missed word could name stay
+   * as underscores, at the end. Missed words from the dictionary sweep are not
+   * tied to a slot, so placing them in a gap would claim a position they may
+   * not have.
+   */
+  private buildWordLogGroups(): Map<number, WordLogEntry[]> {
+    const wordsByLength = new Map<number, string[]>();
+    for (const word of this.currentLevelCorrectWords) {
+      const key = word.replace(/\*/g, '').length;
+      wordsByLength.set(key, [...(wordsByLength.get(key) ?? []), word]);
+    }
+
+    const slotsByLength = new Map<number, Slot[]>();
+    for (const slot of this.currentLevelSlots) {
+      if (!slot || !Array.isArray(slot.letters)) continue;
+      const key = slot.letters.length;
+      slotsByLength.set(key, [...(slotsByLength.get(key) ?? []), slot]);
+    }
+
+    const lengths = [...new Set([...wordsByLength.keys(), ...slotsByLength.keys()])].sort((a, b) => a - b);
+    return new Map(lengths.map(length => [
+      length,
+      this.layoutWordGroup(length, wordsByLength.get(length) ?? [], slotsByLength.get(length) ?? []),
+    ]));
+  }
+
+  private layoutWordGroup(length: number, words: string[], slots: Slot[]): WordLogEntry[] {
+    const toEntry = (word: string): WordLogEntry => word.endsWith('*')
+      ? { text: `${word.slice(0, -1).toUpperCase()}*`, kind: 'missed' }
+      : { text: word.toUpperCase(), kind: 'found' };
+    const placeholder: WordLogEntry = { text: '_'.repeat(length), kind: 'unguessed' };
+    const emptySlots = slots.filter(slot => !slot.user).length;
+    const missedCount = words.filter(word => word.endsWith('*')).length;
+
+    if (missedCount > 0) {
+      const unnamed = Math.max(0, emptySlots - missedCount);
+      return [...words.map(toEntry), ...Array.from({ length: unnamed }, () => placeholder)];
+    }
+
+    const unplaced = [...words];
+    const entries: WordLogEntry[] = [];
+    for (const slot of slots) {
+      if (!slot.user) {
+        entries.push(placeholder);
+        continue;
+      }
+      const slotWord = (slot.word || slot.letters.join('')).toLowerCase();
+      const at = unplaced.findIndex(word => word.toLowerCase() === slotWord);
+      if (at !== -1) {
+        entries.push(toEntry(unplaced.splice(at, 1)[0]));
+      }
+    }
+    return [...entries, ...unplaced.map(toEntry)];
+  }
+
+  private renderCorrectWords() {
     const logEl = document.getElementById('correct-words-log');
     if (!logEl) {
       return;
@@ -871,9 +941,8 @@ export class GameSpectator {
 
     const fragment = document.createDocumentFragment();
 
-    Array.from(groupedWords.entries())
-      .sort((a, b) => a[0] - b[0])
-      .forEach(([length, words]) => {
+    Array.from(this.buildWordLogGroups().entries())
+      .forEach(([length, entries]) => {
         const groupEl = document.createElement('div');
         groupEl.className = 'word-group';
 
@@ -885,11 +954,28 @@ export class GameSpectator {
         const wordsContainer = document.createElement('div');
         wordsContainer.className = 'word-group__words';
 
-        words.forEach(current => {
-          const displayWord = current.replace('*', '').toUpperCase();
+        entries.forEach(entry => {
           const wordEl = document.createElement('span');
-          wordEl.className = `correct-word${current.endsWith('*') ? ' missing-word' : ''}`;
-          wordEl.textContent = `${displayWord}${current.endsWith('*') ? '*' : ''}`;
+          // Every chip in a group is sized for the slot's letter count rather
+          // than for the word in it, so a found word drops into its
+          // placeholder's room without moving the chips around it.
+          wordEl.style.setProperty('--letters', `${length}`);
+          wordEl.className = {
+            found: 'correct-word',
+            missed: 'correct-word missing-word',
+            unguessed: 'correct-word unguessed-word',
+          }[entry.kind];
+          if (entry.kind === 'unguessed') {
+            // The underscores sit in their own, smaller span so a placeholder
+            // chip keeps a word chip's height but takes no more room across
+            // than the word it stands for would.
+            const blanksEl = document.createElement('span');
+            blanksEl.className = 'unguessed-word__blanks';
+            blanksEl.textContent = entry.text;
+            wordEl.appendChild(blanksEl);
+          } else {
+            wordEl.textContent = entry.text;
+          }
           wordsContainer.appendChild(wordEl);
         });
 
@@ -928,32 +1014,47 @@ export class GameSpectator {
 
     const MIN_SCALE = 0.4;
     const MAX_SCALE = 1.4;
-    let scale = 1;
-    track.style.setProperty('zoom', '1');
 
     // Available content area = the log's inner height minus its vertical padding.
     const logStyle = getComputedStyle(logEl);
     const padV =
       (parseFloat(logStyle.paddingTop) || 0) + (parseFloat(logStyle.paddingBottom) || 0);
 
-    // Converge on the scale where the words fill the available height — shrinking
-    // when they overflow and growing into spare space. We measure the track's
-    // rendered height via getBoundingClientRect (which, unlike scrollHeight,
-    // reflects the applied `zoom`) and re-measure each step to handle chips
-    // re-wrapping as the scale changes.
-    for (let i = 0; i < 8; i++) {
-      const content = track.getBoundingClientRect().height;
-      const avail = logEl.clientHeight - padV;
-      if (content <= 0 || avail <= 0) break;
-      let next = scale * (avail / content);
-      next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, next));
-      if (Math.abs(next - scale) < 0.01) {
-        scale = next;
-        break;
+    // Whether the words fit the available height at a given scale. The track's
+    // rendered height is read via getBoundingClientRect, which (unlike
+    // scrollHeight) reflects the applied `zoom`, and it is re-read at every
+    // scale because chips re-wrap as they grow and shrink.
+    const fitsAt = (candidate: number): boolean => {
+      track.style.setProperty('zoom', `${candidate}`);
+      return track.getBoundingClientRect().height <= logEl.clientHeight - padV;
+    };
+
+    // Find the largest scale that still fits. Rendered height only ever grows
+    // with the scale, so a bisection always lands on a scale that fits. The
+    // earlier proportional step could not promise that: re-wrapping makes the
+    // height jump in steps, so it could stop on a scale just past one of them
+    // and start the auto-scroll with room to spare (issue #211).
+    let scale = 1;
+    if (logEl.clientHeight - padV > 0 && track.getBoundingClientRect().height > 0) {
+      if (fitsAt(MAX_SCALE)) {
+        scale = MAX_SCALE;
+      } else if (!fitsAt(MIN_SCALE)) {
+        scale = MIN_SCALE;
+      } else {
+        let low = MIN_SCALE;
+        let high = MAX_SCALE;
+        for (let i = 0; i < 10; i++) {
+          const mid = (low + high) / 2;
+          if (fitsAt(mid)) {
+            low = mid;
+          } else {
+            high = mid;
+          }
+        }
+        scale = low;
       }
-      scale = next;
-      track.style.setProperty('zoom', `${scale}`);
     }
+    track.style.setProperty('zoom', `${scale}`);
 
     const overflowDistance = logEl.scrollHeight - logEl.clientHeight;
     if (overflowDistance > 1) {
@@ -985,6 +1086,12 @@ export class GameSpectator {
       this.wordLogResizeRaf = requestAnimationFrame(() => { this.fitWordLog(); });
     });
     this.wordLogResizeObserver.observe(logEl);
+
+    // The fit is measured in whatever font is on screen at the time. Words
+    // drawn before the web fonts arrive are fitted in the fallback font, and
+    // nothing resizes the box when the real one swaps in, so fit again
+    // whenever a font finishes loading.
+    document.fonts?.addEventListener('loadingdone', () => { this.fitWordLog(); });
   }
 
   calculateHiddenLetters(bigWord: string) {

@@ -477,6 +477,176 @@ describe('GameSpectator class', () => {
     });
   });
 
+  describe('found-words placeholders for empty slots (issue #211)', () => {
+    const renderedGroup = (length: number) => {
+      const group = Array.from(document.querySelectorAll('#correct-words-log .word-group'))
+        .find(el => el.querySelector('.word-group__title')?.textContent === `${length}:`);
+      return Array.from(group?.querySelectorAll('.correct-word') ?? []).map(el => ({
+        text: el.textContent,
+        unguessed: el.classList.contains('unguessed-word'),
+      }));
+    };
+
+    beforeEach(() => {
+      spectator = new GameSpectator();
+    });
+
+    it('renders nothing but found words when the board has no slots', () => {
+      (spectator as any).updateCorrectWordsDisplayed('test');
+
+      expect(renderedGroup(4)).toEqual([{ text: 'TEST', unguessed: false }]);
+    });
+
+    it('places a found word in its slot from the slot letters when the slot carries no word', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['t', 'a', 'l', 'e'], word: '', user: 'biocow', hitMax: false },
+        { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).updateCorrectWordsDisplayed('TALE');
+
+      expect(renderedGroup(4)).toEqual([
+        { text: 'TALE', unguessed: false },
+        { text: '____', unguessed: true },
+      ]);
+    });
+
+    it('ignores slot entries that carry no letters', () => {
+      spectator.currentLevelSlots = [
+        null as any,
+        { word: '', user: null, hitMax: false } as any,
+        { letters: ['.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).renderCorrectWords();
+
+      expect(document.querySelectorAll('#correct-words-log .word-group')).toHaveLength(1);
+      expect(renderedGroup(2)).toEqual([{ text: '__', unguessed: true }]);
+    });
+
+    it('appends a found word that matches no slot after the slots of its length', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).updateCorrectWordsDisplayed('coat');
+
+      expect(renderedGroup(4)).toEqual([
+        { text: '____', unguessed: true },
+        { text: 'COAT', unguessed: false },
+      ]);
+    });
+
+    it('sets the underscores in their own span so the chip can draw them smaller than a word', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).renderCorrectWords();
+
+      const chip = document.querySelector('#correct-words-log .unguessed-word')!;
+      expect(chip.querySelector('.unguessed-word__blanks')?.textContent).toBe('___');
+    });
+
+    it('sizes every chip in a group for the slot length, not for the word in it', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },
+        { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).updateCorrectWordsDisplayed('coat');
+      (spectator as any).updateCorrectWordsDisplayed('tide*');
+
+      const chips = Array.from(document.querySelectorAll<HTMLElement>('#correct-words-log .correct-word'));
+      expect(chips.map(chip => chip.style.getPropertyValue('--letters'))).toEqual(['4', '4', '4']);
+    });
+
+    describe('fitting the words to the log (fitWordLog)', () => {
+      // happy-dom does no layout, so the log's height and the track's
+      // rendered height are modelled here: `heightAt(zoom)` stands in for how
+      // tall the words render at a given scale.
+      const layOut = (logHeight: number, heightAt: (zoom: number) => number) => {
+        (spectator as any).updateCorrectWordsDisplayed('test');
+        const logEl = document.getElementById('correct-words-log')!;
+        const track = logEl.querySelector<HTMLElement>('.correct-words-track')!;
+        const rendered = () => heightAt(parseFloat(track.style.zoom || '1'));
+        Object.defineProperty(logEl, 'clientHeight', { configurable: true, get: () => logHeight });
+        Object.defineProperty(logEl, 'scrollHeight', { configurable: true, get: () => Math.max(logHeight, rendered()) });
+        track.getBoundingClientRect = () => ({ height: rendered() }) as DOMRect;
+        (spectator as any).fitWordLog();
+        return { logEl, zoom: parseFloat(track.style.zoom) };
+      };
+
+      it('grows the words to the largest scale when they fit there', () => {
+        const { zoom, logEl } = layOut(200, z => 100 * z);
+
+        expect(zoom).toBe(1.4);
+        expect(logEl.classList.contains('auto-scroll')).toBe(false);
+      });
+
+      it('settles on the largest scale that still fits', () => {
+        const { zoom, logEl } = layOut(200, z => 300 * z);
+
+        expect(300 * zoom).toBeLessThanOrEqual(200);
+        expect(zoom).toBeGreaterThan(0.66);
+        expect(logEl.classList.contains('auto-scroll')).toBe(false);
+      });
+
+      it('never settles just past a re-wrap, where the words would overflow (issue #211)', () => {
+        // Chips re-wrap onto a third row above 1.0, so the height jumps there.
+        const { zoom, logEl } = layOut(200, z => (z > 1 ? 300 : 190) * z);
+
+        expect(zoom).toBeLessThanOrEqual(1);
+        expect(zoom).toBeGreaterThan(0.99);
+        expect(logEl.classList.contains('auto-scroll')).toBe(false);
+      });
+
+      it('scrolls at the smallest scale when even that does not fit', () => {
+        const { zoom, logEl } = layOut(200, z => 1000 * z);
+
+        expect(zoom).toBe(0.4);
+        expect(logEl.classList.contains('auto-scroll')).toBe(true);
+      });
+    });
+
+    it('fits the log again when a web font finishes loading', () => {
+      const fonts = new EventTarget();
+      const originalFonts = Object.getOwnPropertyDescriptor(document, 'fonts');
+      const originalObserver = (globalThis as any).ResizeObserver;
+      Object.defineProperty(document, 'fonts', { value: fonts, configurable: true });
+      (globalThis as any).ResizeObserver = class { observe() { } disconnect() { } };
+      try {
+        (spectator as any).updateCorrectWordsDisplayed('test');
+        const fitSpy = vi.spyOn(spectator as any, 'fitWordLog');
+
+        fonts.dispatchEvent(new Event('loadingdone'));
+
+        expect(fitSpy).toHaveBeenCalledTimes(1);
+      } finally {
+        (globalThis as any).ResizeObserver = originalObserver;
+        if (originalFonts) {
+          Object.defineProperty(document, 'fonts', originalFonts);
+        } else {
+          delete (document as any).fonts;
+        }
+      }
+    });
+
+    it('drops every placeholder of a length once its missed words cover the empty slots', () => {
+      spectator.currentLevelSlots = [
+        { letters: ['.', '.', '.', '.'], word: '', user: null, hitMax: false },
+      ];
+
+      (spectator as any).updateCorrectWordsDisplayed('coat*');
+      (spectator as any).updateCorrectWordsDisplayed('cota*');
+
+      expect(renderedGroup(4)).toEqual([
+        { text: 'COAT*', unguessed: false },
+        { text: 'COTA*', unguessed: false },
+      ]);
+    });
+  });
+
   describe('calculateHiddenLetters', () => {
     beforeEach(() => {
       spectator = new GameSpectator();
