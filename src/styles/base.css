@@ -60,6 +60,26 @@
   --sp-ink-muted: #d9c5f5;
   --sp-ink-dim: #9a82c4;
   --sp-chip: #2a1147;
+
+  /* ==========================================================================
+     "Halloween" palette — pumpkin orange, slime green and ghost white on a
+     midnight purple. Used only under `data-theme="halloween"`
+     (wos-theme-halloween.css).
+     ========================================================================== */
+  --hw-night: #030104;
+  --hw-night-deep: #000000;
+  --hw-panel: #0f0816;
+  --hw-panel-raised: #221330;
+  --hw-pumpkin: #ff7518;
+  --hw-pumpkin-deep: #b84a00;
+  --hw-candle: #ffb347;
+  --hw-slime: #8cff3f;
+  --hw-slime-ink: #0f1f05;
+  --hw-blood: #ff3b3b;
+  --hw-ghost: #f4ecff;
+  --hw-ghost-dim: #bfaed6;
+  --hw-ink-dark: #1a0a00;
+  --font-spooky: 'Creepster', 'Fredoka', sans-serif;
 }
 
 /* Base HTML Elements */

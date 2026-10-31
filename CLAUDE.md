@@ -30,6 +30,7 @@ The shape you need to know before touching code:
 | Web Workers | `src/scripts/wos-worker.ts`, `src/scripts/twitch-chat-worker.ts` | `postMessage` only; no DOM, no shared state |
 | Dictionary / word matching | `src/scripts/wos-words.ts` | The crown jewels. Highest-risk module, lowest coverage. |
 | Twitch channel names | `src/scripts/twitch-channel.ts` | Canonical normalization and 1–50 character validation |
+| UI themes | `src/data/themes.ts` → `src/components/ThemeControl.astro`, `src/styles/wos-theme-*.css` | One list feeds the settings picker and the first-paint script in `WosBaseLayout.astro`. A new theme is an entry there plus a `wos-theme-<id>.css` imported by the player and streamer stylesheets |
 | Bot command reference | `src/data/bot-commands.ts` → `src/pages/bot/commands.astro` | Hand-copied from the wos-plus-bot handlers; the bot's `!help` links to `/bot/commands`, so keep it in step with bot command changes |
 | API routes | `src/pages/api/**` | Must `export const prerender = false`; env via `locals.runtime.env`; CORS via `src/lib/cors.ts` |
 | Shared helpers | `src/lib/**` | Board validation in `board-utils.ts`; API responses in `api-utils.ts`; Supabase clients in `supabase.ts`; CORS in `cors.ts` |
@@ -141,7 +142,7 @@ Prefer a failing build over a paragraph of good advice.
 
 ## 4. Known state (keep current)
 
-- Test suite: **800 passing** Vitest tests across 24 files, plus **3
+- Test suite: **816 passing** Vitest tests across 25 files, plus **3
   `it.todo`**. Every remaining todo is a **known gap with a tracking issue or a
   stated coverage limitation** — none is simply an unwritten test, and none may
   be deleted to tidy the count. The decisions behind them are tabulated in
@@ -154,8 +155,8 @@ Prefer a failing build over a paragraph of good advice.
   test in `tests/acceptance/`, so the stub file and the empty
   `tests/integration/` directory were deleted rather than left as a decoy.
 - `pnpm run check` is **clean** (0 errors, 0 warnings; some hints remain).
-- Coverage: **93.35% statements / 88.32% branches / 89.95% functions /
- 94.15% lines**. It counts **all** files under `src/**/*.ts`, so an untested
+- Coverage: **93.39% statements / 88.4% branches / 90.08% functions /
+ 94.17% lines**. It counts **all** files under `src/**/*.ts`, so an untested
   module appears at 0% instead of being invisible.
   - `src/pages/api/**`, `src/lib/cors.ts` and `src/lib/board-utils.ts` are at
     **100%**, covered by the acceptance stream.
@@ -382,8 +383,9 @@ runtime.
   `/bot/commands` rendering every entry in `src/data/bot-commands.ts` (the
   page the bot's `!help` reply links to); `/api/health`
   returning 200 through the real Workers runtime; the settings dialog opening
-  when required query params are missing; and the dialog's Save flow
-  round-tripping values into URL params. WoS WebSocket and Twitch chat
+  when required query params are missing; the dialog's Save flow
+  round-tripping values into URL params; and the theme picker applying a
+  theme that the first-paint script restores after a reload. WoS WebSocket and Twitch chat
   connections are explicitly **out of scope** — that protocol handling is
   already covered deterministically by the fixture-driven worker tests
   (`tests/unit/wos-worker.test.ts`, `tests/unit/twitch-chat-worker.test.ts`).

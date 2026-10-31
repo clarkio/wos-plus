@@ -3,6 +3,7 @@ import Settings from "./Icons/Settings.astro";
 import SettingsDialog from "./SettingsDialog.astro";
 import MadeBy from "./MadeBy.astro";
 import ThemeControl from "./ThemeControl.astro";
+import type { ThemeId } from "../data/themes";
 import WosBaseLayout from "../layouts/WosBaseLayout.astro";
 
 /**
@@ -29,7 +30,7 @@ interface Props {
   title: string;
   description: string;
   keywords: string;
-  defaultTheme: 'default' | 'sticker-pop';
+  defaultTheme: ThemeId;
 }
 
 const { view, viewLabel, title, description, keywords, defaultTheme } =

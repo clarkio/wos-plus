@@ -1,6 +1,7 @@
 /* WOS Player Page Styles */
 @import "./wos-shared.css";
 @import "./wos-theme-sticker-pop.css";
+@import "./wos-theme-halloween.css";
 
 /* Player Page Specific Styles */
 .player-wos-main-grid {
