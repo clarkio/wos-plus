@@ -1,8 +1,9 @@
 /* ==========================================================================
    "Halloween" theme
    --------------------------------------------------------------------------
-   Spooky seasonal skin: midnight panels, pumpkin-orange and slime-green glows,
-   Creepster headings and a jack-o'-lantern on the word log.
+   Spooky seasonal skin: near-black panels, pumpkin-orange and slime-green glows,
+   Creepster headings, a jack-o'-lantern on the word log, cobwebs in the
+   corners and a couple of spiders dangling from the top of the screen.
 
    Applied when the document root carries `data-theme="halloween"`. Shared by
    both the player and streamer views. Like the Sticker Pop theme, only visual
@@ -226,4 +227,73 @@
   font-weight: 700;
   color: var(--hw-blood);
   letter-spacing: 2px;
+}
+
+/* --- Decorations: corner cobwebs and dangling spiders --------------------
+   Drawn with pseudo-elements and inline SVG so no markup or script changes.
+   All of it is fixed to the viewport, sits above the panels and ignores the
+   pointer, so it never blocks the board, chat or settings button. */
+[data-theme="halloween"] .player-wos-main-grid::before,
+[data-theme="halloween"] .streamer-wos-main-grid::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='' fill='none' stroke='%23f4ecff' stroke-opacity='0.38' stroke-width='0.7' stroke-linecap='round'%3E%3Cpath d='M0 0L100.0 0.0M0 0L96.6 25.9M0 0L86.6 50.0M0 0L70.7 70.7M0 0L50.0 86.6M0 0L25.9 96.6M0 0L0.0 100.0M18.0 0.0Q15.2 2.0 17.4 4.7Q14.2 5.9 15.6 9.0Q12.2 9.3 12.7 12.7Q9.3 12.2 9.0 15.6Q5.9 14.2 4.7 17.4Q2.0 15.2 0.0 18.0M34.0 0.0Q28.7 3.8 32.8 8.8Q26.8 11.1 29.4 17.0Q23.0 17.6 24.0 24.0Q17.6 23.0 17.0 29.4Q11.1 26.8 8.8 32.8Q3.8 28.7 0.0 34.0M52.0 0.0Q44.0 5.8 50.2 13.5Q41.0 17.0 45.0 26.0Q35.2 27.0 36.8 36.8Q27.0 35.2 26.0 45.0Q17.0 41.0 13.5 50.2Q5.8 44.0 0.0 52.0M72.0 0.0Q60.9 8.0 69.5 18.6Q56.7 23.5 62.4 36.0Q48.7 37.4 50.9 50.9Q37.4 48.7 36.0 62.4Q23.5 56.7 18.6 69.5Q8.0 60.9 0.0 72.0M94.0 0.0Q79.5 10.5 90.8 24.3Q74.0 30.7 81.4 47.0Q63.6 48.8 66.5 66.5Q48.8 63.6 47.0 81.4Q30.7 74.0 24.3 90.8Q10.5 79.5 0.0 94.0'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate%28100 0%29 scale%28-1 1%29' fill='none' stroke='%23f4ecff' stroke-opacity='0.38' stroke-width='0.7' stroke-linecap='round'%3E%3Cpath d='M0 0L100.0 0.0M0 0L96.6 25.9M0 0L86.6 50.0M0 0L70.7 70.7M0 0L50.0 86.6M0 0L25.9 96.6M0 0L0.0 100.0M18.0 0.0Q15.2 2.0 17.4 4.7Q14.2 5.9 15.6 9.0Q12.2 9.3 12.7 12.7Q9.3 12.2 9.0 15.6Q5.9 14.2 4.7 17.4Q2.0 15.2 0.0 18.0M34.0 0.0Q28.7 3.8 32.8 8.8Q26.8 11.1 29.4 17.0Q23.0 17.6 24.0 24.0Q17.6 23.0 17.0 29.4Q11.1 26.8 8.8 32.8Q3.8 28.7 0.0 34.0M52.0 0.0Q44.0 5.8 50.2 13.5Q41.0 17.0 45.0 26.0Q35.2 27.0 36.8 36.8Q27.0 35.2 26.0 45.0Q17.0 41.0 13.5 50.2Q5.8 44.0 0.0 52.0M72.0 0.0Q60.9 8.0 69.5 18.6Q56.7 23.5 62.4 36.0Q48.7 37.4 50.9 50.9Q37.4 48.7 36.0 62.4Q23.5 56.7 18.6 69.5Q8.0 60.9 0.0 72.0M94.0 0.0Q79.5 10.5 90.8 24.3Q74.0 30.7 81.4 47.0Q63.6 48.8 66.5 66.5Q48.8 63.6 47.0 81.4Q30.7 74.0 24.3 90.8Q10.5 79.5 0.0 94.0'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate%280 100%29 scale%281 -1%29' fill='none' stroke='%23f4ecff' stroke-opacity='0.38' stroke-width='0.7' stroke-linecap='round'%3E%3Cpath d='M0 0L100.0 0.0M0 0L96.6 25.9M0 0L86.6 50.0M0 0L70.7 70.7M0 0L50.0 86.6M0 0L25.9 96.6M0 0L0.0 100.0M18.0 0.0Q15.2 2.0 17.4 4.7Q14.2 5.9 15.6 9.0Q12.2 9.3 12.7 12.7Q9.3 12.2 9.0 15.6Q5.9 14.2 4.7 17.4Q2.0 15.2 0.0 18.0M34.0 0.0Q28.7 3.8 32.8 8.8Q26.8 11.1 29.4 17.0Q23.0 17.6 24.0 24.0Q17.6 23.0 17.0 29.4Q11.1 26.8 8.8 32.8Q3.8 28.7 0.0 34.0M52.0 0.0Q44.0 5.8 50.2 13.5Q41.0 17.0 45.0 26.0Q35.2 27.0 36.8 36.8Q27.0 35.2 26.0 45.0Q17.0 41.0 13.5 50.2Q5.8 44.0 0.0 52.0M72.0 0.0Q60.9 8.0 69.5 18.6Q56.7 23.5 62.4 36.0Q48.7 37.4 50.9 50.9Q37.4 48.7 36.0 62.4Q23.5 56.7 18.6 69.5Q8.0 60.9 0.0 72.0M94.0 0.0Q79.5 10.5 90.8 24.3Q74.0 30.7 81.4 47.0Q63.6 48.8 66.5 66.5Q48.8 63.6 47.0 81.4Q30.7 74.0 24.3 90.8Q10.5 79.5 0.0 94.0'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg transform='translate%28100 100%29 scale%28-1 -1%29' fill='none' stroke='%23f4ecff' stroke-opacity='0.38' stroke-width='0.7' stroke-linecap='round'%3E%3Cpath d='M0 0L100.0 0.0M0 0L96.6 25.9M0 0L86.6 50.0M0 0L70.7 70.7M0 0L50.0 86.6M0 0L25.9 96.6M0 0L0.0 100.0M18.0 0.0Q15.2 2.0 17.4 4.7Q14.2 5.9 15.6 9.0Q12.2 9.3 12.7 12.7Q9.3 12.2 9.0 15.6Q5.9 14.2 4.7 17.4Q2.0 15.2 0.0 18.0M34.0 0.0Q28.7 3.8 32.8 8.8Q26.8 11.1 29.4 17.0Q23.0 17.6 24.0 24.0Q17.6 23.0 17.0 29.4Q11.1 26.8 8.8 32.8Q3.8 28.7 0.0 34.0M52.0 0.0Q44.0 5.8 50.2 13.5Q41.0 17.0 45.0 26.0Q35.2 27.0 36.8 36.8Q27.0 35.2 26.0 45.0Q17.0 41.0 13.5 50.2Q5.8 44.0 0.0 52.0M72.0 0.0Q60.9 8.0 69.5 18.6Q56.7 23.5 62.4 36.0Q48.7 37.4 50.9 50.9Q37.4 48.7 36.0 62.4Q23.5 56.7 18.6 69.5Q8.0 60.9 0.0 72.0M94.0 0.0Q79.5 10.5 90.8 24.3Q74.0 30.7 81.4 47.0Q63.6 48.8 66.5 66.5Q48.8 63.6 47.0 81.4Q30.7 74.0 24.3 90.8Q10.5 79.5 0.0 94.0'/%3E%3C/g%3E%3C/svg%3E");
+  background-position: top left, top right, bottom left, bottom right;
+  background-repeat: no-repeat;
+  background-size: clamp(90px, 16vmin, 180px) clamp(90px, 16vmin, 180px);
+}
+
+/* Two spiders on silk threads. Each element is the thread plus the spider at
+   its bottom; at rest the spider hangs 10% of the way down the screen and the
+   animation bobs it between 8% and 12% before it climbs back out of view. */
+[data-theme="halloween"] body::before,
+[data-theme="halloween"] body::after {
+  content: "";
+  position: fixed;
+  top: -20vh;
+  left: 28%;
+  z-index: 6;
+  width: 46px;
+  height: 30vh;
+  pointer-events: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg stroke='%23826a9e' stroke-width='1.6' fill='none' stroke-linecap='round'%3E%3Cpath d='M15 18 Q8 12 4 16M15 21 Q7 19 3 23M15 24 Q8 27 5 33M16 26 Q11 32 10 38M25 18 Q32 12 36 16M25 21 Q33 19 37 23M25 24 Q32 27 35 33M24 26 Q29 32 30 38'/%3E%3C/g%3E%3Cellipse cx='20' cy='25' rx='6.5' ry='7.5' fill='%231c1426' stroke='%239a82c4' stroke-width='0.8'/%3E%3Ccircle cx='20' cy='15.5' r='4' fill='%231c1426' stroke='%239a82c4' stroke-width='0.8'/%3E%3Ccircle cx='18.4' cy='15' r='1' fill='%23ff7518'/%3E%3Ccircle cx='21.6' cy='15' r='1' fill='%23ff7518'/%3E%3C/svg%3E") bottom center / 46px 46px no-repeat,
+    linear-gradient(rgba(244, 236, 255, 0.5), rgba(244, 236, 255, 0.5))
+      top center / 1px calc(100% - 30px) no-repeat;
+  transform: translateY(calc(-10vh - 52px));
+  animation: hw-spider-drop 14s ease-in-out 1s infinite;
+}
+
+[data-theme="halloween"] body::after {
+  left: 71%;
+  width: 30px;
+  background-size: 30px 30px, 1px calc(100% - 20px);
+  animation-duration: 19s;
+  animation-delay: 6s;
+}
+
+@keyframes hw-spider-drop {
+  0%, 8% { transform: translateY(calc(-10vh - 52px)); }
+  30% { transform: translateY(0); }
+  38% { transform: translateY(2vh); }
+  46% { transform: translateY(-2vh); }
+  54% { transform: translateY(1vh); }
+  62%, 74% { transform: translateY(0); }
+  96%, 100% { transform: translateY(calc(-10vh - 52px)); }
+}
+
+/* No motion: let the spiders simply hang at rest. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="halloween"] body::before,
+  [data-theme="halloween"] body::after {
+    animation: none;
+    transform: translateY(0);
+  }
 }
