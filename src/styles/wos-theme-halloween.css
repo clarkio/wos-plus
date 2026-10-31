@@ -15,12 +15,12 @@
    stay in Fredoka so they remain easy to read on stream.
    ========================================================================== */
 
-/* --- Grid backdrop: night sky with a harvest-moon glow ------------------- */
+/* --- Grid backdrop: near-black night with a faint harvest-moon glow ----- */
 [data-theme="halloween"] .player-wos-main-grid,
 [data-theme="halloween"] .streamer-wos-main-grid {
   background:
-    radial-gradient(circle at 92% 8%, rgba(255, 179, 71, 0.18) 0, rgba(255, 179, 71, 0) 22%),
-    radial-gradient(ellipse at 50% 120%, rgba(140, 255, 63, 0.08) 0, rgba(140, 255, 63, 0) 55%),
+    radial-gradient(circle at 92% 8%, rgba(255, 179, 71, 0.1) 0, rgba(255, 179, 71, 0) 20%),
+    radial-gradient(ellipse at 50% 120%, rgba(140, 255, 63, 0.04) 0, rgba(140, 255, 63, 0) 55%),
     var(--hw-night);
   font-family: var(--font-ui);
 }
@@ -30,7 +30,7 @@
 [data-theme="halloween"] .streamer-wos-board-container {
   background: var(--hw-panel);
   border: 2px solid var(--hw-pumpkin);
-  border-radius: 16px;
+  border-radius: 6px;
   box-shadow: 0 0 10px rgba(255, 117, 24, 0.45);
 }
 
@@ -39,7 +39,7 @@
 [data-theme="halloween"] .streamer-twitch-chat-frame {
   background: var(--hw-night-deep);
   border: 2px solid var(--hw-slime);
-  border-radius: 16px;
+  border-radius: 6px;
   box-shadow: 0 0 10px rgba(140, 255, 63, 0.35);
 }
 
@@ -47,7 +47,7 @@
 [data-theme="halloween"] .settings-button {
   background: var(--hw-pumpkin);
   border: none;
-  border-radius: 12px;
+  border-radius: 5px;
   color: var(--hw-ink-dark);
   box-shadow: 0 0 8px rgba(255, 117, 24, 0.6);
 }
@@ -63,7 +63,7 @@
 [data-theme="halloween"] .streamer-channel-data-container .level-current {
   background: var(--hw-panel);
   border: 2px solid var(--hw-pumpkin);
-  border-radius: 14px;
+  border-radius: 6px;
   box-shadow: 0 0 8px rgba(255, 117, 24, 0.4);
 }
 
@@ -87,7 +87,7 @@
 [data-theme="halloween"] .player-channel-data-container .level-record,
 [data-theme="halloween"] .streamer-channel-data-container .level-record {
   border: none;
-  border-radius: 12px;
+  border-radius: 5px;
   font-family: var(--font-display);
   font-weight: 700;
 }
@@ -125,7 +125,7 @@
 [data-theme="halloween"] .correct-words-log {
   background: var(--hw-panel);
   border: 2px solid var(--hw-candle);
-  border-radius: 16px;
+  border-radius: 6px;
   box-shadow: 0 0 10px rgba(255, 179, 71, 0.35);
 }
 
@@ -156,7 +156,7 @@
 [data-theme="halloween"] .streamer-bottom-container .word-group__title {
   background: var(--hw-pumpkin);
   color: var(--hw-ink-dark);
-  border-radius: 8px;
+  border-radius: 4px;
   font-family: var(--font-display);
   font-weight: 700;
   padding: 0.15em 0.35em;
@@ -168,7 +168,7 @@
   background: var(--hw-panel-raised);
   color: var(--hw-ghost);
   border-color: transparent;
-  border-radius: 8px;
+  border-radius: 4px;
   font-family: var(--font-display);
   font-weight: 600;
   letter-spacing: 0;
@@ -194,7 +194,7 @@
 [data-theme="halloween"] .level-data-container {
   background: var(--hw-panel);
   border: 2px solid var(--hw-slime);
-  border-radius: 16px;
+  border-radius: 6px;
   box-shadow: 0 0 10px rgba(140, 255, 63, 0.3);
 }
 

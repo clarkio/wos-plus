@@ -66,8 +66,8 @@
      midnight purple. Used only under `data-theme="halloween"`
      (wos-theme-halloween.css).
      ========================================================================== */
-  --hw-night: #0d0714;
-  --hw-night-deep: #07030b;
+  --hw-night: #030104;
+  --hw-night-deep: #000000;
   --hw-panel: #1b0f26;
   --hw-panel-raised: #2a1638;
   --hw-pumpkin: #ff7518;
