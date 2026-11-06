@@ -299,6 +299,123 @@
   }
 }
 
+/* --- A turkey that struts in from the bottom-right corner ------------------
+   Every 40 seconds it walks in from off screen, stops in the corner, bobs its
+   head with a "Gobble gobble!" speech bubble, turns round and walks back out.
+   The turkey and the bubble are pseudo-elements on separate elements that
+   share one 40s clock, so the bubble shows only while the turkey is standing
+   still. Both ignore the pointer. Size scales with the viewport so it stays
+   small on a 1080p OBS source and on a phone alike. */
+[data-theme="thanksgiving"] .player-wos-main-grid::after,
+[data-theme="thanksgiving"] .streamer-wos-main-grid::after {
+  content: "";
+  position: fixed;
+  right: 12px;
+  bottom: 4px;
+  z-index: 7;
+  width: var(--tg-turkey-size);
+  height: calc(var(--tg-turkey-size) * 116 / 132);
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-6 -6 132 116'%3E%3Cg transform='rotate%28-80 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23a4471a' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg transform='rotate%28-60 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23e8772e' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg transform='rotate%28-40 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23f2b544' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg transform='rotate%28-20 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23b3283c' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg transform='rotate%280 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23e8772e' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg transform='rotate%2820 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23f2b544' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg transform='rotate%2840 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23a4471a' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg transform='rotate%2860 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23b3283c' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg transform='rotate%2880 62 60%29'%3E%3Cellipse cx='62' cy='26' rx='9' ry='30' fill='%23e8772e' stroke='%233a1f0c' stroke-width='1'/%3E%3Cellipse cx='62' cy='12' rx='4' ry='6' fill='%23fbefdc' fill-opacity='0.35'/%3E%3C/g%3E%3Cg stroke='%23e8772e' stroke-width='3' stroke-linecap='round' fill='none'%3E%3Cpath d='M52 86L50 102M50 102L44 105M50 102L53 106'/%3E%3Cpath d='M66 86L68 102M68 102L62 105M68 102L72 106'/%3E%3C/g%3E%3Cellipse cx='60' cy='70' rx='26' ry='22' fill='%236b3f1f' stroke='%233a1f0c' stroke-width='1.2'/%3E%3Cpath d='M50 62Q66 56 78 70Q66 84 50 76Z' fill='%238a5530' stroke='%233a1f0c' stroke-width='1'/%3E%3Cpath d='M56 66Q66 64 72 70M56 71Q65 70 70 75' stroke='%233a1f0c' stroke-opacity='0.5' fill='none'/%3E%3Cpath d='M44 64Q30 56 32 36' stroke='%23c49a6c' stroke-width='9' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%23c49a6c' stroke='%233a1f0c' stroke-width='1'/%3E%3Cpath d='M24 30L14 33L24 36Z' fill='%23f2b544' stroke='%23a4471a' stroke-width='0.8'/%3E%3Cpath d='M25 36Q20 44 24 50Q29 45 27 37Z' fill='%23d02f45'/%3E%3Cpath d='M26 28Q22 22 24 18' stroke='%23d02f45' stroke-width='3' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='30' cy='29' r='2.2' fill='%231f0e04'/%3E%3Ccircle cx='29.4' cy='28.4' r='0.7' fill='%23fff'/%3E%3C/svg%3E") center / contain no-repeat;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+  transform-origin: 50% 100%;
+  translate: calc(100% + 40px) 0;
+  animation: tg-turkey-walk 40s linear infinite;
+}
+
+html[data-theme="thanksgiving"]::after {
+  content: "Gobble gobble!";
+  position: fixed;
+  right: calc(var(--tg-turkey-size) + 4px);
+  bottom: calc(var(--tg-turkey-size) * 0.72);
+  z-index: 7;
+  padding: 0.3em 0.6em;
+  pointer-events: none;
+  white-space: nowrap;
+  font-family: var(--font-harvest);
+  font-size: clamp(12px, 1.9vmin, 18px);
+  color: var(--tg-ink-dark);
+  background: var(--tg-cream);
+  border: 2px solid var(--tg-harvest);
+  border-radius: 6px 6px 0 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transform-origin: 100% 100%;
+  opacity: 0;
+  animation: tg-turkey-gobble 40s linear infinite;
+}
+
+@keyframes tg-turkey-walk {
+  0% { translate: calc(100% + 40px) 0; rotate: 0deg; scale: 1 1; }
+  8% { translate: calc(100% + 40px) 0; rotate: 0deg; scale: 1 1; }
+  9.0% { translate: calc((calc(100% + 40px)) * 0.929) -3px; rotate: 4deg; scale: 1 1; }
+  10.0% { translate: calc((calc(100% + 40px)) * 0.857) 0; rotate: -4deg; scale: 1 1; }
+  11.0% { translate: calc((calc(100% + 40px)) * 0.786) -3px; rotate: 4deg; scale: 1 1; }
+  12.0% { translate: calc((calc(100% + 40px)) * 0.714) 0; rotate: -4deg; scale: 1 1; }
+  13.0% { translate: calc((calc(100% + 40px)) * 0.643) -3px; rotate: 4deg; scale: 1 1; }
+  14.0% { translate: calc((calc(100% + 40px)) * 0.571) 0; rotate: -4deg; scale: 1 1; }
+  15.0% { translate: calc((calc(100% + 40px)) * 0.500) -3px; rotate: 4deg; scale: 1 1; }
+  16.0% { translate: calc((calc(100% + 40px)) * 0.429) 0; rotate: -4deg; scale: 1 1; }
+  17.0% { translate: calc((calc(100% + 40px)) * 0.357) -3px; rotate: 4deg; scale: 1 1; }
+  18.0% { translate: calc((calc(100% + 40px)) * 0.286) 0; rotate: -4deg; scale: 1 1; }
+  19.0% { translate: calc((calc(100% + 40px)) * 0.214) -3px; rotate: 4deg; scale: 1 1; }
+  20.0% { translate: calc((calc(100% + 40px)) * 0.143) 0; rotate: -4deg; scale: 1 1; }
+  21.0% { translate: calc((calc(100% + 40px)) * 0.071) -3px; rotate: 4deg; scale: 1 1; }
+  22.0% { translate: 0 0; rotate: 0deg; scale: 1 1; }
+  24% { translate: 0 0; rotate: 0deg; scale: 1 1; }
+  25% { translate: 0 -2px; rotate: -6deg; scale: 1 1; }
+  26% { translate: 0 0; rotate: 2deg; scale: 1 1; }
+  27% { translate: 0 -2px; rotate: -6deg; scale: 1 1; }
+  28% { translate: 0 0; rotate: 2deg; scale: 1 1; }
+  29% { translate: 0 -2px; rotate: -6deg; scale: 1 1; }
+  30% { translate: 0 0; rotate: 2deg; scale: 1 1; }
+  31% { translate: 0 -2px; rotate: -6deg; scale: 1 1; }
+  32% { translate: 0 0; rotate: 2deg; scale: 1 1; }
+  33% { translate: 0 -2px; rotate: -6deg; scale: 1 1; }
+  34% { translate: 0 0; rotate: 2deg; scale: 1 1; }
+  35% { translate: 0 -2px; rotate: -6deg; scale: 1 1; }
+  36% { translate: 0 0; rotate: 2deg; scale: 1 1; }
+  37% { translate: 0 -2px; rotate: -6deg; scale: 1 1; }
+  38% { translate: 0 0; rotate: 0deg; scale: 1 1; }
+  40% { translate: 0 0; rotate: 0deg; scale: 1 1; }
+  42% { translate: 0 0; rotate: 0deg; scale: -1 1; }
+  43.0% { translate: calc((calc(100% + 40px)) * 0.071) -3px; rotate: 4deg; scale: -1 1; }
+  44.0% { translate: calc((calc(100% + 40px)) * 0.143) 0; rotate: -4deg; scale: -1 1; }
+  45.0% { translate: calc((calc(100% + 40px)) * 0.214) -3px; rotate: 4deg; scale: -1 1; }
+  46.0% { translate: calc((calc(100% + 40px)) * 0.286) 0; rotate: -4deg; scale: -1 1; }
+  47.0% { translate: calc((calc(100% + 40px)) * 0.357) -3px; rotate: 4deg; scale: -1 1; }
+  48.0% { translate: calc((calc(100% + 40px)) * 0.429) 0; rotate: -4deg; scale: -1 1; }
+  49.0% { translate: calc((calc(100% + 40px)) * 0.500) -3px; rotate: 4deg; scale: -1 1; }
+  50.0% { translate: calc((calc(100% + 40px)) * 0.571) 0; rotate: -4deg; scale: -1 1; }
+  51.0% { translate: calc((calc(100% + 40px)) * 0.643) -3px; rotate: 4deg; scale: -1 1; }
+  52.0% { translate: calc((calc(100% + 40px)) * 0.714) 0; rotate: -4deg; scale: -1 1; }
+  53.0% { translate: calc((calc(100% + 40px)) * 0.786) -3px; rotate: 4deg; scale: -1 1; }
+  54.0% { translate: calc((calc(100% + 40px)) * 0.857) 0; rotate: -4deg; scale: -1 1; }
+  55.0% { translate: calc((calc(100% + 40px)) * 0.929) -3px; rotate: 4deg; scale: -1 1; }
+  56.0% { translate: calc(100% + 40px) 0; rotate: 0deg; scale: -1 1; }
+  100% { translate: calc(100% + 40px) 0; rotate: 0deg; scale: -1 1; }
+}
+
+@keyframes tg-turkey-gobble {
+  0%, 24% { opacity: 0; scale: 0.6; }
+  25.5% { opacity: 1; scale: 1.08; }
+  27%, 36% { opacity: 1; scale: 1; }
+  37.5%, 100% { opacity: 0; scale: 0.6; }
+}
+
+/* No motion: the turkey stands quietly in its corner and says nothing. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="thanksgiving"] .player-wos-main-grid::after,
+  [data-theme="thanksgiving"] .streamer-wos-main-grid::after {
+    animation: none;
+    translate: 0 0;
+  }
+
+  html[data-theme="thanksgiving"]::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 /* --- The WoS board itself -------------------------------------------------
    The board is a cross-origin iframe (wos.gg), so nothing inside it can be
    restyled from here. As with Halloween, it is tinted from outside: the

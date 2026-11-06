@@ -100,6 +100,7 @@
   --tg-cream-dim: #d4bf9f;
   --tg-ink-dark: #1f0e04;
   --font-harvest: 'Rye', 'Fredoka', serif;
+  --tg-turkey-size: clamp(80px, 13vmin, 140px);
 }
 
 /* Base HTML Elements */
