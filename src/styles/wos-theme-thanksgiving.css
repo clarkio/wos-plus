@@ -1,0 +1,322 @@
+/* ==========================================================================
+   "Thanksgiving" theme
+   --------------------------------------------------------------------------
+   Autumn harvest skin: near-black warm-brown backdrop, harvest-orange,
+   wheat-gold and cranberry borders, Rye headings, a turkey on the word log,
+   clusters of autumn leaves in the top corners and a slow fall of leaves
+   across the screen.
+
+   Applied when the document root carries `data-theme="thanksgiving"`. Shared
+   by both the player and streamer views. Like the Halloween theme, only
+   visual properties are touched here: the grid layout, sizing logic and every
+   id/class the spectator script drives (#level-value, #correct-words-log,
+   .word-group, .correct-word, …) are left as they are. Corners stay squarish
+   (4–6px) and glows small, so they fit inside the existing gutters.
+
+   Rye is used for headings and labels only. Words, letters and numbers stay
+   in Fredoka so they remain easy to read on stream.
+   ========================================================================== */
+
+/* --- Grid backdrop: near-black with a low hearth glow --------------------- */
+[data-theme="thanksgiving"] .player-wos-main-grid,
+[data-theme="thanksgiving"] .streamer-wos-main-grid {
+  background:
+    radial-gradient(ellipse at 50% 115%, rgba(232, 119, 46, 0.12) 0, rgba(232, 119, 46, 0) 55%),
+    radial-gradient(circle at 8% 6%, rgba(242, 181, 68, 0.06) 0, rgba(242, 181, 68, 0) 25%),
+    var(--tg-night);
+  font-family: var(--font-ui);
+}
+
+/* --- Board: harvest-orange panel ----------------------------------------- */
+[data-theme="thanksgiving"] .player-wos-board-container,
+[data-theme="thanksgiving"] .streamer-wos-board-container {
+  background: var(--tg-panel);
+  border: 2px solid var(--tg-harvest);
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(232, 119, 46, 0.4);
+}
+
+/* --- Chat: cranberry panel ----------------------------------------------- */
+[data-theme="thanksgiving"] .player-twitch-chat-frame,
+[data-theme="thanksgiving"] .streamer-twitch-chat-frame {
+  background: var(--tg-night-deep);
+  border: 2px solid var(--tg-cranberry);
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(179, 40, 60, 0.4);
+}
+
+/* --- Settings button: wheat gold ----------------------------------------- */
+[data-theme="thanksgiving"] .settings-button {
+  background: var(--tg-gold);
+  border: none;
+  border-radius: 5px;
+  color: var(--tg-ink-dark);
+  box-shadow: 0 0 8px rgba(242, 181, 68, 0.5);
+}
+
+[data-theme="thanksgiving"] .settings-button:hover {
+  background: var(--tg-harvest);
+  border: none;
+  color: var(--tg-ink-dark);
+}
+
+/* --- HUD: LEVEL block + record badges ------------------------------------ */
+[data-theme="thanksgiving"] .player-channel-data-container .level-current,
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-current {
+  background: var(--tg-panel);
+  border: 2px solid var(--tg-gold);
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(242, 181, 68, 0.35);
+}
+
+[data-theme="thanksgiving"] .player-channel-data-container .level-title,
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-title {
+  font-family: var(--font-harvest);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--tg-gold);
+}
+
+[data-theme="thanksgiving"] .player-channel-data-container .level-value,
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--tg-cream);
+  text-shadow: 0 0 6px rgba(242, 181, 68, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme="thanksgiving"] .player-channel-data-container .level-record,
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-record {
+  border: none;
+  border-radius: 5px;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+/* Trophy / personal best — harvest orange */
+[data-theme="thanksgiving"] .player-channel-data-container .level-record:nth-child(1),
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-record:nth-child(1) {
+  background: var(--tg-harvest);
+  color: var(--tg-ink-dark);
+}
+
+/* Daily best — wheat gold */
+[data-theme="thanksgiving"] .player-channel-data-container .level-record:nth-child(2),
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-record:nth-child(2) {
+  background: var(--tg-gold);
+  color: var(--tg-ink-dark);
+}
+
+/* Daily clears — cranberry. Light ink to keep contrast on the deep red. */
+[data-theme="thanksgiving"] .player-channel-data-container .level-record:nth-child(3),
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-record:nth-child(3) {
+  background: var(--tg-cranberry);
+  color: var(--tg-cream);
+}
+
+[data-theme="thanksgiving"] .player-channel-data-container .level-record .icon,
+[data-theme="thanksgiving"] .player-channel-data-container .level-record-value,
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-record .icon,
+[data-theme="thanksgiving"] .streamer-channel-data-container .level-record-value {
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Word log: harvest table with a turkey header ------------------------ */
+[data-theme="thanksgiving"] .correct-words-log {
+  background: var(--tg-panel);
+  border: 2px solid var(--tg-gold);
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(242, 181, 68, 0.3);
+}
+
+[data-theme="thanksgiving"] .correct-words-header {
+  font-family: var(--font-harvest);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--tg-harvest);
+}
+
+[data-theme="thanksgiving"] .correct-words-header::before {
+  content: "\1F983\00A0"; /* 🦃 + non-breaking space */
+}
+
+[data-theme="thanksgiving"] .correct-words-header .made-by-component {
+  font-family: var(--font-ui);
+  letter-spacing: 0;
+  color: var(--tg-sage);
+}
+
+/* Length badge — small harvest-orange square */
+[data-theme="thanksgiving"] .player-bottom-container .word-group,
+[data-theme="thanksgiving"] .streamer-bottom-container .word-group {
+  border-bottom-color: rgba(242, 181, 68, 0.22);
+}
+
+[data-theme="thanksgiving"] .player-bottom-container .word-group__title,
+[data-theme="thanksgiving"] .streamer-bottom-container .word-group__title {
+  background: var(--tg-harvest);
+  color: var(--tg-ink-dark);
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 0.15em 0.35em;
+}
+
+/* Found word — warm wooden chip */
+[data-theme="thanksgiving"] .player-bottom-container .correct-word,
+[data-theme="thanksgiving"] .streamer-bottom-container .correct-word {
+  background: var(--tg-panel-raised);
+  color: var(--tg-cream);
+  border-color: transparent;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* Missed word — cranberry chip */
+[data-theme="thanksgiving"] .player-bottom-container .correct-word.missing-word,
+[data-theme="thanksgiving"] .streamer-bottom-container .correct-word.missing-word {
+  background: var(--tg-cranberry);
+  border-color: transparent;
+  color: var(--tg-cream);
+}
+
+/* Empty slot — a faint outline, a seat still waiting at the table (#211). */
+[data-theme="thanksgiving"] .player-bottom-container .correct-word.unguessed-word,
+[data-theme="thanksgiving"] .streamer-bottom-container .correct-word.unguessed-word {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px rgba(251, 239, 220, 0.28);
+  opacity: 0.8;
+}
+
+/* --- Letters panel ------------------------------------------------------- */
+[data-theme="thanksgiving"] .level-data-container {
+  background: var(--tg-panel);
+  border: 2px solid var(--tg-sage);
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(143, 160, 90, 0.3);
+}
+
+[data-theme="thanksgiving"] .level-data-container .letters-label,
+[data-theme="thanksgiving"] .level-data-container .hidden-letter-label,
+[data-theme="thanksgiving"] .level-data-container .fake-letter-label {
+  font-family: var(--font-harvest);
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--tg-cream-dim);
+}
+
+[data-theme="thanksgiving"] .level-data-container .letters {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--tg-cream);
+  letter-spacing: 2px;
+}
+
+[data-theme="thanksgiving"] .level-data-container .hidden-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--tg-gold);
+  letter-spacing: 2px;
+}
+
+[data-theme="thanksgiving"] .level-data-container .fake-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--tg-cranberry-bright);
+  letter-spacing: 2px;
+}
+
+/* --- Decorations: leaf clusters in the top corners ------------------------
+   Drawn with pseudo-elements and inline SVG so no markup or script changes.
+   Fixed to the viewport, above the panels, and ignoring the pointer, so they
+   never block the board, chat or settings button. */
+[data-theme="thanksgiving"] .player-wos-main-grid::before,
+[data-theme="thanksgiving"] .streamer-wos-main-grid::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 130 130'%3E%3Cg transform=''%3E%3Cpath transform='translate%2814 12%29 rotate%28135%29 scale%280.01141%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23b3283c' fill-opacity='1'/%3E%3Cpath transform='translate%2848 8%29 rotate%28160%29 scale%280.00993%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23e8772e' fill-opacity='1'/%3E%3Cg transform='translate%2880 8%29 rotate%28120%29 scale%280.7500%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%23f2b544' fill-opacity='1'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3Cpath transform='translate%2810 46%29 rotate%28100%29 scale%280.00943%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23f2b544' fill-opacity='1'/%3E%3Cg transform='translate%288 82%29 rotate%28170%29 scale%280.7000%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%238fa05a' fill-opacity='1'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3Cg transform='translate%2836 40%29 rotate%28-20%29 scale%280.6000%29 translate%28-20 -20%29'%3E%3Cellipse cx='20' cy='25' rx='9' ry='11' fill='%23b0703a'/%3E%3Cpath d='M9 18Q20 6 31 18Q20 22 9 18Z' fill='%235c3a1e'/%3E%3Cpath d='M20 11V6' stroke='%235c3a1e' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3Cpath transform='translate%28110 4%29 rotate%28190%29 scale%280.00645%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23a4471a' fill-opacity='0.9'/%3E%3Cg transform='translate%284 112%29 rotate%28150%29 scale%280.5000%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%23e8772e' fill-opacity='0.9'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 130 130'%3E%3Cg transform='translate%28130 0%29 scale%28-1 1%29'%3E%3Cpath transform='translate%2814 12%29 rotate%28135%29 scale%280.01141%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23b3283c' fill-opacity='1'/%3E%3Cpath transform='translate%2848 8%29 rotate%28160%29 scale%280.00993%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23e8772e' fill-opacity='1'/%3E%3Cg transform='translate%2880 8%29 rotate%28120%29 scale%280.7500%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%23f2b544' fill-opacity='1'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3Cpath transform='translate%2810 46%29 rotate%28100%29 scale%280.00943%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23f2b544' fill-opacity='1'/%3E%3Cg transform='translate%288 82%29 rotate%28170%29 scale%280.7000%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%238fa05a' fill-opacity='1'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3Cg transform='translate%2836 40%29 rotate%28-20%29 scale%280.6000%29 translate%28-20 -20%29'%3E%3Cellipse cx='20' cy='25' rx='9' ry='11' fill='%23b0703a'/%3E%3Cpath d='M9 18Q20 6 31 18Q20 22 9 18Z' fill='%235c3a1e'/%3E%3Cpath d='M20 11V6' stroke='%235c3a1e' stroke-width='2' stroke-linecap='round'/%3E%3C/g%3E%3Cpath transform='translate%28110 4%29 rotate%28190%29 scale%280.00645%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23a4471a' fill-opacity='0.9'/%3E%3Cg transform='translate%284 112%29 rotate%28150%29 scale%280.5000%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%23e8772e' fill-opacity='0.9'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-position: top left, top right;
+  background-repeat: no-repeat;
+  background-size: clamp(80px, 13vmin, 150px) clamp(80px, 13vmin, 150px);
+}
+
+/* Falling leaves. Each layer is a tile of a few leaves repeated over a sheet
+   one tile larger than the screen; sliding the sheet by exactly one tile and
+   starting again loops without a seam. Moving it with `transform` keeps the
+   animation on the compositor, so it stays cheap in an OBS browser source.
+   The two layers use different tiles and speeds so the fall looks random. */
+[data-theme="thanksgiving"] body::before,
+[data-theme="thanksgiving"] body::after {
+  content: "";
+  position: fixed;
+  top: -900px;
+  left: -640px;
+  z-index: 6;
+  width: calc(100vw + 640px);
+  height: calc(100vh + 900px);
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 640 900'%3E%3Cpath transform='translate%2870 90%29 rotate%2825%29 scale%280.00844%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23e8772e' fill-opacity='0.85'/%3E%3Cg transform='translate%28410 250%29 rotate%28-40%29 scale%280.6500%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%23f2b544' fill-opacity='0.8'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3Cpath transform='translate%28250 610%29 rotate%28-15%29 scale%280.00744%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23a4471a' fill-opacity='0.85'/%3E%3Cg transform='translate%28560 780%29 rotate%2870%29 scale%280.6000%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%23e8772e' fill-opacity='0.8'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 640px 900px repeat;
+  opacity: 0.7;
+  will-change: transform;
+  animation: tg-leaves-fall-near 36s linear infinite;
+}
+
+[data-theme="thanksgiving"] body::after {
+  top: -1100px;
+  left: -900px;
+  width: calc(100vw + 900px);
+  height: calc(100vh + 1100px);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 900 1100'%3E%3Cpath transform='translate%28720 160%29 rotate%28-30%29 scale%280.00596%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23b3283c' fill-opacity='0.75'/%3E%3Cg transform='translate%28130 420%29 rotate%2860%29 scale%280.5000%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%238fa05a' fill-opacity='0.7'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3Cpath transform='translate%28470 860%29 rotate%2880%29 scale%280.00447%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23f2b544' fill-opacity='0.7'/%3E%3Cpath transform='translate%28300 90%29 rotate%2840%29 scale%280.00496%29' d='m-90 2030 45-863a95 95 0 0 0-111-98l-859 151 116-320a65 65 0 0 0-20-73l-941-762 212-99a65 65 0 0 0 34-79l-186-572 542 115a65 65 0 0 0 73-38l105-247 423 454a65 65 0 0 0 111-57l-204-1052 327 189a65 65 0 0 0 91-27l332-652 332 652a65 65 0 0 0 91 27l327-189-204 1052a65 65 0 0 0 111 57l423-454 105 247a65 65 0 0 0 73 38l542-115-186 572a65 65 0 0 0 34 79l212 99-941 762a65 65 0 0 0-20 73l116 320-859-151a95 95 0 0 0-111 98l45 863z' fill='%23e8772e' fill-opacity='0.7'/%3E%3Cg transform='translate%28830 640%29 rotate%28-20%29 scale%280.4500%29 translate%28-20 -20%29'%3E%3Cpath d='M20 2C31 9 34 22 21 36L20 39L19 36C6 22 9 9 20 2Z' fill='%23b3283c' fill-opacity='0.7'/%3E%3Cpath d='M20 6V37' stroke='%231f0e04' stroke-opacity='0.35' stroke-width='1.2' fill='none'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 900px 1100px repeat;
+  opacity: 0.55;
+  animation-name: tg-leaves-fall-far;
+  animation-duration: 58s;
+}
+
+@keyframes tg-leaves-fall-near {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(640px, 900px, 0); }
+}
+
+@keyframes tg-leaves-fall-far {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(900px, 1100px, 0); }
+}
+
+/* No motion: the leaves stay where they are. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="thanksgiving"] body::before,
+  [data-theme="thanksgiving"] body::after {
+    animation: none;
+  }
+}
+
+/* --- The WoS board itself -------------------------------------------------
+   The board is a cross-origin iframe (wos.gg), so nothing inside it can be
+   restyled from here. As with Halloween, it is tinted from outside: the
+   frame's pixels are warmed a little, and a soft amber vignette sits over
+   its edges. The overlay ignores the pointer so the board works as before. */
+[data-theme="thanksgiving"] .player-wos-board-container iframe,
+[data-theme="thanksgiving"] .streamer-wos-board-container iframe {
+  filter: brightness(0.92) sepia(0.25) saturate(1.1);
+}
+
+[data-theme="thanksgiving"] .player-wos-board-container::after,
+[data-theme="thanksgiving"] .streamer-wos-board-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(242, 181, 68, 0.16) 85%, rgba(164, 71, 26, 0.38) 100%);
+}

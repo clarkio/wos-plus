@@ -80,6 +80,26 @@
   --hw-ghost-dim: #bfaed6;
   --hw-ink-dark: #1a0a00;
   --font-spooky: 'Creepster', 'Fredoka', sans-serif;
+
+  /* ==========================================================================
+     "Thanksgiving" palette — harvest orange, wheat gold, cranberry and sage on
+     a near-black warm brown. Used only under `data-theme="thanksgiving"`
+     (wos-theme-thanksgiving.css).
+     ========================================================================== */
+  --tg-night: #0c0603;
+  --tg-night-deep: #050201;
+  --tg-panel: #170d07;
+  --tg-panel-raised: #2e1c10;
+  --tg-harvest: #e8772e;
+  --tg-harvest-deep: #a4471a;
+  --tg-gold: #f2b544;
+  --tg-cranberry: #b3283c;
+  --tg-cranberry-bright: #ff5a6e;
+  --tg-sage: #8fa05a;
+  --tg-cream: #fbefdc;
+  --tg-cream-dim: #d4bf9f;
+  --tg-ink-dark: #1f0e04;
+  --font-harvest: 'Rye', 'Fredoka', serif;
 }
 
 /* Base HTML Elements */

@@ -20,6 +20,7 @@ export const THEMES = [
   { id: 'default', label: 'Default' },
   { id: 'sticker-pop', label: 'Sticker Pop' },
   { id: 'halloween', label: 'Halloween' },
+  { id: 'thanksgiving', label: 'Thanksgiving' },
 ] as const satisfies readonly Theme[];
 
 export type ThemeId = (typeof THEMES)[number]['id'];

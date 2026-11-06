@@ -3,8 +3,8 @@
  * ThemeControl
  * A theme picker that lets the user switch the UI between the themes listed in
  * src/data/themes.ts: the "default" look (the original dark-purple styling),
- * the bold "Sticker Pop" look and the "Halloween" look. Drop it inside a
- * settings form. The choice is applied by toggling `data-theme` on the
+ * the bold "Sticker Pop" look and the seasonal "Halloween" and "Thanksgiving"
+ * looks. Drop it inside a settings form. The choice is applied by toggling `data-theme` on the
  * document root and persisted to localStorage so it carries across both the
  * player and streamer views.
  *
@@ -36,7 +36,7 @@ const validThemes = [...THEME_IDS];
   </select>
   <small class="form-help"
     >Pick how this view looks: the default look, the bold "Sticker Pop" look,
-    or the spooky "Halloween" look.</small
+    the spooky "Halloween" look or the harvest "Thanksgiving" look.</small
   >
 </div>
 
