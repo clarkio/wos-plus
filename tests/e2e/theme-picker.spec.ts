@@ -56,3 +56,61 @@ for (const [path, defaultTheme] of [
     });
   }
 }
+
+/**
+ * The Thanksgiving decorations are pseudo-elements, so only a real page can
+ * say whether they render. Leaves are hidden outright when the visitor's
+ * system asks for reduced motion (Windows "Animation effects" off, macOS
+ * "Reduce motion" on); the turkey stays, standing still.
+ */
+const decorations = (page: import('@playwright/test').Page, view: string) =>
+  page.evaluate((v) => {
+    const grid = document.querySelector(`.${v}-wos-main-grid`);
+    const turkey = grid ? getComputedStyle(grid, '::after') : null;
+    return {
+      leavesNear: getComputedStyle(document.body, '::before').content,
+      leavesFar: getComputedStyle(document.body, '::after').content,
+      turkeyContent: turkey?.content,
+      turkeyImage: turkey?.backgroundImage.startsWith('url(') ?? false,
+      turkeyAnimation: turkey?.animationName,
+    };
+  }, view);
+
+for (const view of ['player', 'streamer'] as const) {
+  test.describe(`/${view} Thanksgiving decorations`, () => {
+    test.beforeEach(async ({ page }) => {
+      await blockExternalNetwork(page);
+      await page.addInitScript((v) => {
+        localStorage.setItem(`wosPlusTheme:${v}`, 'thanksgiving');
+      }, view);
+    });
+
+    test('shows falling leaves and the walking turkey', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.goto(`/${view}`, { waitUntil: 'domcontentloaded' });
+
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'thanksgiving');
+      expect(await decorations(page, view)).toEqual({
+        leavesNear: '""',
+        leavesFar: '""',
+        turkeyContent: '""',
+        turkeyImage: true,
+        turkeyAnimation: 'tg-turkey-walk',
+      });
+    });
+
+    test('drops the leaves when reduced motion is requested', async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`/${view}`, { waitUntil: 'domcontentloaded' });
+
+      await expect(page.locator('html')).toHaveAttribute('data-theme', 'thanksgiving');
+      expect(await decorations(page, view)).toEqual({
+        leavesNear: 'none',
+        leavesFar: 'none',
+        turkeyContent: '""',
+        turkeyImage: true,
+        turkeyAnimation: 'none',
+      });
+    });
+  });
+}
