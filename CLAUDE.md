@@ -385,7 +385,9 @@ runtime.
   returning 200 through the real Workers runtime; the settings dialog opening
   when required query params are missing; the dialog's Save flow
   round-tripping values into URL params; and the theme picker applying a
-  theme that the first-paint script restores after a reload. WoS WebSocket and Twitch chat
+  theme that the first-paint script restores after a reload, plus the
+  Thanksgiving theme's pseudo-element decorations (leaves dropped under reduced
+  motion, turkey present). WoS WebSocket and Twitch chat
   connections are explicitly **out of scope** — that protocol handling is
   already covered deterministically by the fixture-driven worker tests
   (`tests/unit/wos-worker.test.ts`, `tests/unit/twitch-chat-worker.test.ts`).

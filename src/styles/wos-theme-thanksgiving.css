@@ -291,10 +291,12 @@
   to { transform: translate3d(900px, 1100px, 0); }
 }
 
-/* No motion: the leaves stay where they are. */
+/* No motion (Windows "Animation effects" off, macOS "Reduce motion" on): no
+   leaves at all. Frozen leaves just look like smudges on the panels. */
 @media (prefers-reduced-motion: reduce) {
   [data-theme="thanksgiving"] body::before,
   [data-theme="thanksgiving"] body::after {
+    content: none;
     animation: none;
   }
 }
