@@ -5,6 +5,7 @@ import { findAllMissingWords, findMissingWordsFromBoard, loadWordsFromDb, isWosW
 import { saveBoard, fetchBoard, fetchChannelStats } from './db-service';
 import { getMirrorGameId } from './mirror-url';
 import { wosLanguageIdToCode } from '../lib/board-utils';
+import { levelPassSoundFor } from '../data/themes';
 import type { Slot } from '../lib/types';
 
 
@@ -341,7 +342,27 @@ export class GameSpectator {
     this.playSound('level_end');
   }
 
+  /**
+   * A passed level's sound. A theme can swap in its own (the Thanksgiving
+   * gobble, specs/game-flow.md), which then plays for every pass, including
+   * the 2- and 4-star ones that are otherwise silent.
+   */
+  private playLevelPassSound(eventType: EventTypes | undefined) {
+    const themed = typeof document !== 'undefined'
+      ? levelPassSoundFor(document.documentElement.dataset.theme)
+      : undefined;
+    if (themed) {
+      this.playSoundFile(themed);
+    } else if (eventType) {
+      this.playSound(eventType);
+    }
+  }
+
   private playSound(eventType: EventTypes) {
+    this.playSoundFile(this.soundEventTypes.get(eventType) || '/assets/nothing.mp3');
+  }
+
+  private playSoundFile(soundFile: string) {
     if (!this.isSoundsEnabled) {
       return;
     }
@@ -354,8 +375,7 @@ export class GameSpectator {
       return;
     }
 
-    const soundFile = this.soundEventTypes.get(eventType);
-    const audio = new Audio(soundFile || '/assets/nothing.mp3');
+    const audio = new Audio(soundFile);
     audio.play().catch((error) => {
       console.error('Error playing audio:', error);
     });
@@ -387,14 +407,11 @@ export class GameSpectator {
         await saveBoard(boardId, this.currentLevelSlots, this.currentChannel, this.currentLanguageCode);
       }
 
-      this.playSound('level_clear');
+      this.playLevelPassSound('level_clear');
     } else {
-      if (stars === 1) {
-        this.playSound('one_star');
-      }
-      if (stars === 3) {
-        this.playSound('three_stars');
-      }
+      this.playLevelPassSound(
+        stars === 1 ? 'one_star' : stars === 3 ? 'three_stars' : undefined,
+      );
       await this.logMissingWords();
       this.logEmptySlots();
     }
