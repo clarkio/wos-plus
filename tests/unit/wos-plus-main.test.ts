@@ -1378,6 +1378,67 @@ describe('GameSpectator class', () => {
     });
   });
 
+  // specs/game-flow.md § "the Thanksgiving theme gobbles on a passed level"
+  describe('handleLevelResults with the Thanksgiving theme', () => {
+    const GOBBLE = '/assets/gobble.wav';
+    const unfilledSlot = () => [
+      { letters: ['t', 'e', 's', 't'], word: '', user: undefined, hitMax: false, index: 0, length: 4 },
+    ];
+
+    beforeEach(() => {
+      spectator = new GameSpectator();
+      spectator.currentLevel = 10;
+      spectator.isSoundsEnabled = true;
+      document.documentElement.dataset.theme = 'thanksgiving';
+    });
+
+    afterEach(() => {
+      delete document.documentElement.dataset.theme;
+    });
+
+    const playedFiles = () =>
+      ((global as any).Audio as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+
+    it('gobbles instead of the clear sound when the level is cleared', async () => {
+      await (spectator as any).handleLevelResults(5);
+
+      expect(playedFiles()).toEqual([GOBBLE]);
+    });
+
+    it.each([1, 2, 3, 4])('gobbles once for a %i-star pass that is not a clear', async (stars) => {
+      spectator.currentLevelSlots = unfilledSlot();
+
+      await (spectator as any).handleLevelResults(stars);
+
+      expect(playedFiles()).toEqual([GOBBLE]);
+    });
+
+    it('stays silent when sounds are switched off', async () => {
+      spectator.isSoundsEnabled = false;
+      spectator.currentLevelSlots = unfilledSlot();
+
+      await (spectator as any).handleLevelResults(3);
+
+      expect((global as any).Audio).not.toHaveBeenCalled();
+    });
+
+    it('does not gobble when the game ends on a failed level', async () => {
+      await (spectator as any).handleLevelEnd();
+
+      expect(playedFiles()).toEqual(['/assets/loser.wav']);
+    });
+
+    it('keeps the usual sounds under any other theme', async () => {
+      document.documentElement.dataset.theme = 'halloween';
+      spectator.currentLevelSlots = unfilledSlot();
+
+      await (spectator as any).handleLevelResults(2);
+      await (spectator as any).handleLevelResults(3);
+
+      expect(playedFiles()).toEqual(['/assets/not_too_shabby.wav']);
+    });
+  });
+
   describe('handleLetterReveal', () => {
     beforeEach(() => {
       spectator = new GameSpectator();

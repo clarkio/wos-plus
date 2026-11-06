@@ -3,6 +3,7 @@ import {
   THEMES,
   THEME_IDS,
   isThemeId,
+  levelPassSoundFor,
   resolveTheme,
 } from '../../src/data/themes';
 
@@ -55,5 +56,19 @@ describe('resolveTheme', () => {
 
   it('falls back to "default" when the view default is not a theme either', () => {
     expect(resolveTheme('spooky', 'nope')).toBe('default');
+  });
+});
+
+describe('levelPassSoundFor', () => {
+  it('gives the Thanksgiving theme a gobble for a passed level', () => {
+    expect(levelPassSoundFor('thanksgiving')).toBe('/assets/gobble.wav');
+  });
+
+  it.each(['default', 'sticker-pop', 'halloween'])('leaves %s on the usual sounds', (id) => {
+    expect(levelPassSoundFor(id)).toBeUndefined();
+  });
+
+  it.each([null, undefined, '', 'Thanksgiving', 'spooky'])('ignores %s, which is not a theme', (value) => {
+    expect(levelPassSoundFor(value)).toBeUndefined();
   });
 });
