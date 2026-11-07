@@ -14,12 +14,18 @@ export interface Theme {
   id: string;
   /** Name shown in the settings dialog. */
   label: string;
+  /**
+   * Sound played when a level is passed, in place of the usual clear /
+   * near-miss / decent-effort sounds (specs/game-flow.md). Omit to keep them.
+   */
+  levelPassSound?: string;
 }
 
 export const THEMES = [
   { id: 'default', label: 'Default' },
   { id: 'sticker-pop', label: 'Sticker Pop' },
   { id: 'halloween', label: 'Halloween' },
+  { id: 'thanksgiving', label: 'Thanksgiving', levelPassSound: '/assets/gobble.wav' },
 ] as const satisfies readonly Theme[];
 
 export type ThemeId = (typeof THEMES)[number]['id'];
@@ -37,4 +43,13 @@ export function isThemeId(value: unknown): value is ThemeId {
 export function resolveTheme(stored: string | null | undefined, viewDefault: string): ThemeId {
   if (isThemeId(stored)) return stored;
   return isThemeId(viewDefault) ? viewDefault : 'default';
+}
+
+/**
+ * The sound a theme plays for a passed level, or undefined when the theme (or
+ * an unknown value) keeps the usual sounds. Takes the raw `data-theme` value.
+ */
+export function levelPassSoundFor(theme: string | null | undefined): string | undefined {
+  const match = (THEMES as readonly Theme[]).find((t) => t.id === theme);
+  return match?.levelPassSound;
 }

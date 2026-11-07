@@ -453,6 +453,19 @@ word from what that player typed in chat.
   Every sound WoS+ plays is behind the same setting. When it is switched off no
   sound plays, and nothing else about the level changes.
 
+### Scenario: the Thanksgiving theme gobbles on a passed level
+
+- **Given** the view is showing the Thanksgiving theme
+- **And** the sounds are switched on
+- **When** a level is passed, with any number of stars, cleared or not
+- **Then** a turkey "gobble gobble" plays once, in place of the clear,
+  near-miss or decent-effort sound that would otherwise play
+- **And** a level that ends the game still plays the end-of-game sound
+
+  This is the only sound that depends on the theme. Every other theme keeps the
+  sounds above, and the gobble obeys the same sounds setting and background-tab
+  rule as every other sound.
+
 ### Scenario: the game ends
 
 - **Given** the channel's run comes to an end
